@@ -24,7 +24,6 @@ const isPrivateRoom = computed(() => props.currentRoom?.room_type === 'private')
   <section class="chat panel">
     <div class="chat-head">
       <div>
-        <p class="eyebrow">当前房间</p>
         <h2>{{ currentRoom?.room_name ?? '暂无房间' }}</h2>
       </div>
       <div class="chat-side-info">
@@ -40,19 +39,20 @@ const isPrivateRoom = computed(() => props.currentRoom?.room_type === 'private')
       <MessageStream :messages="messages" />
     </div>
 
-    <form class="composer" @submit.prevent="emit('submit')">
+    <form v-if="isPrivateRoom" class="composer active" @submit.prevent="emit('submit')">
       <textarea
         :value="draft"
-        :disabled="!isPrivateRoom"
-        placeholder="在这里输入发给 Agent 的消息…"
-        rows="3"
+        placeholder="在此输入消息..."
+        rows="2"
         @input="emit('updateDraft', ($event.target as HTMLTextAreaElement).value)"
         @keydown.enter.exact.prevent="emit('submit')"
       ></textarea>
       <div class="composer-foot">
-        <span>{{ composerNotice || '按 Enter 发送，Shift + Enter 换行' }}</span>
-        <button type="submit" :disabled="!isPrivateRoom || !draft.trim()">发送</button>
+        <span>按 Enter 发送，Shift + Enter 换行</span>
+        <button type="submit" :disabled="!draft.trim()">发送</button>
       </div>
     </form>
+
+    <div v-else class="composer-hint">{{ composerNotice }}</div>
   </section>
 </template>
