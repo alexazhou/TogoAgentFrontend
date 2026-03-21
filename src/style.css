@@ -565,7 +565,7 @@ textarea {
 
 .composer {
   background: transparent;
-  border-top: 2px solid #223040;
+  border-top: 1px solid #223040;
   padding: 8px 0 0;
   overflow: hidden;
 }
@@ -603,7 +603,7 @@ textarea {
   max-height: 25vh;
   border: none;
   border-radius: 0;
-  padding: 10px 14px;
+  padding: 12px;
   color: inherit;
   background: transparent;
   outline: none;
@@ -622,14 +622,17 @@ textarea {
 }
 
 .composer-foot {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
+  position: relative;
+  display: block;
   margin-top: 0;
-  padding: 4px 9px 9px 8px;
+  padding: 12px 64px 9px 12px;
   font-size: 0.74rem;
   background: transparent;
+}
+
+.composer-foot span {
+  display: block;
+  line-height: 1;
 }
 
 .composer-hint {
@@ -650,6 +653,9 @@ textarea {
 }
 
 .composer button {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
   border: 0;
   border-radius: 6px;
   padding: 5px 10px;
