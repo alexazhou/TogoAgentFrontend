@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { createEventsSocket, getAgents, getRoomMessages, getRooms, postRoomMessage } from './api';
+import AgentListSection from './components/AgentListSection.vue';
 import ChatPanel from './components/ChatPanel.vue';
-import SidebarPanel from './components/SidebarPanel.vue';
+import RoomListSection from './components/RoomListSection.vue';
 import TopBar from './components/TopBar.vue';
 import type {
   AgentInfo,
@@ -303,13 +304,16 @@ onBeforeUnmount(() => {
     />
 
     <main class="workspace">
-      <SidebarPanel
-        :loading="loading"
-        :grouped-rooms="groupedRooms"
-        :current-room-id="currentRoomId"
-        :agents="uniqueAgents"
-        @select-room="loadRoomMessages($event, { force: true })"
-      />
+      <div class="left-stack">
+        <RoomListSection
+          :loading="loading"
+          :grouped-rooms="groupedRooms"
+          :current-room-id="currentRoomId"
+          @select-room="loadRoomMessages($event, { force: true })"
+        />
+
+        <AgentListSection :agents="uniqueAgents" />
+      </div>
 
       <div ref="messageViewport" class="chat-shell">
         <ChatPanel

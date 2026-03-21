@@ -7,7 +7,7 @@ defineProps<{
 </script>
 
 <template>
-  <section class="sidebar-block">
+  <section class="sidebar-card panel">
     <div class="block-head">
       <h2>Agent</h2>
       <span>{{ agents.length }}</span>

@@ -12,7 +12,6 @@ defineProps<{
   <header class="topbar">
     <div>
       <p class="eyebrow">Team Agent Web Console</p>
-      <h1>多人协作观测台</h1>
     </div>
     <div class="status-group">
       <div class="status-pill" :data-state="connectionState">

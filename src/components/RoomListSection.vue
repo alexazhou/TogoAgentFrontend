@@ -13,7 +13,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="sidebar-block">
+  <section class="sidebar-card panel">
     <div class="block-head">
       <h2>聊天室</h2>
       <span>
