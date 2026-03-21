@@ -61,7 +61,7 @@ defineEmits<{
           </svg>
         </span>
         <span class="theme-switch-track">
-          <span class="theme-switch-thumb" :class="{ 'is-light': isLightMode }"></span>
+          <span class="theme-switch-thumb" :class="{ 'is-dark': !isLightMode }"></span>
         </span>
         <span class="theme-switch-icon theme-switch-icon-moon" aria-hidden="true">
           <svg viewBox="0 0 24 24">
@@ -157,9 +157,9 @@ defineEmits<{
 .theme-switch {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 2px;
   height: 28px;
-  padding: 0 9px;
+  padding: 0 5px;
   border: 1px solid var(--panel-border);
   border-radius: 999px;
   background: var(--pill-bg);
@@ -188,7 +188,7 @@ defineEmits<{
 
 .theme-switch-track {
   position: relative;
-  width: 34px;
+  width: 28px;
   height: 18px;
   border-radius: 999px;
   background: var(--toolbar-switch-off);
@@ -208,8 +208,8 @@ defineEmits<{
     background 180ms ease;
 }
 
-.theme-switch-thumb.is-light {
-  transform: translateX(16px);
+.theme-switch-thumb.is-dark {
+  transform: translateX(10px);
 }
 
 .reconnect-indicator {
