@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import {
-  createEventsSocket,
-  getAgents,
-  getRoomMessages,
-  getRooms,
-  postRoomMessage,
-} from './api';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { createEventsSocket, getAgents, getRoomMessages, getRooms, postRoomMessage } from './api';
+import ChatPanel from './components/ChatPanel.vue';
+import SidebarPanel from './components/SidebarPanel.vue';
+import TopBar from './components/TopBar.vue';
 import type {
   AgentInfo,
   MessageInfo,
@@ -16,8 +13,12 @@ import type {
   WsEvent,
   WsMessageEvent,
 } from './types';
-
-type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+import {
+  formatConnectionState,
+  formatPreview,
+  groupRoomsByTeam,
+  type ConnectionState,
+} from './utils';
 
 const rooms = ref<RoomState[]>([]);
 const agents = ref<AgentInfo[]>([]);
@@ -30,14 +31,22 @@ const errorMessage = ref('');
 const connectionState = ref<ConnectionState>('connecting');
 const reconnectAttempt = ref(0);
 const composerNotice = ref('当前为观察模式');
-const messageViewport = ref<HTMLElement | null>(null);
+const messageViewport = useTemplateRef('messageViewport');
 
 let ws: WebSocket | null = null;
 let reconnectTimer: number | null = null;
 let shouldReconnect = true;
 let activeSocketToken = 0;
 
-const sortedAgents = computed(() => {
+const currentRoom = computed(
+  () => rooms.value.find((room) => room.room_id === currentRoomId.value) ?? null,
+);
+const totalMessageCount = computed(() => messages.value.length);
+const statusLabel = computed(() =>
+  formatConnectionState(connectionState.value, reconnectAttempt.value),
+);
+const groupedRooms = computed(() => groupRoomsByTeam(rooms.value));
+const uniqueAgents = computed(() => {
   const unique = new Map<string, AgentInfo>();
 
   for (const agent of agents.value) {
@@ -49,72 +58,10 @@ const sortedAgents = computed(() => {
   return Array.from(unique.values());
 });
 
-const currentRoom = computed(() =>
-  rooms.value.find((room) => room.room_id === currentRoomId.value) ?? null,
-);
-
-const isPrivateRoom = computed(() => currentRoom.value?.room_type === 'private');
-
-const totalMessageCount = computed(() => messages.value.length);
-
-const statusLabel = computed(() => {
-  if (connectionState.value === 'connected') {
-    return '已连接';
-  }
-  if (connectionState.value === 'reconnecting') {
-    return `重连中 #${reconnectAttempt.value}`;
-  }
-  if (connectionState.value === 'disconnected') {
-    return '已断开';
-  }
-  return '连接中';
-});
-
-const groupedRooms = computed(() => {
-  const map = new Map<string, RoomState[]>();
-
-  for (const room of rooms.value) {
-    const bucket = map.get(room.team_name) ?? [];
-    bucket.push(room);
-    map.set(room.team_name, bucket);
-  }
-
-  return Array.from(map.entries());
-});
-
-function formatPreview(message: Pick<MessageInfo, 'sender' | 'content'>): string {
-  return `${message.sender}: ${message.content.replace(/\n/g, ' ')}`;
-}
-
-function formatTime(time: string): string {
-  const date = new Date(time);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(date);
-}
-
-function bubbleSide(sender: string): 'left' | 'right' | 'center' {
-  if (sender === 'system') {
-    return 'center';
-  }
-  if (sender === 'Operator') {
-    return 'right';
-  }
-  return 'left';
-}
-
 function scrollMessagesToBottom(force = false): void {
-  const viewport = messageViewport.value;
+  const viewport = messageViewport.value?.querySelector('.message-stream');
 
-  if (!viewport) {
+  if (!(viewport instanceof HTMLElement)) {
     return;
   }
 
@@ -211,15 +158,20 @@ async function refreshAll(options?: { preserveSelection?: boolean }): Promise<vo
 
 function applyMessageEvent(event: WsMessageEvent): void {
   const room = rooms.value.find((entry) => entry.room_id === event.room_id);
-  if (room) {
-    room.preview = formatPreview({ sender: event.sender, content: event.content });
+  if (!room) {
+    return;
+  }
 
-    if (event.room_id === currentRoomId.value) {
-      messages.value = [...messages.value, { sender: event.sender, content: event.content, time: event.time }];
-      nextTick(() => scrollMessagesToBottom());
-    } else {
-      room.unread += 1;
-    }
+  room.preview = formatPreview({ sender: event.sender, content: event.content });
+
+  if (event.room_id === currentRoomId.value) {
+    messages.value = [
+      ...messages.value,
+      { sender: event.sender, content: event.content, time: event.time },
+    ];
+    nextTick(() => scrollMessagesToBottom());
+  } else {
+    room.unread += 1;
   }
 }
 
@@ -314,6 +266,10 @@ async function handleSubmit(): Promise<void> {
   }
 }
 
+function updateDraft(value: string): void {
+  draft.value = value;
+}
+
 watch(currentRoom, (room) => {
   composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
 });
@@ -340,125 +296,33 @@ onBeforeUnmount(() => {
     <div class="ambient ambient-left"></div>
     <div class="ambient ambient-right"></div>
 
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Team Agent Web Console</p>
-        <h1>多人协作观测台</h1>
-      </div>
-      <div class="status-group">
-        <div class="status-pill" :data-state="connectionState">
-          <span class="status-dot"></span>
-          {{ statusLabel }}
-        </div>
-        <div class="metric-pill">{{ totalMessageCount }} 条消息</div>
-      </div>
-    </header>
+    <TopBar
+      :connection-state="connectionState"
+      :status-label="statusLabel"
+      :total-message-count="totalMessageCount"
+    />
 
     <main class="workspace">
-      <aside class="sidebar panel">
-        <section class="sidebar-block">
-          <div class="block-head">
-            <h2>聊天室</h2>
-            <span>{{ rooms.length }}</span>
-          </div>
+      <SidebarPanel
+        :loading="loading"
+        :grouped-rooms="groupedRooms"
+        :current-room-id="currentRoomId"
+        :agents="uniqueAgents"
+        @select-room="loadRoomMessages($event, { force: true })"
+      />
 
-          <div v-if="loading" class="placeholder">正在同步房间列表…</div>
-
-          <template v-else>
-            <div v-for="[teamName, teamRooms] in groupedRooms" :key="teamName" class="team-group">
-              <div class="team-name">{{ teamName }}</div>
-              <button
-                v-for="room in teamRooms"
-                :key="room.room_id"
-                class="room-card"
-                :class="{ selected: room.room_id === currentRoomId }"
-                type="button"
-                @click="loadRoomMessages(room.room_id, { force: true })"
-              >
-                <div class="room-head">
-                  <div class="room-title">
-                    <span class="room-icon">{{ room.room_type === 'private' ? '单' : '群' }}</span>
-                    <strong>{{ room.room_name }}</strong>
-                  </div>
-                  <span v-if="room.unread > 0" class="unread-badge">{{ room.unread }}</span>
-                </div>
-                <div class="room-meta">{{ room.members.length }} 人 · {{ room.state }}</div>
-                <p class="room-preview">{{ room.preview }}</p>
-              </button>
-            </div>
-          </template>
-        </section>
-
-        <section class="sidebar-block">
-          <div class="block-head">
-            <h2>Agent</h2>
-            <span>{{ sortedAgents.length }}</span>
-          </div>
-          <div class="agent-list">
-            <div v-for="agent in sortedAgents" :key="agent.name" class="agent-card">
-              <div>
-                <strong>{{ agent.name }}</strong>
-                <p>{{ agent.model }}</p>
-              </div>
-              <div class="agent-state" :data-state="agent.status">
-                <span class="status-dot"></span>
-                {{ agent.status === 'active' ? '忙碌' : '空闲' }}
-              </div>
-            </div>
-          </div>
-        </section>
-      </aside>
-
-      <section class="chat panel">
-        <div class="chat-head">
-          <div>
-            <p class="eyebrow">当前房间</p>
-            <h2>{{ currentRoom?.room_name ?? '暂无房间' }}</h2>
-          </div>
-          <div class="chat-side-info">
-            <span>{{ currentRoom?.team_name ?? '未分组' }}</span>
-            <span>{{ currentRoom?.room_type === 'private' ? '可发送消息' : '观察模式' }}</span>
-          </div>
-        </div>
-
-        <div v-if="errorMessage" class="banner error">{{ errorMessage }}</div>
-        <div v-else-if="reloadingMessages" class="banner">正在加载消息…</div>
-
-        <div ref="messageViewport" class="message-stream">
-          <div
-            v-for="(message, index) in messages"
-            :key="`${message.time}-${message.sender}-${index}`"
-            class="message-row"
-            :class="`side-${bubbleSide(message.sender)}`"
-          >
-            <template v-if="bubbleSide(message.sender) === 'center'">
-              <div class="system-note">{{ message.content }}</div>
-            </template>
-            <template v-else>
-              <div class="message-meta">
-                <span v-if="bubbleSide(message.sender) === 'left'" class="sender">{{ message.sender }}</span>
-                <span class="time">{{ formatTime(message.time) }}</span>
-                <span v-if="bubbleSide(message.sender) === 'right'" class="sender">{{ message.sender }}</span>
-              </div>
-              <div class="bubble">{{ message.content }}</div>
-            </template>
-          </div>
-        </div>
-
-        <form class="composer" @submit.prevent="handleSubmit">
-          <textarea
-            v-model="draft"
-            :disabled="!isPrivateRoom"
-            placeholder="在这里输入发给 Agent 的消息…"
-            rows="3"
-            @keydown.enter.exact.prevent="handleSubmit"
-          ></textarea>
-          <div class="composer-foot">
-            <span>{{ composerNotice || '按 Enter 发送，Shift + Enter 换行' }}</span>
-            <button type="submit" :disabled="!isPrivateRoom || !draft.trim()">发送</button>
-          </div>
-        </form>
-      </section>
+      <div ref="messageViewport" class="chat-shell">
+        <ChatPanel
+          :current-room="currentRoom"
+          :messages="messages"
+          :error-message="errorMessage"
+          :reloading-messages="reloadingMessages"
+          :draft="draft"
+          :composer-notice="composerNotice"
+          @update-draft="updateDraft"
+          @submit="handleSubmit"
+        />
+      </div>
     </main>
   </div>
 </template>
