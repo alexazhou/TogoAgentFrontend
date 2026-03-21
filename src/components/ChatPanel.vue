@@ -18,10 +18,11 @@ const emit = defineEmits<{
 }>();
 
 const isPrivateRoom = computed(() => props.currentRoom?.room_type === 'private');
+const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMessages));
 </script>
 
 <template>
-  <section class="chat panel">
+  <section class="chat panel" :class="{ 'has-banner': hasBanner, 'no-banner': !hasBanner }">
     <div class="chat-head">
       <div>
         <h2>{{ currentRoom?.room_name ?? '暂无房间' }}</h2>

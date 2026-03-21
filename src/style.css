@@ -387,13 +387,20 @@ textarea {
 
 .chat {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: 0;
   padding: 8px 10px;
   height: 100%;
   min-height: 0;
   overflow: hidden;
   background: #0e1621;
+}
+
+.chat.has-banner {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.chat.no-banner {
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
 .chat-head {
@@ -415,11 +422,15 @@ textarea {
 }
 
 .banner {
-  grid-row: 2;
   border-radius: 6px;
   padding: 6px 8px;
   background: #17212b;
   font-size: 0.78rem;
+}
+
+.chat.has-banner .banner {
+  grid-row: 2;
+  margin-top: 8px;
 }
 
 .banner.error {
@@ -428,9 +439,17 @@ textarea {
 }
 
 .message-viewport {
-  grid-row: 3;
   min-height: 0;
   overflow: hidden;
+}
+
+.chat.has-banner .message-viewport {
+  grid-row: 3;
+}
+
+.chat.no-banner .message-viewport {
+  grid-row: 2;
+  margin-top: 2px;
 }
 
 .message-stream {
@@ -536,11 +555,18 @@ textarea {
 }
 
 .composer {
-  grid-row: 4;
   background: #17212b;
   border-top: 2px solid #223040;
   padding: 0;
   overflow: hidden;
+}
+
+.chat.has-banner .composer {
+  grid-row: 4;
+}
+
+.chat.no-banner .composer {
+  grid-row: 3;
 }
 
 .composer textarea {
@@ -580,13 +606,20 @@ textarea {
 }
 
 .composer-hint {
-  grid-row: 4;
   background: #17212b;
   border-top: 2px solid #223040;
   color: #4c5e72;
   text-align: center;
   padding: 3px 8px;
   font-size: 0.74rem;
+}
+
+.chat.has-banner .composer-hint {
+  grid-row: 4;
+}
+
+.chat.no-banner .composer-hint {
+  grid-row: 3;
 }
 
 .composer button {

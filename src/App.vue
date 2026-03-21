@@ -69,6 +69,27 @@ function scrollMessagesToBottom(force = false): void {
   const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
   if (force || distanceToBottom < 64) {
     viewport.scrollTop = viewport.scrollHeight;
+    requestAnimationFrame(() => {
+      alignFirstVisibleMessage(viewport);
+      requestAnimationFrame(() => {
+        alignFirstVisibleMessage(viewport);
+      });
+    });
+  }
+}
+
+function alignFirstVisibleMessage(viewport: HTMLElement): void {
+  const rows = Array.from(viewport.querySelectorAll<HTMLElement>('.message-row'));
+  const viewportScrollTop = viewport.scrollTop;
+  const topPadding = 8;
+
+  for (const row of rows) {
+    const rowTop = row.offsetTop;
+    const rowBottom = rowTop + row.offsetHeight;
+    if (rowTop < viewportScrollTop && rowBottom > viewportScrollTop) {
+      viewport.scrollTop = Math.max(0, rowTop - topPadding);
+      break;
+    }
   }
 }
 
