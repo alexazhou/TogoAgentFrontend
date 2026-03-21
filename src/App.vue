@@ -33,11 +33,13 @@ const connectionState = ref<ConnectionState>('connecting');
 const reconnectAttempt = ref(0);
 const composerNotice = ref('当前为观察模式');
 const messageViewport = useTemplateRef('messageViewport');
+const shouldFollowMessages = ref(true);
 
 let ws: WebSocket | null = null;
 let reconnectTimer: number | null = null;
 let shouldReconnect = true;
 let activeSocketToken = 0;
+let boundMessageStream: HTMLElement | null = null;
 
 const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === currentRoomId.value) ?? null,
@@ -59,38 +61,49 @@ const uniqueAgents = computed(() => {
   return Array.from(unique.values());
 });
 
-function scrollMessagesToBottom(force = false): void {
+function getMessageStream(): HTMLElement | null {
   const viewport = messageViewport.value?.querySelector('.message-stream');
+  return viewport instanceof HTMLElement ? viewport : null;
+}
 
-  if (!(viewport instanceof HTMLElement)) {
+function isAtBottom(viewport: HTMLElement): boolean {
+  const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+  return distanceToBottom <= 4;
+}
+
+function syncFollowMessages(viewport?: HTMLElement | null): void {
+  const target = viewport ?? getMessageStream();
+  if (!target) {
+    shouldFollowMessages.value = true;
+    return;
+  }
+  shouldFollowMessages.value = isAtBottom(target);
+}
+
+function handleMessageScroll(): void {
+  syncFollowMessages();
+}
+
+function bindMessageScrollListener(): void {
+  const viewport = getMessageStream();
+  if (!viewport || viewport === boundMessageStream) {
     return;
   }
 
-  const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-  if (force || distanceToBottom < 64) {
-    viewport.scrollTop = viewport.scrollHeight;
-    requestAnimationFrame(() => {
-      alignFirstVisibleMessage(viewport);
-      requestAnimationFrame(() => {
-        alignFirstVisibleMessage(viewport);
-      });
-    });
-  }
+  boundMessageStream?.removeEventListener('scroll', handleMessageScroll);
+  viewport.addEventListener('scroll', handleMessageScroll, { passive: true });
+  boundMessageStream = viewport;
+  syncFollowMessages(viewport);
 }
 
-function alignFirstVisibleMessage(viewport: HTMLElement): void {
-  const rows = Array.from(viewport.querySelectorAll<HTMLElement>('.message-row'));
-  const viewportScrollTop = viewport.scrollTop;
-  const topPadding = 8;
-
-  for (const row of rows) {
-    const rowTop = row.offsetTop;
-    const rowBottom = rowTop + row.offsetHeight;
-    if (rowTop < viewportScrollTop && rowBottom > viewportScrollTop) {
-      viewport.scrollTop = Math.max(0, rowTop - topPadding);
-      break;
-    }
+function scrollMessagesToBottom(): void {
+  const viewport = getMessageStream();
+  if (!viewport) {
+    return;
   }
+
+  viewport.scrollTop = viewport.scrollHeight;
+  shouldFollowMessages.value = true;
 }
 
 async function loadRoomMessages(roomId: string, options?: { force?: boolean }): Promise<void> {
@@ -111,7 +124,8 @@ async function loadRoomMessages(roomId: string, options?: { force?: boolean }): 
     }
     composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
     await nextTick();
-    scrollMessagesToBottom(true);
+    bindMessageScrollListener();
+    scrollMessagesToBottom();
   } catch (error) {
     errorMessage.value = '加载消息失败，请检查网络或后端状态。';
     console.error(error);
@@ -187,11 +201,21 @@ function applyMessageEvent(event: WsMessageEvent): void {
   room.preview = formatPreview({ sender: event.sender, content: event.content });
 
   if (event.room_id === currentRoomId.value) {
+    const wasAtBottom = (() => {
+      const viewport = getMessageStream();
+      return viewport ? isAtBottom(viewport) : shouldFollowMessages.value;
+    })();
     messages.value = [
       ...messages.value,
       { sender: event.sender, content: event.content, time: event.time },
     ];
-    nextTick(() => scrollMessagesToBottom());
+    nextTick(() => {
+      if (wasAtBottom) {
+        scrollMessagesToBottom();
+      } else {
+        syncFollowMessages();
+      }
+    });
   } else {
     room.unread += 1;
   }
@@ -298,10 +322,13 @@ watch(currentRoom, (room) => {
 
 onMounted(async () => {
   await refreshAll();
+  bindMessageScrollListener();
   connectWebSocket();
 });
 
 onBeforeUnmount(() => {
+  boundMessageStream?.removeEventListener('scroll', handleMessageScroll);
+  boundMessageStream = null;
   shouldReconnect = false;
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
