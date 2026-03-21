@@ -30,6 +30,7 @@
   --text-strong: #d9e1ea;
   --selected: #2b5278;
   --divider: #0e1621;
+  --room-title-text: var(--text-strong);
   --topbar-bg: #1c2733;
   --pill-bg: #223040;
   --chat-bg: #0e1621;
@@ -83,6 +84,7 @@
   --text-strong: #213244;
   --selected: #dbeaf9;
   --divider: #e4ecf5;
+  --room-title-text: #39516a;
   --topbar-bg: rgba(255, 255, 255, 0.82);
   --pill-bg: #ecf2f9;
   --chat-bg: rgba(255, 255, 255, 0.72);

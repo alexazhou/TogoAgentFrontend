@@ -115,7 +115,7 @@ const emit = defineEmits<{
 .room-title strong {
   font-size: 0.88rem;
   line-height: 1.15;
-  color: var(--text-strong);
+  color: var(--room-title-text);
 }
 
 .room-icon {
