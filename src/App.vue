@@ -34,6 +34,8 @@ const messageViewport = ref<HTMLElement | null>(null);
 
 let ws: WebSocket | null = null;
 let reconnectTimer: number | null = null;
+let shouldReconnect = true;
+let activeSocketToken = 0;
 
 const sortedAgents = computed(() => {
   const unique = new Map<string, AgentInfo>();
@@ -242,14 +244,22 @@ function scheduleReconnect(): void {
 }
 
 function connectWebSocket(): void {
+  activeSocketToken += 1;
+  const socketToken = activeSocketToken;
+
   if (ws) {
+    shouldReconnect = false;
     ws.close();
+    shouldReconnect = true;
   }
 
   connectionState.value = reconnectAttempt.value > 0 ? 'reconnecting' : 'connecting';
   ws = createEventsSocket();
 
   ws.addEventListener('open', () => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
     connectionState.value = 'connected';
     reconnectAttempt.value = 0;
     if (reconnectTimer !== null) {
@@ -260,6 +270,9 @@ function connectWebSocket(): void {
   });
 
   ws.addEventListener('message', (messageEvent) => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
     const payload = JSON.parse(messageEvent.data) as WsEvent;
     if (payload.event === 'message') {
       applyMessageEvent(payload);
@@ -269,11 +282,19 @@ function connectWebSocket(): void {
   });
 
   ws.addEventListener('close', () => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
     connectionState.value = 'disconnected';
-    scheduleReconnect();
+    if (shouldReconnect) {
+      scheduleReconnect();
+    }
   });
 
   ws.addEventListener('error', () => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
     connectionState.value = 'disconnected';
   });
 }
@@ -303,6 +324,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  shouldReconnect = false;
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
   }
@@ -429,6 +451,7 @@ onBeforeUnmount(() => {
             :disabled="!isPrivateRoom"
             placeholder="在这里输入发给 Agent 的消息…"
             rows="3"
+            @keydown.enter.exact.prevent="handleSubmit"
           ></textarea>
           <div class="composer-foot">
             <span>{{ composerNotice || '按 Enter 发送，Shift + Enter 换行' }}</span>
