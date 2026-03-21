@@ -26,7 +26,7 @@ const emit = defineEmits<{
 
       <template v-else>
         <div v-for="[teamName, teamRooms] in groupedRooms" :key="teamName" class="team-group">
-          <div class="team-name">{{ teamName }}</div>
+          <div v-if="teamName !== 'default'" class="team-name">{{ teamName }}</div>
           <button
             v-for="room in teamRooms"
             :key="room.room_id"
@@ -40,9 +40,11 @@ const emit = defineEmits<{
                 <span class="room-icon">{{ room.room_type === 'private' ? '单' : '群' }}</span>
                 <strong>{{ room.room_name }}</strong>
               </div>
-              <span v-if="room.unread > 0" class="unread-badge">{{ room.unread }}</span>
+              <div class="room-head-right">
+                <div class="room-meta">{{ room.members.length }} 人 · {{ room.state }}</div>
+                <span v-if="room.unread > 0" class="unread-badge">{{ room.unread }}</span>
+              </div>
             </div>
-            <div class="room-meta">{{ room.members.length }} 人 · {{ room.state }}</div>
             <p class="room-preview">{{ room.preview }}</p>
           </button>
         </div>
