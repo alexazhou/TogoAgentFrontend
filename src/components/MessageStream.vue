@@ -67,3 +67,89 @@ function senderColor(sender: string): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+.message-stream {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.message-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.message-row.side-left {
+  align-items: flex-start;
+}
+
+.message-row.side-right {
+  align-items: flex-end;
+}
+
+.message-row.side-center {
+  align-items: center;
+}
+
+.message-meta {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.72rem;
+  padding: 0 6px;
+}
+
+.sender {
+  font-weight: 600;
+  font-size: 0.84rem;
+  line-height: 1;
+}
+
+.time {
+  color: #4c5e72;
+}
+
+.bubble,
+.system-note {
+  max-width: min(80%, 820px);
+  border-radius: 6px;
+  padding: 10px 14px;
+  line-height: 1.55;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 0.82rem;
+}
+
+.bubble {
+  background: var(--bubble-left);
+}
+
+.side-right .bubble {
+  background: var(--bubble-right);
+  color: #fffaf5;
+}
+
+.system-note {
+  text-align: center;
+  color: var(--muted);
+  background: transparent;
+  padding: 6px 0 10px;
+  max-width: 100%;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  .bubble,
+  .system-note {
+    max-width: 100%;
+  }
+}
+</style>

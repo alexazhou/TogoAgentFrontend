@@ -378,3 +378,73 @@ onBeforeUnmount(() => {
     </main>
   </div>
 </template>
+
+<style scoped>
+.shell {
+  position: relative;
+  height: 100vh;
+  padding: 10px;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+}
+
+.ambient {
+  display: none;
+}
+
+.ambient-left {
+  top: -8rem;
+  left: -8rem;
+  background: rgba(255, 183, 116, 0.28);
+}
+
+.ambient-right {
+  right: -8rem;
+  bottom: -10rem;
+  background: rgba(124, 191, 255, 0.24);
+}
+
+.workspace,
+.topbar {
+  position: relative;
+  z-index: 1;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.left-stack {
+  display: grid;
+  grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 8px;
+  min-height: 0;
+}
+
+.chat-shell {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 980px) {
+  .shell {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .left-stack {
+    grid-template-rows: minmax(280px, 1fr) minmax(220px, 0.8fr);
+  }
+}
+</style>

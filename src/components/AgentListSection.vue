@@ -27,3 +27,59 @@ defineProps<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-card {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #223040;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: inherit;
+}
+
+.agent-card strong {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.1;
+  color: var(--text-strong);
+}
+
+.agent-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.agent-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-size: 0.72rem;
+}
+
+.agent-state[data-state='active'] .status-dot {
+  background: var(--good);
+  box-shadow: none;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #4c5e72;
+}
+</style>
