@@ -282,7 +282,7 @@ textarea {
 .room-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
 }
 
@@ -290,6 +290,27 @@ textarea {
   font-size: 0.88rem;
   line-height: 1.15;
   color: var(--text-strong);
+}
+
+.unread-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 15px;
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(248, 81, 73, 0.16);
+  color: #f87168;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
+  align-self: center;
+}
+
+.unread-inline.active {
+  color: #f87168;
 }
 
 .room-head-right {
@@ -336,18 +357,6 @@ textarea {
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
-}
-
-.unread-badge {
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.7rem;
 }
 
 .agent-list {

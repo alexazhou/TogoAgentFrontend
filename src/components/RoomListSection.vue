@@ -39,10 +39,10 @@ const emit = defineEmits<{
               <div class="room-title">
                 <span class="room-icon">{{ room.room_type === 'private' ? '单' : '群' }}</span>
                 <strong>{{ room.room_name }}</strong>
+                <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
               </div>
               <div class="room-head-right">
-                <div class="room-meta">{{ room.members.length }} 人 · {{ room.state }}</div>
-                <span v-if="room.unread > 0" class="unread-badge">{{ room.unread }}</span>
+                <div class="room-meta">{{ room.members.length }} 人</div>
               </div>
             </div>
             <p class="room-preview">{{ room.preview }}</p>
