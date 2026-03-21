@@ -20,7 +20,7 @@ defineProps<{
           <p>{{ agent.model }}</p>
         </div>
         <div class="agent-state" :data-state="agent.status">
-          <span class="status-dot"></span>
+          <span class="status-dot" :class="{ 'status-dot-pulse': agent.status === 'active' }"></span>
           {{ agent.status === 'active' ? '忙碌' : '空闲' }}
         </div>
       </div>
@@ -81,5 +81,25 @@ defineProps<{
   height: 7px;
   border-radius: 999px;
   background: var(--status-dot-idle);
+}
+
+.status-dot-pulse {
+  width: 6px;
+  height: 6px;
+  background: var(--good);
+  animation: agent-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes agent-dot-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
 }
 </style>

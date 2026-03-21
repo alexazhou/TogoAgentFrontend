@@ -20,6 +20,26 @@ defineEmits<{
       <p class="eyebrow">Team Agent Web Console</p>
     </div>
     <div class="status-group">
+      <div class="status-pill" :data-state="connectionState">
+        <span
+          v-if="connectionState === 'waiting_reconnect'"
+          class="reconnect-indicator"
+          :style="{ '--reconnect-progress': reconnectProgress.toString() }"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 16 16" class="reconnect-ring">
+            <circle class="reconnect-ring-track" cx="8" cy="8" r="5.5" />
+            <circle class="reconnect-ring-progress" cx="8" cy="8" r="5.5" />
+          </svg>
+        </span>
+        <span
+          v-else
+          class="status-dot"
+          :class="{ 'status-dot-pulse': connectionState === 'reconnecting' }"
+        ></span>
+        {{ statusLabel }}
+      </div>
+      <div class="metric-pill">{{ totalMessageCount }} 条消息</div>
       <button
         class="theme-switch"
         type="button"
@@ -51,26 +71,6 @@ defineEmits<{
           </svg>
         </span>
       </button>
-      <div class="status-pill" :data-state="connectionState">
-        <span
-          v-if="connectionState === 'waiting_reconnect'"
-          class="reconnect-indicator"
-          :style="{ '--reconnect-progress': reconnectProgress.toString() }"
-          aria-hidden="true"
-        >
-          <svg viewBox="0 0 16 16" class="reconnect-ring">
-            <circle class="reconnect-ring-track" cx="8" cy="8" r="5.5" />
-            <circle class="reconnect-ring-progress" cx="8" cy="8" r="5.5" />
-          </svg>
-        </span>
-        <span
-          v-else
-          class="status-dot"
-          :class="{ 'status-dot-pulse': connectionState === 'reconnecting' }"
-        ></span>
-        {{ statusLabel }}
-      </div>
-      <div class="metric-pill">{{ totalMessageCount }} 条消息</div>
     </div>
   </header>
 </template>
