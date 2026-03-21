@@ -98,12 +98,12 @@
   --status-dot-idle: #98a9bd;
   --toolbar-switch-off: rgba(15, 23, 42, 0.18);
   --toolbar-switch-handle: #ffffff;
-  --room-private-border: rgba(216, 157, 23, 0.38);
-  --room-private-bg: rgba(216, 157, 23, 0.1);
-  --room-private-text: #b57e11;
-  --room-group-border: rgba(79, 134, 198, 0.34);
-  --room-group-bg: rgba(79, 134, 198, 0.1);
-  --room-group-text: #3e78b9;
+  --room-private-border: rgba(196, 137, 12, 0.42);
+  --room-private-bg: rgba(255, 244, 214, 0.9);
+  --room-private-text: #b06c00;
+  --room-group-border: rgba(70, 129, 199, 0.38);
+  --room-group-bg: rgba(230, 241, 255, 0.92);
+  --room-group-text: #2f6fb2;
   --unread-bg: rgba(217, 77, 70, 0.12);
   --unread-text: #d94d46;
   color-scheme: light;
