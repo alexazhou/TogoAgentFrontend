@@ -41,16 +41,18 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
     </div>
 
     <form v-if="isPrivateRoom" class="composer active" @submit.prevent="emit('submit')">
-      <textarea
-        :value="draft"
-        placeholder="在此输入消息..."
-        rows="2"
-        @input="emit('updateDraft', ($event.target as HTMLTextAreaElement).value)"
-        @keydown.enter.exact.prevent="emit('submit')"
-      ></textarea>
-      <div class="composer-foot">
-        <span>按 Enter 发送，Shift + Enter 换行</span>
-        <button type="submit" :disabled="!draft.trim()">发送</button>
+      <div class="composer-editor">
+        <textarea
+          :value="draft"
+          placeholder="在此输入消息..."
+          rows="2"
+          @input="emit('updateDraft', ($event.target as HTMLTextAreaElement).value)"
+          @keydown.enter.exact.prevent="emit('submit')"
+        ></textarea>
+        <div class="composer-foot">
+          <span>按 Enter 发送，Shift + Enter 换行</span>
+          <button type="submit" :disabled="!draft.trim()">发送</button>
+        </div>
       </div>
     </form>
 
