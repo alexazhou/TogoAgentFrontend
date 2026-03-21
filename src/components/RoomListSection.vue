@@ -37,7 +37,12 @@ const emit = defineEmits<{
           >
             <div class="room-head">
               <div class="room-title">
-                <span class="room-icon">{{ room.room_type === 'private' ? '单' : '群' }}</span>
+                <span
+                  class="room-icon"
+                  :class="room.room_type === 'private' ? 'room-icon-private' : 'room-icon-group'"
+                >
+                  {{ room.room_type === 'private' ? '单' : '群' }}
+                </span>
                 <strong>{{ room.room_name }}</strong>
                 <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
               </div>
@@ -116,13 +121,26 @@ const emit = defineEmits<{
 .room-icon {
   width: 16px;
   height: 16px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
   font-size: 0.72rem;
+  line-height: 1;
+  padding-top: 0.5px;
   flex: 0 0 auto;
+}
+
+.room-icon-private {
+  border: 1px solid rgba(248, 184, 77, 0.48);
+  background: rgba(248, 184, 77, 0.12);
+  color: #f8b84d;
+}
+
+.room-icon-group {
+  border: 1px solid rgba(105, 170, 230, 0.5);
+  background: rgba(105, 170, 230, 0.12);
+  color: #69aae6;
 }
 
 .unread-inline {
