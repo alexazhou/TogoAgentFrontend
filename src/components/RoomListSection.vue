@@ -68,7 +68,7 @@ const emit = defineEmits<{
   margin-bottom: 4px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: #223040;
+  background: var(--pill-bg);
   color: var(--muted);
   font-size: 0.7rem;
 }
@@ -77,7 +77,7 @@ const emit = defineEmits<{
   width: 100%;
   display: block;
   padding: 8px 10px;
-  border: 1px solid #223040;
+  border: 1px solid var(--panel-border-strong);
   border-radius: 8px;
   background: var(--surface-soft);
   color: inherit;
@@ -94,7 +94,7 @@ const emit = defineEmits<{
 
 .room-card:hover,
 .room-card.selected {
-  border-color: #365c82;
+  border-color: var(--focus-border);
   background: var(--selected);
 }
 
@@ -132,15 +132,15 @@ const emit = defineEmits<{
 }
 
 .room-icon-private {
-  border: 1px solid rgba(248, 184, 77, 0.48);
-  background: rgba(248, 184, 77, 0.12);
-  color: #f8b84d;
+  border: 1px solid var(--room-private-border);
+  background: var(--room-private-bg);
+  color: var(--room-private-text);
 }
 
 .room-icon-group {
-  border: 1px solid rgba(105, 170, 230, 0.5);
-  background: rgba(105, 170, 230, 0.12);
-  color: #69aae6;
+  border: 1px solid var(--room-group-border);
+  background: var(--room-group-bg);
+  color: var(--room-group-text);
 }
 
 .unread-inline {
@@ -152,8 +152,8 @@ const emit = defineEmits<{
   margin-left: 4px;
   padding: 0 5px;
   border-radius: 999px;
-  background: rgba(248, 81, 73, 0.16);
-  color: #f87168;
+  background: var(--unread-bg);
+  color: var(--unread-text);
   font-size: 0.66rem;
   font-weight: 600;
   line-height: 1;

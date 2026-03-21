@@ -3,9 +3,14 @@ import type { ConnectionState } from '../utils';
 
 defineProps<{
   connectionState: ConnectionState;
+  isLightMode: boolean;
   statusLabel: string;
   reconnectProgress: number;
   totalMessageCount: number;
+}>();
+
+defineEmits<{
+  toggleTheme: [];
 }>();
 </script>
 
@@ -15,6 +20,37 @@ defineProps<{
       <p class="eyebrow">Team Agent Web Console</p>
     </div>
     <div class="status-group">
+      <button
+        class="theme-switch"
+        type="button"
+        :aria-pressed="isLightMode"
+        :title="isLightMode ? '切换到暗色模式' : '切换到亮色模式'"
+        @click="$emit('toggleTheme')"
+      >
+        <span class="theme-switch-icon theme-switch-icon-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2.75v2.5"></path>
+            <path d="M12 18.75v2.5"></path>
+            <path d="M4.93 4.93l1.77 1.77"></path>
+            <path d="M17.3 17.3l1.77 1.77"></path>
+            <path d="M2.75 12h2.5"></path>
+            <path d="M18.75 12h2.5"></path>
+            <path d="M4.93 19.07l1.77-1.77"></path>
+            <path d="M17.3 6.7l1.77-1.77"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-track">
+          <span class="theme-switch-thumb" :class="{ 'is-light': isLightMode }"></span>
+        </span>
+        <span class="theme-switch-icon theme-switch-icon-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.8 7.8 0 1 0 10.5 10.5Z"
+            ></path>
+          </svg>
+        </span>
+      </button>
       <div class="status-pill" :data-state="connectionState">
         <span
           v-if="connectionState === 'waiting_reconnect'"
@@ -46,8 +82,8 @@ defineProps<{
   gap: 10px;
   align-items: center;
   min-height: 0;
-  background: #1c2733;
-  border: 1px solid #223040;
+  background: var(--topbar-bg);
+  border: 1px solid var(--panel-border);
   border-radius: 10px;
   padding: 4px 10px;
 }
@@ -74,7 +110,7 @@ defineProps<{
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 3px 8px;
-  background: #223040;
+  background: var(--pill-bg);
   color: var(--muted);
   font-size: 0.78rem;
 }
@@ -91,13 +127,13 @@ defineProps<{
 .status-pill[data-state='waiting_reconnect'] .status-dot,
 .status-pill[data-state='reconnecting'] .status-dot,
 .status-pill[data-state='connecting'] .status-dot {
-  background: #ffce54;
+  background: var(--warn);
   box-shadow: none;
 }
 
 .status-pill[data-state='waiting_reconnect'],
 .status-pill[data-state='reconnecting'] {
-  color: #ffce54;
+  color: var(--warn);
 }
 
 .status-pill[data-state='disconnected'] .status-dot {
@@ -108,14 +144,72 @@ defineProps<{
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #4c5e72;
+  background: var(--status-dot-idle);
 }
 
 .status-dot-pulse {
   width: 6px;
   height: 6px;
-  background: #ffce54;
-  animation: reconnect-dot-pulse 1.6s ease-in-out infinite;
+  background: var(--warn);
+  animation: reconnect-dot-pulse 2s ease-in-out infinite;
+}
+
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--pill-bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.theme-switch:hover {
+  border-color: var(--focus-border);
+  color: var(--text-strong);
+}
+
+.theme-switch svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-switch-track {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--toolbar-switch-off);
+}
+
+.theme-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--toolbar-switch-handle);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+  transition:
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.theme-switch-thumb.is-light {
+  transform: translateX(16px);
 }
 
 .reconnect-indicator {
@@ -124,7 +218,7 @@ defineProps<{
   height: 16px;
   display: inline-grid;
   place-items: center;
-  color: #ffce54;
+  color: var(--warn);
 }
 
 .reconnect-ring {
@@ -140,7 +234,7 @@ defineProps<{
 }
 
 .reconnect-ring-track {
-  stroke: rgba(255, 206, 84, 0.22);
+  stroke: var(--warn-track);
 }
 
 .reconnect-ring-progress {

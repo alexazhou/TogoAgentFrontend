@@ -113,7 +113,7 @@ function senderColor(sender: string): string {
 }
 
 .time {
-  color: #4c5e72;
+  color: var(--hint-text);
 }
 
 .bubble,
@@ -134,7 +134,7 @@ function senderColor(sender: string): string {
 
 .side-right .bubble {
   background: var(--bubble-right);
-  color: #fffaf5;
+  color: var(--bubble-right-text);
 }
 
 .system-note {

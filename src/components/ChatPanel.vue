@@ -68,7 +68,7 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #0e1621;
+  background: var(--chat-bg);
 }
 
 .chat.has-banner {
@@ -86,7 +86,7 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
   gap: 10px;
   align-items: flex-end;
   padding: 0 2px 8px;
-  border-bottom: 1px solid #223040;
+  border-bottom: 1px solid var(--chat-divider);
 }
 
 .chat-head h2 {
@@ -108,7 +108,7 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 .banner {
   border-radius: 6px;
   padding: 6px 8px;
-  background: #17212b;
+  background: var(--banner-bg);
   font-size: 0.78rem;
 }
 
@@ -118,8 +118,8 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 }
 
 .banner.error {
-  background: rgba(255, 119, 101, 0.12);
-  color: #9b342d;
+  background: var(--banner-error-bg);
+  color: var(--banner-error-text);
 }
 
 .message-viewport {
@@ -138,7 +138,7 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 
 .composer {
   background: transparent;
-  border-top: 1px solid #223040;
+  border-top: 1px solid var(--chat-divider);
   padding: 8px 0 0;
   overflow: hidden;
 }
@@ -152,10 +152,10 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 }
 
 .composer-editor {
-  background: #16202b;
+  background: var(--composer-bg);
   display: flex;
   flex-direction: column;
-  border: 1px solid #1f3143;
+  border: 1px solid var(--composer-border);
   border-radius: 8px;
   overflow: hidden;
   transition:
@@ -164,8 +164,8 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 }
 
 .composer-editor:focus-within {
-  border-color: #365c82;
-  box-shadow: 0 0 0 1px rgba(54, 92, 130, 0.24);
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 1px var(--focus-glow);
 }
 
 .composer textarea {
@@ -211,8 +211,8 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 
 .composer-hint {
   background: transparent;
-  border-top: 1px solid #223040;
-  color: #4c5e72;
+  border-top: 1px solid var(--chat-divider);
+  color: var(--hint-text);
   text-align: center;
   padding: 3px 8px;
   font-size: 0.74rem;

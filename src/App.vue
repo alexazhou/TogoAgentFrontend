@@ -21,6 +21,8 @@ import {
   type ConnectionState,
 } from './utils';
 
+type ThemeMode = 'dark' | 'light';
+
 const rooms = ref<RoomState[]>([]);
 const agents = ref<AgentInfo[]>([]);
 const messages = ref<MessageInfo[]>([]);
@@ -35,6 +37,7 @@ const reconnectRemainingMs = ref<number | null>(null);
 const composerNotice = ref('当前为观察模式');
 const messageViewport = useTemplateRef('messageViewport');
 const shouldFollowMessages = ref(true);
+const themeMode = ref<ThemeMode>((localStorage.getItem('theme-mode') as ThemeMode) || 'dark');
 const reconnectDelayMs = 3000;
 const connectTimeoutMs = 2000;
 
@@ -51,6 +54,7 @@ const currentRoom = computed(
 );
 const totalMessageCount = computed(() => messages.value.length);
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
+const isLightMode = computed(() => themeMode.value === 'light');
 const reconnectProgress = computed(() => {
   if (reconnectRemainingMs.value === null) {
     return 0;
@@ -377,11 +381,29 @@ function updateDraft(value: string): void {
   draft.value = value;
 }
 
+function applyTheme(mode: ThemeMode): void {
+  document.documentElement.dataset.theme = mode;
+}
+
+function toggleTheme(): void {
+  themeMode.value = themeMode.value === 'dark' ? 'light' : 'dark';
+}
+
 watch(currentRoom, (room) => {
   composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
 });
 
+watch(
+  themeMode,
+  (mode) => {
+    localStorage.setItem('theme-mode', mode);
+    applyTheme(mode);
+  },
+  { immediate: true },
+);
+
 onMounted(async () => {
+  applyTheme(themeMode.value);
   await refreshAll();
   bindMessageScrollListener();
   connectWebSocket();
@@ -410,9 +432,11 @@ onBeforeUnmount(() => {
 
     <TopBar
       :connection-state="connectionState"
+      :is-light-mode="isLightMode"
       :status-label="statusLabel"
       :reconnect-progress="reconnectProgress"
       :total-message-count="totalMessageCount"
+      @toggle-theme="toggleTheme"
     />
 
     <main class="workspace">
@@ -461,13 +485,13 @@ onBeforeUnmount(() => {
 .ambient-left {
   top: -8rem;
   left: -8rem;
-  background: rgba(255, 183, 116, 0.28);
+  background: var(--shell-glow-left);
 }
 
 .ambient-right {
   right: -8rem;
   bottom: -10rem;
-  background: rgba(124, 191, 255, 0.24);
+  background: var(--shell-glow-right);
 }
 
 .workspace,

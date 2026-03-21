@@ -42,7 +42,7 @@ defineProps<{
   gap: 8px;
   align-items: center;
   padding: 8px 10px;
-  border: 1px solid #223040;
+  border: 1px solid var(--panel-border-strong);
   border-radius: 8px;
   background: var(--surface-soft);
   color: inherit;
@@ -80,6 +80,6 @@ defineProps<{
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #4c5e72;
+  background: var(--status-dot-idle);
 }
 </style>
