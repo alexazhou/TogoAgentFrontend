@@ -1,6 +1,11 @@
 import type { MessageInfo, RoomState } from './types';
 
-export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+export type ConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'waiting_reconnect'
+  | 'reconnecting'
+  | 'disconnected';
 export type BubbleSide = 'left' | 'right' | 'center';
 
 export function groupRoomsByTeam(rooms: RoomState[]): Array<[string, RoomState[]]> {
@@ -44,12 +49,15 @@ export function bubbleSide(sender: string): BubbleSide {
   return 'left';
 }
 
-export function formatConnectionState(state: ConnectionState, reconnectAttempt: number): string {
+export function formatConnectionState(state: ConnectionState): string {
   if (state === 'connected') {
     return '已连接';
   }
+  if (state === 'waiting_reconnect') {
+    return '等待重连';
+  }
   if (state === 'reconnecting') {
-    return `重连中 #${reconnectAttempt}`;
+    return '重连中';
   }
   if (state === 'disconnected') {
     return '已断开';

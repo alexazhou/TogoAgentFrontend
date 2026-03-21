@@ -31,12 +31,17 @@ const reloadingMessages = ref(false);
 const errorMessage = ref('');
 const connectionState = ref<ConnectionState>('connecting');
 const reconnectAttempt = ref(0);
+const reconnectRemainingMs = ref<number | null>(null);
 const composerNotice = ref('当前为观察模式');
 const messageViewport = useTemplateRef('messageViewport');
 const shouldFollowMessages = ref(true);
+const reconnectDelayMs = 3000;
+const connectTimeoutMs = 2000;
 
 let ws: WebSocket | null = null;
 let reconnectTimer: number | null = null;
+let reconnectCountdownTimer: number | null = null;
+let connectTimeoutTimer: number | null = null;
 let shouldReconnect = true;
 let activeSocketToken = 0;
 let boundMessageStream: HTMLElement | null = null;
@@ -45,9 +50,15 @@ const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === currentRoomId.value) ?? null,
 );
 const totalMessageCount = computed(() => messages.value.length);
-const statusLabel = computed(() =>
-  formatConnectionState(connectionState.value, reconnectAttempt.value),
-);
+const statusLabel = computed(() => formatConnectionState(connectionState.value));
+const reconnectProgress = computed(() => {
+  if (reconnectRemainingMs.value === null) {
+    return 0;
+  }
+
+  const clampedRemaining = Math.min(Math.max(reconnectRemainingMs.value, 0), reconnectDelayMs);
+  return 1 - clampedRemaining / reconnectDelayMs;
+});
 const groupedRooms = computed(() => groupRoomsByTeam(rooms.value));
 const uniqueAgents = computed(() => {
   const unique = new Map<string, AgentInfo>();
@@ -229,21 +240,55 @@ function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
   );
 }
 
+function clearReconnectCountdown(): void {
+  reconnectRemainingMs.value = null;
+  if (reconnectCountdownTimer !== null) {
+    window.clearInterval(reconnectCountdownTimer);
+    reconnectCountdownTimer = null;
+  }
+}
+
+function clearConnectTimeout(): void {
+  if (connectTimeoutTimer !== null) {
+    window.clearTimeout(connectTimeoutTimer);
+    connectTimeoutTimer = null;
+  }
+}
+
+function startReconnectCountdown(delayMs: number): void {
+  const reconnectAt = Date.now() + delayMs;
+
+  const syncCountdown = (): void => {
+    const remainingMs = reconnectAt - Date.now();
+    reconnectRemainingMs.value = remainingMs > 0 ? remainingMs : 0;
+  };
+
+  clearReconnectCountdown();
+  syncCountdown();
+  reconnectCountdownTimer = window.setInterval(syncCountdown, 50);
+}
+
 function scheduleReconnect(): void {
+  const delayMs = reconnectDelayMs;
+
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
   }
 
   reconnectAttempt.value += 1;
-  connectionState.value = 'reconnecting';
+  connectionState.value = 'waiting_reconnect';
+  startReconnectCountdown(delayMs);
   reconnectTimer = window.setTimeout(() => {
+    clearReconnectCountdown();
     connectWebSocket();
-  }, 3000);
+  }, delayMs);
 }
 
 function connectWebSocket(): void {
   activeSocketToken += 1;
   const socketToken = activeSocketToken;
+
+  clearConnectTimeout();
 
   if (ws) {
     shouldReconnect = false;
@@ -252,18 +297,32 @@ function connectWebSocket(): void {
   }
 
   connectionState.value = reconnectAttempt.value > 0 ? 'reconnecting' : 'connecting';
+  clearReconnectCountdown();
   ws = createEventsSocket();
+  connectTimeoutTimer = window.setTimeout(() => {
+    if (socketToken !== activeSocketToken || connectionState.value !== 'reconnecting') {
+      return;
+    }
+
+    shouldReconnect = false;
+    ws?.close();
+    shouldReconnect = true;
+    connectionState.value = 'disconnected';
+    scheduleReconnect();
+  }, connectTimeoutMs);
 
   ws.addEventListener('open', () => {
     if (socketToken !== activeSocketToken) {
       return;
     }
+    clearConnectTimeout();
     connectionState.value = 'connected';
     reconnectAttempt.value = 0;
     if (reconnectTimer !== null) {
       window.clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+    clearReconnectCountdown();
     refreshAll({ preserveSelection: true }).catch(console.error);
   });
 
@@ -283,6 +342,7 @@ function connectWebSocket(): void {
     if (socketToken !== activeSocketToken) {
       return;
     }
+    clearConnectTimeout();
     connectionState.value = 'disconnected';
     if (shouldReconnect) {
       scheduleReconnect();
@@ -293,6 +353,7 @@ function connectWebSocket(): void {
     if (socketToken !== activeSocketToken) {
       return;
     }
+    clearConnectTimeout();
     connectionState.value = 'disconnected';
   });
 }
@@ -333,6 +394,8 @@ onBeforeUnmount(() => {
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
   }
+  clearConnectTimeout();
+  clearReconnectCountdown();
   if (ws) {
     ws.close();
     ws = null;
@@ -348,6 +411,7 @@ onBeforeUnmount(() => {
     <TopBar
       :connection-state="connectionState"
       :status-label="statusLabel"
+      :reconnect-progress="reconnectProgress"
       :total-message-count="totalMessageCount"
     />
 

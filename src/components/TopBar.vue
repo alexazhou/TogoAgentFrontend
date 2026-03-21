@@ -4,6 +4,7 @@ import type { ConnectionState } from '../utils';
 defineProps<{
   connectionState: ConnectionState;
   statusLabel: string;
+  reconnectProgress: number;
   totalMessageCount: number;
 }>();
 </script>
@@ -15,7 +16,22 @@ defineProps<{
     </div>
     <div class="status-group">
       <div class="status-pill" :data-state="connectionState">
-        <span class="status-dot"></span>
+        <span
+          v-if="connectionState === 'waiting_reconnect'"
+          class="reconnect-indicator"
+          :style="{ '--reconnect-progress': reconnectProgress.toString() }"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 16 16" class="reconnect-ring">
+            <circle class="reconnect-ring-track" cx="8" cy="8" r="5.5" />
+            <circle class="reconnect-ring-progress" cx="8" cy="8" r="5.5" />
+          </svg>
+        </span>
+        <span
+          v-else
+          class="status-dot"
+          :class="{ 'status-dot-pulse': connectionState === 'reconnecting' }"
+        ></span>
         {{ statusLabel }}
       </div>
       <div class="metric-pill">{{ totalMessageCount }} 条消息</div>
@@ -72,10 +88,16 @@ defineProps<{
   box-shadow: none;
 }
 
+.status-pill[data-state='waiting_reconnect'] .status-dot,
 .status-pill[data-state='reconnecting'] .status-dot,
 .status-pill[data-state='connecting'] .status-dot {
   background: #ffce54;
   box-shadow: none;
+}
+
+.status-pill[data-state='waiting_reconnect'],
+.status-pill[data-state='reconnecting'] {
+  color: #ffce54;
 }
 
 .status-pill[data-state='disconnected'] .status-dot {
@@ -87,6 +109,58 @@ defineProps<{
   height: 7px;
   border-radius: 999px;
   background: #4c5e72;
+}
+
+.status-dot-pulse {
+  width: 6px;
+  height: 6px;
+  background: #ffce54;
+  animation: reconnect-dot-pulse 1.6s ease-in-out infinite;
+}
+
+.reconnect-indicator {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  color: #ffce54;
+}
+
+.reconnect-ring {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+}
+
+.reconnect-ring-track,
+.reconnect-ring-progress {
+  fill: none;
+  stroke-width: 1.7;
+}
+
+.reconnect-ring-track {
+  stroke: rgba(255, 206, 84, 0.22);
+}
+
+.reconnect-ring-progress {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-dasharray: 34.56;
+  stroke-dashoffset: calc(34.56 * (1 - var(--reconnect-progress, 0)));
+}
+
+@keyframes reconnect-dot-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 980px) {
