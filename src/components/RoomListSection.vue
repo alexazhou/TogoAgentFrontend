@@ -180,6 +180,7 @@ const emit = defineEmits<{
   color: var(--muted);
   line-height: 1.15;
   font-size: 0.74rem;
+  transform: translateY(2px);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 1;

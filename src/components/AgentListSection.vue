@@ -60,6 +60,7 @@ defineProps<{
   color: var(--muted);
   font-size: 0.72rem;
   white-space: nowrap;
+  transform: translateY(2px);
 }
 
 .agent-state {
