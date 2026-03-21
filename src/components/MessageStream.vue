@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import type { MessageInfo } from '../types';
 import { bubbleSide, formatTime } from '../utils';
 
-defineProps<{
+const props = defineProps<{
   messages: MessageInfo[];
 }>();
+
+const streamRef = useTemplateRef('streamRef');
+const hasScrollbar = ref(false);
+let resizeObserver: ResizeObserver | null = null;
 
 const NAME_COLORS = [
   '#56d4b0',
@@ -31,10 +36,46 @@ function senderColor(sender: string): string {
   const hash = Array.from(sender).reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return NAME_COLORS[hash % NAME_COLORS.length];
 }
+
+function updateScrollbarState(): void {
+  const stream = streamRef.value;
+  if (!stream) {
+    hasScrollbar.value = false;
+    return;
+  }
+
+  hasScrollbar.value = stream.scrollHeight - stream.clientHeight > 1;
+}
+
+watch(
+  () => props.messages,
+  async () => {
+    await nextTick();
+    updateScrollbarState();
+  },
+  { deep: true },
+);
+
+onMounted(() => {
+  updateScrollbarState();
+  if (typeof ResizeObserver === 'undefined' || !streamRef.value) {
+    return;
+  }
+
+  resizeObserver = new ResizeObserver(() => {
+    updateScrollbarState();
+  });
+  resizeObserver.observe(streamRef.value);
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+});
 </script>
 
 <template>
-  <div class="message-stream">
+  <div ref="streamRef" class="message-stream" :class="{ 'has-scrollbar': hasScrollbar }">
     <div
       v-for="(message, index) in messages"
       :key="`${message.time}-${message.sender}-${index}`"
@@ -91,6 +132,10 @@ function senderColor(sender: string): string {
 
 .message-row.side-right {
   align-items: flex-end;
+}
+
+.message-stream.has-scrollbar .message-row.side-right {
+  padding-right: 6px;
 }
 
 .message-row.side-center {
