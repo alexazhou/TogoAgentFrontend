@@ -77,14 +77,15 @@ const emit = defineEmits<{
   width: 100%;
   display: block;
   padding: 8px 10px;
-  border: 1px solid var(--panel-border-strong);
+  border: none;
   border-radius: 8px;
   background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px var(--room-card-border);
   color: inherit;
   text-align: left;
   transition:
-    border-color 120ms ease,
-    background 120ms ease;
+    background 120ms ease,
+    box-shadow 120ms ease;
   cursor: pointer;
 }
 
@@ -94,8 +95,8 @@ const emit = defineEmits<{
 
 .room-card:hover,
 .room-card.selected {
-  border-color: var(--focus-border);
   background: var(--selected);
+  box-shadow: inset 0 0 0 1px var(--room-card-border-active);
 }
 
 .room-head {

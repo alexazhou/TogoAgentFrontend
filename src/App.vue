@@ -291,6 +291,7 @@ function scheduleReconnect(): void {
 function connectWebSocket(): void {
   activeSocketToken += 1;
   const socketToken = activeSocketToken;
+  const isReconnectAttempt = reconnectAttempt.value > 0;
 
   clearConnectTimeout();
 
@@ -300,7 +301,7 @@ function connectWebSocket(): void {
     shouldReconnect = true;
   }
 
-  connectionState.value = reconnectAttempt.value > 0 ? 'reconnecting' : 'connecting';
+  connectionState.value = isReconnectAttempt ? 'reconnecting' : 'connecting';
   clearReconnectCountdown();
   ws = createEventsSocket();
   connectTimeoutTimer = window.setTimeout(() => {
@@ -308,6 +309,7 @@ function connectWebSocket(): void {
       return;
     }
 
+    clearConnectTimeout();
     shouldReconnect = false;
     ws?.close();
     shouldReconnect = true;
@@ -346,6 +348,9 @@ function connectWebSocket(): void {
     if (socketToken !== activeSocketToken) {
       return;
     }
+    if (isReconnectAttempt && connectTimeoutTimer !== null && connectionState.value === 'reconnecting') {
+      return;
+    }
     clearConnectTimeout();
     connectionState.value = 'disconnected';
     if (shouldReconnect) {
@@ -355,6 +360,9 @@ function connectWebSocket(): void {
 
   ws.addEventListener('error', () => {
     if (socketToken !== activeSocketToken) {
+      return;
+    }
+    if (isReconnectAttempt && connectTimeoutTimer !== null && connectionState.value === 'reconnecting') {
       return;
     }
     clearConnectTimeout();
