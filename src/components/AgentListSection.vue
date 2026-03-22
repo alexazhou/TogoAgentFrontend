@@ -9,7 +9,7 @@ defineProps<{
 <template>
   <section class="sidebar-card panel">
     <div class="block-head">
-      <h2>Agent</h2>
+      <h2>团队成员</h2>
       <span>{{ agents.length }}</span>
     </div>
 
