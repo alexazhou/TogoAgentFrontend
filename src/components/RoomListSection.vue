@@ -30,7 +30,7 @@ const emit = defineEmits<{
           <button
             v-for="room in teamRooms"
             :key="room.room_id"
-            class="room-card"
+            class="room-card sidebar-item-card"
             :class="{ selected: room.room_id === currentRoomId }"
             type="button"
             @click="emit('selectRoom', room.room_id)"
@@ -77,11 +77,6 @@ const emit = defineEmits<{
   width: 100%;
   display: block;
   padding: 8px 10px;
-  border: none;
-  border-radius: 8px;
-  background: var(--surface-soft);
-  box-shadow: inset 0 0 0 1px var(--room-card-border);
-  color: inherit;
   text-align: left;
   transition:
     background 120ms ease,

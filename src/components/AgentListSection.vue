@@ -14,7 +14,7 @@ defineProps<{
     </div>
 
     <div class="sidebar-scroll agent-list">
-      <div v-for="agent in agents" :key="agent.name" class="agent-card">
+      <div v-for="agent in agents" :key="agent.name" class="agent-card sidebar-item-card">
         <div>
           <strong>{{ agent.name }}</strong>
           <p>{{ agent.model }}</p>
@@ -42,10 +42,6 @@ defineProps<{
   gap: 8px;
   align-items: center;
   padding: 8px 10px;
-  border: 1px solid var(--panel-border-strong);
-  border-radius: 8px;
-  background: var(--surface-soft);
-  color: inherit;
 }
 
 .agent-card strong {
