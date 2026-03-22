@@ -47,7 +47,11 @@ defineEmits<{
         :title="isLightMode ? '切换到暗色模式' : '切换到亮色模式'"
         @click="$emit('toggleTheme')"
       >
-        <span class="theme-switch-icon theme-switch-icon-sun" aria-hidden="true">
+        <span
+          class="theme-switch-icon theme-switch-icon-sun"
+          :class="{ 'is-active': isLightMode }"
+          aria-hidden="true"
+        >
           <svg viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2.75v2.5"></path>
@@ -63,7 +67,11 @@ defineEmits<{
         <span class="theme-switch-track">
           <span class="theme-switch-thumb" :class="{ 'is-dark': !isLightMode }"></span>
         </span>
-        <span class="theme-switch-icon theme-switch-icon-moon" aria-hidden="true">
+        <span
+          class="theme-switch-icon theme-switch-icon-moon"
+          :class="{ 'is-active': !isLightMode }"
+          aria-hidden="true"
+        >
           <svg viewBox="0 0 24 24">
             <path
               d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.8 7.8 0 1 0 10.5 10.5Z"
@@ -184,6 +192,15 @@ defineEmits<{
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.theme-switch-icon {
+  color: var(--muted);
+  transition: color 160ms ease;
+}
+
+.theme-switch-icon.is-active {
+  color: var(--theme-switch-icon-active);
 }
 
 .theme-switch-track {

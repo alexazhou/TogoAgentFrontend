@@ -44,8 +44,9 @@
   --focus-glow: rgba(54, 92, 130, 0.24);
   --hint-text: #4c5e72;
   --status-dot-idle: #4c5e72;
-  --toolbar-switch-off: rgba(255, 255, 255, 0.18);
-  --toolbar-switch-handle: #ffffff;
+  --toolbar-switch-off: #3a4655;
+  --toolbar-switch-handle: #c7d0db;
+  --theme-switch-icon-active: #dfe8f2;
   --room-private-border: rgba(248, 184, 77, 0.48);
   --room-private-bg: rgba(248, 184, 77, 0.12);
   --room-private-text: #f8b84d;
@@ -100,6 +101,7 @@
   --status-dot-idle: #98a9bd;
   --toolbar-switch-off: rgba(15, 23, 42, 0.18);
   --toolbar-switch-handle: #ffffff;
+  --theme-switch-icon-active: #4b7fc0;
   --room-private-border: rgba(196, 137, 12, 0.42);
   --room-private-bg: rgba(255, 244, 214, 0.9);
   --room-private-text: #b06c00;
