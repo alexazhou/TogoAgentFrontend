@@ -82,20 +82,20 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
 }
 
 export async function getAgents(): Promise<AgentInfo[]> {
-  const data = await requestJson<{ agents: AgentInfo[] }>('/agents.json');
+  const data = await requestJson<{ agents: AgentInfo[] }>('/agents/list.json');
   return data.agents;
 }
 
 export async function getAgentsByTeam(teamName: string): Promise<AgentInfo[]> {
   const data = await requestJson<{ agents: AgentInfo[] }>(
-    withSearch('/agents.json', { team_name: teamName }),
+    withSearch('/agents/list.json', { team_name: teamName }),
   );
   return data.agents;
 }
 
 export async function getRooms(teamName?: string): Promise<RoomInfo[]> {
   const data = await requestJson<{ rooms: RawRoomInfo[] }>(
-    withSearch('/rooms.json', { team_name: teamName }),
+    withSearch('/rooms/list.json', { team_name: teamName }),
   );
   return data.rooms.map(normalizeRoom);
 }
@@ -122,13 +122,13 @@ export async function getAgentDetail(teamId: number, agentName: string): Promise
 
 export async function getRoomMessages(roomId: number): Promise<MessageInfo[]> {
   const data = await requestJson<{ messages: MessageInfo[] }>(
-    `/rooms/${roomId}/messages.json`,
+    `/rooms/${roomId}/messages/list.json`,
   );
   return data.messages;
 }
 
 export async function postRoomMessage(roomId: number, content: string): Promise<void> {
-  await requestJson(`/rooms/${roomId}/messages.json`, {
+  await requestJson(`/rooms/${roomId}/messages/send.json`, {
     method: 'POST',
     body: JSON.stringify({ content }),
   });

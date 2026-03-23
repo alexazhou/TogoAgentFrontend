@@ -3,12 +3,14 @@ export type RoomType = 'private' | 'group';
 
 export interface AgentInfo {
   name: string;
+  template_name?: string | null;
   model: string;
   team_name: string;
   status: AgentStatus;
 }
 
 export interface AgentDetail extends AgentInfo {
+  agent_name: string;
   driver_type: string;
   prompt: string;
 }
@@ -70,13 +72,18 @@ export interface TeamRoomDetail {
 }
 
 export interface TeamDetail extends TeamSummary {
-  members: string[];
+  members: TeamMember[];
   rooms: TeamRoomDetail[];
+}
+
+export interface TeamMember {
+  name: string;
+  agent: string;
 }
 
 export interface CreateTeamPayload {
   name: string;
-  members: string[];
+  members: TeamMember[];
   preset_rooms: Array<{
     name: string;
     members: string[];
