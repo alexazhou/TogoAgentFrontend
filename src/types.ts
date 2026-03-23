@@ -57,6 +57,7 @@ export interface RoomState extends RoomInfo {
 export interface TeamSummary {
   id: number;
   name: string;
+  working_directory: string;
   max_function_calls: number | null;
   enabled: number;
   created_at: string;
@@ -83,6 +84,7 @@ export interface TeamMember {
 
 export interface CreateTeamPayload {
   name: string;
+  working_directory: string;
   members: TeamMember[];
   preset_rooms: Array<{
     name: string;
