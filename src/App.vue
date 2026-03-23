@@ -25,12 +25,6 @@ const teamIdFromRoute = computed<number | null>(() => {
 
 const currentTeam = computed(() => findTeamById(teamIdFromRoute.value));
 const activeTeamId = computed(() => currentTeam.value?.id ?? preferredTeamId.value ?? firstTeamId.value);
-const activeTeamName = computed(() => {
-  if (currentTeam.value) {
-    return currentTeam.value.name;
-  }
-  return findTeamById(activeTeamId.value)?.name ?? '选择团队';
-});
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
 
@@ -122,7 +116,6 @@ onMounted(async () => {
       :total-message-count="totalMessageCount"
       :teams="teams"
       :active-team-id="activeTeamId"
-      :active-team-name="activeTeamName"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @open-create-team="openCreateTeam"
