@@ -78,6 +78,21 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+async function requestJsonWithFallback<T>(
+  primaryPath: string,
+  fallbackPath: string,
+  init?: RequestInit,
+): Promise<T> {
+  try {
+    return await requestJson<T>(primaryPath, init);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Request failed: 404') {
+      return requestJson<T>(fallbackPath, init);
+    }
+    throw error;
+  }
+}
+
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const teamName = room.team_name ?? 'default';
   const roomName = room.room_name ?? room.name ?? '';
@@ -94,13 +109,17 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
 }
 
 export async function getAgents(): Promise<AgentInfo[]> {
-  const data = await requestJson<{ agents: AgentInfo[] }>('/agents/list.json');
+  const data = await requestJsonWithFallback<{ agents: AgentInfo[] }>(
+    '/agents/list.json',
+    '/agents.json',
+  );
   return data.agents;
 }
 
 export async function getAgentsByTeam(teamName: string): Promise<AgentInfo[]> {
-  const data = await requestJson<{ agents: AgentInfo[] }>(
+  const data = await requestJsonWithFallback<{ agents: AgentInfo[] }>(
     withSearch('/agents/list.json', { team_name: teamName }),
+    withSearch('/agents.json', { team_name: teamName }),
   );
   return data.agents;
 }
