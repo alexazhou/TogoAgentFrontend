@@ -9,7 +9,7 @@ export interface AgentInfo {
 }
 
 export interface RoomInfo {
-  room_id: string;
+  room_id: number;
   room_name: string;
   team_name: string;
   room_type: RoomType;
@@ -25,7 +25,7 @@ export interface MessageInfo {
 
 export interface WsMessageEvent {
   event: 'message';
-  room_id: string;
+  room_id: number;
   room_name: string;
   team_name: string;
   sender: string;
