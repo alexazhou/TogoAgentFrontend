@@ -29,7 +29,7 @@ function toggleAgent(agentName: string): void {
 async function loadAvailableAgents(): Promise<void> {
   const runtimeAgents = await getAgents();
   const unique = new Set<string>();
-  runtimeAgents.forEach((agent: AgentInfo) => unique.add(agent.name));
+  runtimeAgents.forEach((agent: AgentInfo) => unique.add(agent.template_name || agent.name));
   availableAgents.value = Array.from(unique).sort((left, right) => left.localeCompare(right));
 }
 
@@ -44,7 +44,10 @@ async function handleSubmit(): Promise<void> {
   try {
     await createTeam({
       name: name.value.trim(),
-      members: selectedAgents.value,
+      members: selectedAgents.value.map((agentName) => ({
+        name: agentName,
+        agent: agentName,
+      })),
       preset_rooms: [
         {
           name: '团队群聊',

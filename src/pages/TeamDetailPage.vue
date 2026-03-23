@@ -84,12 +84,13 @@ onMounted(() => {
           <div class="member-list">
             <button
               v-for="member in team.members"
-              :key="member"
+              :key="member.name"
               type="button"
               class="member-chip"
-              @click="openAgent(member)"
+              @click="openAgent(member.name)"
             >
-              {{ member }}
+              <strong>{{ member.name }}</strong>
+              <small>{{ member.agent }}</small>
             </button>
           </div>
         </section>
@@ -201,15 +202,27 @@ onMounted(() => {
 
 .member-chip,
 .secondary-button {
-  height: 40px;
   border-radius: 10px;
 }
 
 .member-chip {
+  min-height: 48px;
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--text-strong);
   cursor: pointer;
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.member-chip strong {
+  font-size: 0.88rem;
+}
+
+.member-chip small {
+  color: var(--muted);
 }
 
 .room-card {

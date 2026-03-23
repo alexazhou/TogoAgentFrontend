@@ -54,6 +54,10 @@ onMounted(() => {
     <template v-else-if="agent">
       <div class="summary-grid">
         <article class="summary-card">
+          <span>预设模板</span>
+          <strong>{{ agent.agent_name }}</strong>
+        </article>
+        <article class="summary-card">
           <span>模型</span>
           <strong>{{ agent.model }}</strong>
         </article>
