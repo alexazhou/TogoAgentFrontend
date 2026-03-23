@@ -1,24 +1,54 @@
 <script setup lang="ts">
+import type { TeamSummary } from '../types';
 import type { ConnectionState } from '../utils';
 
-defineProps<{
+const props = defineProps<{
   connectionState: ConnectionState;
   isLightMode: boolean;
   statusLabel: string;
   reconnectProgress: number;
   totalMessageCount: number;
+  teams: TeamSummary[];
+  activeTeamId: number | null;
+  activeTeamName: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   toggleTheme: [];
+  selectTeam: [teamId: number];
+  openCreateTeam: [];
+  openTeamDetail: [];
 }>();
+
+function handleTeamChange(event: Event): void {
+  const value = Number((event.target as HTMLSelectElement).value);
+  if (Number.isFinite(value)) {
+    emit('selectTeam', value);
+  }
+}
 </script>
 
 <template>
   <header class="topbar">
-    <div>
-      <p class="eyebrow">Team Agent Web Console</p>
+    <div class="brand-group">
+      <div>
+        <p class="eyebrow">Team Agent Web Console</p>
+        <h1>{{ activeTeamName }}</h1>
+      </div>
+      <div class="team-switcher">
+        <label for="team-switcher">当前团队</label>
+        <select id="team-switcher" :value="activeTeamId ?? ''" @change="handleTeamChange">
+          <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+        </select>
+      </div>
+      <button class="nav-action" type="button" :disabled="activeTeamId === null" @click="emit('openTeamDetail')">
+        团队详情
+      </button>
+      <button class="nav-action nav-action-accent" type="button" @click="emit('openCreateTeam')">
+        创建团队
+      </button>
     </div>
+
     <div class="status-group">
       <div class="status-pill" :data-state="connectionState">
         <span
@@ -45,7 +75,7 @@ defineEmits<{
         type="button"
         :aria-pressed="isLightMode"
         :title="isLightMode ? '切换到暗色模式' : '切换到亮色模式'"
-        @click="$emit('toggleTheme')"
+        @click="emit('toggleTheme')"
       >
         <span
           class="theme-switch-icon theme-switch-icon-sun"
@@ -73,9 +103,7 @@ defineEmits<{
           aria-hidden="true"
         >
           <svg viewBox="0 0 24 24">
-            <path
-              d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.8 7.8 0 1 0 10.5 10.5Z"
-            ></path>
+            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.8 7.8 0 1 0 10.5 10.5Z"></path>
           </svg>
         </span>
       </button>
@@ -93,7 +121,14 @@ defineEmits<{
   background: var(--topbar-bg);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  padding: 4px 10px;
+  padding: 8px 12px;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .eyebrow {
@@ -104,10 +139,57 @@ defineEmits<{
   text-transform: uppercase;
 }
 
+.brand-group h1 {
+  margin: 2px 0 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+  line-height: 1.05;
+}
+
+.team-switcher {
+  display: grid;
+  gap: 2px;
+}
+
+.team-switcher label {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.team-switcher select {
+  min-width: 180px;
+  height: 32px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--pill-bg);
+  color: var(--text-strong);
+  padding: 0 10px;
+}
+
+.nav-action {
+  height: 32px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--pill-bg);
+  color: var(--text-strong);
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.nav-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nav-action-accent {
+  border-color: var(--focus-border);
+}
+
 .status-group {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .status-pill,
@@ -219,10 +301,7 @@ defineEmits<{
   height: 14px;
   border-radius: 999px;
   background: var(--toolbar-switch-handle);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
-  transition:
-    transform 180ms ease,
-    background 180ms ease;
+  transition: transform 180ms ease;
 }
 
 .theme-switch-thumb.is-dark {
@@ -230,24 +309,19 @@ defineEmits<{
 }
 
 .reconnect-indicator {
-  position: relative;
-  width: 16px;
-  height: 16px;
-  display: inline-grid;
-  place-items: center;
-  color: var(--warn);
+  display: inline-flex;
 }
 
 .reconnect-ring {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   transform: rotate(-90deg);
 }
 
 .reconnect-ring-track,
 .reconnect-ring-progress {
   fill: none;
-  stroke-width: 1.7;
+  stroke-width: 2;
 }
 
 .reconnect-ring-track {
@@ -255,10 +329,9 @@ defineEmits<{
 }
 
 .reconnect-ring-progress {
-  stroke: currentColor;
-  stroke-linecap: round;
+  stroke: var(--warn);
   stroke-dasharray: 34.56;
-  stroke-dashoffset: calc(34.56 * (1 - var(--reconnect-progress, 0)));
+  stroke-dashoffset: calc(34.56 * (1 - var(--reconnect-progress)));
 }
 
 @keyframes reconnect-dot-pulse {
@@ -276,8 +349,13 @@ defineEmits<{
 
 @media (max-width: 980px) {
   .topbar {
-    flex-direction: column;
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .status-group {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>

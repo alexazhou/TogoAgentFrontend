@@ -5,13 +5,14 @@ import RoomListSection from './RoomListSection.vue';
 
 defineProps<{
   loading: boolean;
-  groupedRooms: Array<[string, RoomState[]]>;
-  currentRoomId: string | null;
+  rooms: RoomState[];
+  currentRoomId: number | null;
   agents: AgentInfo[];
 }>();
 
 const emit = defineEmits<{
-  selectRoom: [roomId: string];
+  selectRoom: [roomId: number];
+  selectAgent: [agentName: string];
 }>();
 </script>
 
@@ -19,10 +20,10 @@ const emit = defineEmits<{
   <aside class="sidebar panel">
     <RoomListSection
       :loading="loading"
-      :grouped-rooms="groupedRooms"
+      :rooms="rooms"
       :current-room-id="currentRoomId"
       @select-room="emit('selectRoom', $event)"
     />
-    <AgentListSection :agents="agents" />
+    <AgentListSection :agents="agents" @select-agent="emit('selectAgent', $event)" />
   </aside>
 </template>

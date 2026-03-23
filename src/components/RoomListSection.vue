@@ -3,12 +3,12 @@ import type { RoomState } from '../types';
 
 defineProps<{
   loading: boolean;
-  groupedRooms: Array<[string, RoomState[]]>;
-  currentRoomId: string | null;
+  rooms: RoomState[];
+  currentRoomId: number | null;
 }>();
 
 const emit = defineEmits<{
-  selectRoom: [roomId: string];
+  selectRoom: [roomId: number];
 }>();
 </script>
 
@@ -16,63 +16,46 @@ const emit = defineEmits<{
   <section class="sidebar-card panel">
     <div class="block-head">
       <h2>聊天室</h2>
-      <span>
-        {{ loading ? 0 : groupedRooms.reduce((count, [, teamRooms]) => count + teamRooms.length, 0) }}
-      </span>
+      <span>{{ loading ? 0 : rooms.length }}</span>
     </div>
 
     <div class="sidebar-scroll">
       <div v-if="loading" class="placeholder">正在同步房间列表…</div>
 
-      <template v-else>
-        <div v-for="[teamName, teamRooms] in groupedRooms" :key="teamName" class="team-group">
-          <div v-if="teamName !== 'default'" class="team-name">{{ teamName }}</div>
-          <button
-            v-for="room in teamRooms"
-            :key="room.room_id"
-            class="room-card sidebar-item-card"
-            :class="{ selected: room.room_id === currentRoomId }"
-            type="button"
-            @click="emit('selectRoom', room.room_id)"
-          >
-            <div class="room-head">
-              <div class="room-title">
-                <span
-                  class="room-icon"
-                  :class="room.room_type === 'private' ? 'room-icon-private' : 'room-icon-group'"
-                >
-                  {{ room.room_type === 'private' ? '单' : '群' }}
-                </span>
-                <strong>{{ room.room_name }}</strong>
-                <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
-              </div>
-              <div class="room-head-right">
-                <div class="room-meta">{{ room.members.length }} 人</div>
-              </div>
+      <template v-else-if="rooms.length > 0">
+        <button
+          v-for="room in rooms"
+          :key="room.room_id"
+          class="room-card sidebar-item-card"
+          :class="{ selected: room.room_id === currentRoomId }"
+          type="button"
+          @click="emit('selectRoom', room.room_id)"
+        >
+          <div class="room-head">
+            <div class="room-title">
+              <span
+                class="room-icon"
+                :class="room.room_type === 'private' ? 'room-icon-private' : 'room-icon-group'"
+              >
+                {{ room.room_type === 'private' ? '单' : '群' }}
+              </span>
+              <strong>{{ room.room_name }}</strong>
+              <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
             </div>
-            <p class="room-preview">{{ room.preview }}</p>
-          </button>
-        </div>
+            <div class="room-head-right">
+              <div class="room-meta">{{ room.members.length }} 人</div>
+            </div>
+          </div>
+          <p class="room-preview">{{ room.preview }}</p>
+        </button>
       </template>
+
+      <div v-else class="placeholder">当前团队还没有聊天室。</div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.team-group + .team-group {
-  margin-top: 8px;
-}
-
-.team-name {
-  display: inline-flex;
-  margin-bottom: 4px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--pill-bg);
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
 .room-card {
   width: 100%;
   display: block;

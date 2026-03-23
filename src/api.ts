@@ -1,4 +1,12 @@
-import type { AgentInfo, MessageInfo, RoomInfo } from './types';
+import type {
+  AgentDetail,
+  AgentInfo,
+  CreateTeamPayload,
+  MessageInfo,
+  RoomInfo,
+  TeamDetail,
+  TeamSummary,
+} from './types';
 
 type RawRoomInfo = Partial<RoomInfo> & {
   name?: string;
@@ -15,6 +23,19 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, ''
 
 function makeUrl(path: string): string {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
+}
+
+function withSearch(path: string, params: Record<string, string | number | undefined | null>): string {
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      search.set(key, String(value));
+    }
+  }
+
+  const query = search.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 function makeWsUrl(path: string): string {
@@ -65,9 +86,38 @@ export async function getAgents(): Promise<AgentInfo[]> {
   return data.agents;
 }
 
-export async function getRooms(): Promise<RoomInfo[]> {
-  const data = await requestJson<{ rooms: RawRoomInfo[] }>('/rooms.json');
+export async function getAgentsByTeam(teamName: string): Promise<AgentInfo[]> {
+  const data = await requestJson<{ agents: AgentInfo[] }>(
+    withSearch('/agents.json', { team_name: teamName }),
+  );
+  return data.agents;
+}
+
+export async function getRooms(teamName?: string): Promise<RoomInfo[]> {
+  const data = await requestJson<{ rooms: RawRoomInfo[] }>(
+    withSearch('/rooms.json', { team_name: teamName }),
+  );
   return data.rooms.map(normalizeRoom);
+}
+
+export async function getTeams(): Promise<TeamSummary[]> {
+  const data = await requestJson<{ teams: TeamSummary[] }>('/teams/list.json');
+  return data.teams;
+}
+
+export async function getTeamDetail(teamId: number): Promise<TeamDetail> {
+  return requestJson<TeamDetail>(`/teams/${teamId}.json`);
+}
+
+export async function createTeam(payload: CreateTeamPayload): Promise<{ status: string; name: string }> {
+  return requestJson('/teams/create.json', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAgentDetail(teamId: number, agentName: string): Promise<AgentDetail> {
+  return requestJson<AgentDetail>(`/teams/${teamId}/agents/${encodeURIComponent(agentName)}.json`);
 }
 
 export async function getRoomMessages(roomId: number): Promise<MessageInfo[]> {

@@ -1,395 +1,38 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
-import { createEventsSocket, getAgents, getRoomMessages, getRooms, postRoomMessage } from './api';
-import AgentListSection from './components/AgentListSection.vue';
-import ChatPanel from './components/ChatPanel.vue';
-import RoomListSection from './components/RoomListSection.vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import { RouterView, useRoute, useRouter } from 'vue-router';
+import { connectionState, reconnectProgress, totalMessageCount } from './appUiState';
 import TopBar from './components/TopBar.vue';
-import type {
-  AgentInfo,
-  MessageInfo,
-  RoomInfo,
-  RoomState,
-  WsAgentStatusEvent,
-  WsEvent,
-  WsMessageEvent,
-} from './types';
-import {
-  formatConnectionState,
-  formatPreview,
-  groupRoomsByTeam,
-  type ConnectionState,
-} from './utils';
+import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
+import { formatConnectionState } from './utils';
 
 type ThemeMode = 'dark' | 'light';
 
-const rooms = ref<RoomState[]>([]);
-const agents = ref<AgentInfo[]>([]);
-const messages = ref<MessageInfo[]>([]);
-const currentRoomId = ref<number | null>(null);
-const draft = ref('');
-const loading = ref(true);
-const reloadingMessages = ref(false);
-const errorMessage = ref('');
-const connectionState = ref<ConnectionState>('connecting');
-const reconnectAttempt = ref(0);
-const reconnectRemainingMs = ref<number | null>(null);
-const composerNotice = ref('当前为观察模式');
-const messageViewport = useTemplateRef('messageViewport');
-const shouldFollowMessages = ref(true);
+const route = useRoute();
+const router = useRouter();
+
 const themeMode = ref<ThemeMode>((localStorage.getItem('theme-mode') as ThemeMode) || 'dark');
-const reconnectDelayMs = 3000;
-const connectTimeoutMs = 2000;
 
-let ws: WebSocket | null = null;
-let reconnectTimer: number | null = null;
-let reconnectCountdownTimer: number | null = null;
-let connectTimeoutTimer: number | null = null;
-let shouldReconnect = true;
-let activeSocketToken = 0;
-let boundMessageStream: HTMLElement | null = null;
+const teamIdFromRoute = computed<number | null>(() => {
+  const raw = route.params.teamId;
+  if (typeof raw !== 'string') {
+    return null;
+  }
 
-const currentRoom = computed(
-  () => rooms.value.find((room) => room.room_id === currentRoomId.value) ?? null,
-);
-const totalMessageCount = computed(() => messages.value.length);
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+});
+
+const currentTeam = computed(() => findTeamById(teamIdFromRoute.value));
+const activeTeamId = computed(() => currentTeam.value?.id ?? preferredTeamId.value ?? firstTeamId.value);
+const activeTeamName = computed(() => {
+  if (currentTeam.value) {
+    return currentTeam.value.name;
+  }
+  return findTeamById(activeTeamId.value)?.name ?? '选择团队';
+});
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
-const reconnectProgress = computed(() => {
-  if (reconnectRemainingMs.value === null) {
-    return 0;
-  }
-
-  const clampedRemaining = Math.min(Math.max(reconnectRemainingMs.value, 0), reconnectDelayMs);
-  return 1 - clampedRemaining / reconnectDelayMs;
-});
-const groupedRooms = computed(() => groupRoomsByTeam(rooms.value));
-const uniqueAgents = computed(() => {
-  const unique = new Map<string, AgentInfo>();
-
-  for (const agent of agents.value) {
-    if (!unique.has(agent.name)) {
-      unique.set(agent.name, agent);
-    }
-  }
-
-  return Array.from(unique.values());
-});
-
-function getMessageStream(): HTMLElement | null {
-  const viewport = messageViewport.value?.querySelector('.message-stream');
-  return viewport instanceof HTMLElement ? viewport : null;
-}
-
-function isAtBottom(viewport: HTMLElement): boolean {
-  const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-  return distanceToBottom <= 4;
-}
-
-function syncFollowMessages(viewport?: HTMLElement | null): void {
-  const target = viewport ?? getMessageStream();
-  if (!target) {
-    shouldFollowMessages.value = true;
-    return;
-  }
-  shouldFollowMessages.value = isAtBottom(target);
-}
-
-function handleMessageScroll(): void {
-  syncFollowMessages();
-}
-
-function bindMessageScrollListener(): void {
-  const viewport = getMessageStream();
-  if (!viewport || viewport === boundMessageStream) {
-    return;
-  }
-
-  boundMessageStream?.removeEventListener('scroll', handleMessageScroll);
-  viewport.addEventListener('scroll', handleMessageScroll, { passive: true });
-  boundMessageStream = viewport;
-  syncFollowMessages(viewport);
-}
-
-function scrollMessagesToBottom(): void {
-  const viewport = getMessageStream();
-  if (!viewport) {
-    return;
-  }
-
-  viewport.scrollTop = viewport.scrollHeight;
-  shouldFollowMessages.value = true;
-}
-
-async function loadRoomMessages(roomId: number, options?: { force?: boolean }): Promise<void> {
-  if (!options?.force && currentRoomId.value === roomId) {
-    return;
-  }
-
-  reloadingMessages.value = true;
-  errorMessage.value = '';
-
-  try {
-    const roomMessages = await getRoomMessages(roomId);
-    messages.value = roomMessages;
-    currentRoomId.value = roomId;
-    const room = rooms.value.find((entry) => entry.room_id === roomId);
-    if (room) {
-      room.unread = 0;
-    }
-    composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
-    await nextTick();
-    bindMessageScrollListener();
-    scrollMessagesToBottom();
-  } catch (error) {
-    errorMessage.value = '加载消息失败，请检查网络或后端状态。';
-    console.error(error);
-  } finally {
-    reloadingMessages.value = false;
-  }
-}
-
-async function hydrateRooms(baseRooms: RoomInfo[]): Promise<RoomState[]> {
-  const previews = await Promise.all(
-    baseRooms.map(async (room) => {
-      try {
-        const roomMessages = await getRoomMessages(room.room_id);
-        const lastMessage = roomMessages[roomMessages.length - 1];
-        return {
-          room_id: room.room_id,
-          preview: lastMessage ? formatPreview(lastMessage) : '暂无消息',
-        };
-      } catch (error) {
-        console.error(error);
-        return {
-          room_id: room.room_id,
-          preview: '暂无消息',
-        };
-      }
-    }),
-  );
-
-  const previewMap = new Map(previews.map((entry) => [entry.room_id, entry.preview]));
-
-  return baseRooms.map((room) => ({
-    ...room,
-    preview: previewMap.get(room.room_id) ?? '暂无消息',
-    unread: 0,
-  }));
-}
-
-async function refreshAll(options?: { preserveSelection?: boolean }): Promise<void> {
-  loading.value = true;
-  errorMessage.value = '';
-
-  try {
-    const [nextAgents, nextRooms] = await Promise.all([getAgents(), getRooms()]);
-    agents.value = nextAgents;
-    rooms.value = await hydrateRooms(nextRooms);
-
-    const fallbackRoomId = rooms.value[0]?.room_id ?? null;
-    const targetRoomId =
-      options?.preserveSelection && currentRoomId.value
-        ? currentRoomId.value
-        : currentRoomId.value ?? fallbackRoomId;
-
-    if (targetRoomId) {
-      await loadRoomMessages(targetRoomId, { force: true });
-    } else {
-      messages.value = [];
-      currentRoomId.value = null;
-    }
-  } catch (error) {
-    errorMessage.value = '无法连接到后端服务，请确认服务已启动。';
-    console.error(error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-function applyMessageEvent(event: WsMessageEvent): void {
-  const room = rooms.value.find((entry) => entry.room_id === event.room_id);
-  if (!room) {
-    return;
-  }
-
-  room.preview = formatPreview({ sender: event.sender, content: event.content });
-
-  if (event.room_id === currentRoomId.value) {
-    const wasAtBottom = (() => {
-      const viewport = getMessageStream();
-      return viewport ? isAtBottom(viewport) : shouldFollowMessages.value;
-    })();
-    messages.value = [
-      ...messages.value,
-      { sender: event.sender, content: event.content, time: event.time },
-    ];
-    nextTick(() => {
-      if (wasAtBottom) {
-        scrollMessagesToBottom();
-      } else {
-        syncFollowMessages();
-      }
-    });
-  } else {
-    room.unread += 1;
-  }
-}
-
-function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
-  // 后端发送的是大写 'ACTIVE'/'IDLE'，前端需要转为小写
-  const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
-  agents.value = agents.value.map((agent) =>
-    agent.name === event.agent_name && agent.team_name === event.team_name
-      ? { ...agent, status: normalizedStatus }
-      : agent,
-  );
-}
-
-function clearReconnectCountdown(): void {
-  reconnectRemainingMs.value = null;
-  if (reconnectCountdownTimer !== null) {
-    window.clearInterval(reconnectCountdownTimer);
-    reconnectCountdownTimer = null;
-  }
-}
-
-function clearConnectTimeout(): void {
-  if (connectTimeoutTimer !== null) {
-    window.clearTimeout(connectTimeoutTimer);
-    connectTimeoutTimer = null;
-  }
-}
-
-function startReconnectCountdown(delayMs: number): void {
-  const reconnectAt = Date.now() + delayMs;
-
-  const syncCountdown = (): void => {
-    const remainingMs = reconnectAt - Date.now();
-    reconnectRemainingMs.value = remainingMs > 0 ? remainingMs : 0;
-  };
-
-  clearReconnectCountdown();
-  syncCountdown();
-  reconnectCountdownTimer = window.setInterval(syncCountdown, 50);
-}
-
-function scheduleReconnect(): void {
-  const delayMs = reconnectDelayMs;
-
-  if (reconnectTimer !== null) {
-    window.clearTimeout(reconnectTimer);
-  }
-
-  reconnectAttempt.value += 1;
-  connectionState.value = 'waiting_reconnect';
-  startReconnectCountdown(delayMs);
-  reconnectTimer = window.setTimeout(() => {
-    clearReconnectCountdown();
-    connectWebSocket();
-  }, delayMs);
-}
-
-function connectWebSocket(): void {
-  activeSocketToken += 1;
-  const socketToken = activeSocketToken;
-  const isReconnectAttempt = reconnectAttempt.value > 0;
-
-  clearConnectTimeout();
-
-  if (ws) {
-    shouldReconnect = false;
-    ws.close();
-    shouldReconnect = true;
-  }
-
-  connectionState.value = isReconnectAttempt ? 'reconnecting' : 'connecting';
-  clearReconnectCountdown();
-  ws = createEventsSocket();
-  connectTimeoutTimer = window.setTimeout(() => {
-    if (socketToken !== activeSocketToken || connectionState.value !== 'reconnecting') {
-      return;
-    }
-
-    clearConnectTimeout();
-    shouldReconnect = false;
-    ws?.close();
-    shouldReconnect = true;
-    connectionState.value = 'disconnected';
-    scheduleReconnect();
-  }, connectTimeoutMs);
-
-  ws.addEventListener('open', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    clearConnectTimeout();
-    connectionState.value = 'connected';
-    reconnectAttempt.value = 0;
-    if (reconnectTimer !== null) {
-      window.clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-    clearReconnectCountdown();
-    refreshAll({ preserveSelection: true }).catch(console.error);
-  });
-
-  ws.addEventListener('message', (messageEvent) => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    const payload = JSON.parse(messageEvent.data) as WsEvent;
-    if (payload.event === 'message') {
-      applyMessageEvent(payload);
-      return;
-    }
-    applyAgentStatusEvent(payload);
-  });
-
-  ws.addEventListener('close', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    if (isReconnectAttempt && connectTimeoutTimer !== null && connectionState.value === 'reconnecting') {
-      return;
-    }
-    clearConnectTimeout();
-    connectionState.value = 'disconnected';
-    if (shouldReconnect) {
-      scheduleReconnect();
-    }
-  });
-
-  ws.addEventListener('error', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    if (isReconnectAttempt && connectTimeoutTimer !== null && connectionState.value === 'reconnecting') {
-      return;
-    }
-    clearConnectTimeout();
-    connectionState.value = 'disconnected';
-  });
-}
-
-async function handleSubmit(): Promise<void> {
-  const content = draft.value.trim();
-  if (!content || !currentRoom.value || currentRoom.value.room_type !== 'private') {
-    return;
-  }
-
-  try {
-    await postRoomMessage(currentRoom.value.room_id, content);
-    draft.value = '';
-  } catch (error) {
-    errorMessage.value = '消息发送失败。';
-    console.error(error);
-  }
-}
-
-function updateDraft(value: string): void {
-  draft.value = value;
-}
 
 function applyTheme(mode: ThemeMode): void {
   document.documentElement.dataset.theme = mode;
@@ -399,9 +42,57 @@ function toggleTheme(): void {
   themeMode.value = themeMode.value === 'dark' ? 'light' : 'dark';
 }
 
-watch(currentRoom, (room) => {
-  composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
+function openCreateTeam(): void {
+  router.push({ name: 'team-create' }).catch(console.error);
+}
+
+function openTeamDetail(): void {
+  if (activeTeamId.value === null) {
+    return;
+  }
+  router.push({ name: 'team-detail', params: { teamId: activeTeamId.value } }).catch(console.error);
+}
+
+function selectTeam(teamId: number): void {
+  setPreferredTeamId(teamId);
+  router.push({ name: 'console', params: { teamId } }).catch(console.error);
+}
+
+function redirectToTeam(teamId: number | null): void {
+  if (teamId === null) {
+    return;
+  }
+  router.replace({ name: 'console', params: { teamId } }).catch(console.error);
+}
+
+watch(currentTeam, (team) => {
+  if (team) {
+    setPreferredTeamId(team.id);
+  }
 });
+
+watch(
+  [teamsLoaded, teamIdFromRoute, () => route.name],
+  ([loaded, routeTeamId, routeName]) => {
+    if (!loaded) {
+      return;
+    }
+
+    if (routeName === 'home') {
+      redirectToTeam(preferredTeamId.value ?? firstTeamId.value);
+      return;
+    }
+
+    if (routeName === 'team-create') {
+      return;
+    }
+
+    if (routeTeamId === null || !findTeamById(routeTeamId)) {
+      redirectToTeam(preferredTeamId.value ?? firstTeamId.value);
+    }
+  },
+  { immediate: true },
+);
 
 watch(
   themeMode,
@@ -414,24 +105,7 @@ watch(
 
 onMounted(async () => {
   applyTheme(themeMode.value);
-  await refreshAll();
-  bindMessageScrollListener();
-  connectWebSocket();
-});
-
-onBeforeUnmount(() => {
-  boundMessageStream?.removeEventListener('scroll', handleMessageScroll);
-  boundMessageStream = null;
-  shouldReconnect = false;
-  if (reconnectTimer !== null) {
-    window.clearTimeout(reconnectTimer);
-  }
-  clearConnectTimeout();
-  clearReconnectCountdown();
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
+  await loadTeams();
 });
 </script>
 
@@ -446,33 +120,17 @@ onBeforeUnmount(() => {
       :status-label="statusLabel"
       :reconnect-progress="reconnectProgress"
       :total-message-count="totalMessageCount"
+      :teams="teams"
+      :active-team-id="activeTeamId"
+      :active-team-name="activeTeamName"
       @toggle-theme="toggleTheme"
+      @select-team="selectTeam"
+      @open-create-team="openCreateTeam"
+      @open-team-detail="openTeamDetail"
     />
 
     <main class="workspace">
-      <div class="left-stack">
-        <RoomListSection
-          :loading="loading"
-          :grouped-rooms="groupedRooms"
-          :current-room-id="currentRoomId"
-          @select-room="loadRoomMessages($event, { force: true })"
-        />
-
-        <AgentListSection :agents="uniqueAgents" />
-      </div>
-
-      <div ref="messageViewport" class="chat-shell">
-        <ChatPanel
-          :current-room="currentRoom"
-          :messages="messages"
-          :error-message="errorMessage"
-          :reloading-messages="reloadingMessages"
-          :draft="draft"
-          :composer-notice="composerNotice"
-          @update-draft="updateDraft"
-          @submit="handleSubmit"
-        />
-      </div>
+      <RouterView />
     </main>
   </div>
 </template>
@@ -511,38 +169,8 @@ onBeforeUnmount(() => {
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 8px;
   min-height: 0;
   height: 100%;
   overflow: hidden;
-}
-
-.left-stack {
-  display: grid;
-  grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 8px;
-  min-height: 0;
-}
-
-.chat-shell {
-  min-height: 0;
-  overflow: hidden;
-}
-
-@media (max-width: 980px) {
-  .shell {
-    padding: 16px;
-    gap: 12px;
-  }
-
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .left-stack {
-    grid-template-rows: minmax(280px, 1fr) minmax(220px, 0.8fr);
-  }
 }
 </style>
