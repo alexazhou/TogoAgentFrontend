@@ -66,6 +66,10 @@ onMounted(() => {
           <strong>{{ team.max_function_calls ?? '未设置' }}</strong>
         </article>
         <article class="summary-card">
+          <span>工作目录</span>
+          <strong>{{ team.working_directory || '未设置' }}</strong>
+        </article>
+        <article class="summary-card">
           <span>创建时间</span>
           <strong>{{ team.created_at }}</strong>
         </article>
