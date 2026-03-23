@@ -237,9 +237,11 @@ function applyMessageEvent(event: WsMessageEvent): void {
 }
 
 function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
+  // 后端发送的是大写 'ACTIVE'/'IDLE'，前端需要转为小写
+  const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
   agents.value = agents.value.map((agent) =>
     agent.name === event.agent_name && agent.team_name === event.team_name
-      ? { ...agent, status: event.status }
+      ? { ...agent, status: normalizedStatus }
       : agent,
   );
 }

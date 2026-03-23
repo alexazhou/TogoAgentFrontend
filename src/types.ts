@@ -37,7 +37,7 @@ export interface WsAgentStatusEvent {
   event: 'agent_status';
   agent_name: string;
   team_name: string;
-  status: AgentStatus;
+  status: 'ACTIVE' | 'IDLE';  // 后端发送大写，前端会转换为小写
 }
 
 export type WsEvent = WsMessageEvent | WsAgentStatusEvent;
