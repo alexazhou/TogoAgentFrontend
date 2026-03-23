@@ -4,6 +4,10 @@ import type { AgentInfo } from '../types';
 defineProps<{
   agents: AgentInfo[];
 }>();
+
+const emit = defineEmits<{
+  selectAgent: [agentName: string];
+}>();
 </script>
 
 <template>
@@ -14,7 +18,13 @@ defineProps<{
     </div>
 
     <div class="sidebar-scroll agent-list">
-      <div v-for="agent in agents" :key="agent.name" class="agent-card sidebar-item-card">
+      <button
+        v-for="agent in agents"
+        :key="agent.name"
+        class="agent-card sidebar-item-card"
+        type="button"
+        @click="emit('selectAgent', agent.name)"
+      >
         <div>
           <strong>{{ agent.name }}</strong>
           <p>{{ agent.model }}</p>
@@ -23,7 +33,7 @@ defineProps<{
           <span class="status-dot" :class="{ 'status-dot-pulse': agent.status === 'active' }"></span>
           {{ agent.status === 'active' ? '忙碌' : '空闲' }}
         </div>
-      </div>
+      </button>
     </div>
   </section>
 </template>
@@ -42,6 +52,10 @@ defineProps<{
   gap: 8px;
   align-items: center;
   padding: 8px 10px;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
 }
 
 .agent-card strong {

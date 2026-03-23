@@ -10,6 +10,9 @@ export default defineConfig({
       '/agents.json': 'http://127.0.0.1:8080',
       '/rooms.json': 'http://127.0.0.1:8080',
       '/rooms/': 'http://127.0.0.1:8080',
+      '/teams/list.json': 'http://127.0.0.1:8080',
+      '/teams/create.json': 'http://127.0.0.1:8080',
+      '^/teams/.+\\.json$': 'http://127.0.0.1:8080',
       '/ws': {
         target: 'ws://127.0.0.1:8080',
         ws: true,
