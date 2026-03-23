@@ -26,7 +26,7 @@ type ThemeMode = 'dark' | 'light';
 const rooms = ref<RoomState[]>([]);
 const agents = ref<AgentInfo[]>([]);
 const messages = ref<MessageInfo[]>([]);
-const currentRoomId = ref<string | null>(null);
+const currentRoomId = ref<number | null>(null);
 const draft = ref('');
 const loading = ref(true);
 const reloadingMessages = ref(false);
@@ -121,7 +121,7 @@ function scrollMessagesToBottom(): void {
   shouldFollowMessages.value = true;
 }
 
-async function loadRoomMessages(roomId: string, options?: { force?: boolean }): Promise<void> {
+async function loadRoomMessages(roomId: number, options?: { force?: boolean }): Promise<void> {
   if (!options?.force && currentRoomId.value === roomId) {
     return;
   }

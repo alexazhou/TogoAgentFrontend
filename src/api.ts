@@ -51,7 +51,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const roomType = (room.room_type ?? 'group').toLowerCase();
 
   return {
-    room_id: room.room_id ?? `${roomName}@${teamName}`,
+    room_id: room.room_id as number,
     room_name: roomName,
     team_name: teamName,
     room_type: roomType === 'private' ? 'private' : 'group',
@@ -70,15 +70,15 @@ export async function getRooms(): Promise<RoomInfo[]> {
   return data.rooms.map(normalizeRoom);
 }
 
-export async function getRoomMessages(roomId: string): Promise<MessageInfo[]> {
+export async function getRoomMessages(roomId: number): Promise<MessageInfo[]> {
   const data = await requestJson<{ messages: MessageInfo[] }>(
-    `/rooms/${encodeURIComponent(roomId)}/messages.json`,
+    `/rooms/${roomId}/messages.json`,
   );
   return data.messages;
 }
 
-export async function postRoomMessage(roomId: string, content: string): Promise<void> {
-  await requestJson(`/rooms/${encodeURIComponent(roomId)}/messages.json`, {
+export async function postRoomMessage(roomId: number, content: string): Promise<void> {
+  await requestJson(`/rooms/${roomId}/messages.json`, {
     method: 'POST',
     body: JSON.stringify({ content }),
   });
