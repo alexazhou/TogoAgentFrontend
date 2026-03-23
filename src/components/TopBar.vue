@@ -10,7 +10,6 @@ const props = defineProps<{
   totalMessageCount: number;
   teams: TeamSummary[];
   activeTeamId: number | null;
-  activeTeamName: string;
 }>();
 
 const emit = defineEmits<{
@@ -33,19 +32,36 @@ function handleTeamChange(event: Event): void {
     <div class="brand-group">
       <div>
         <p class="eyebrow">Team Agent Web Console</p>
-        <h1>{{ activeTeamName }}</h1>
       </div>
       <div class="team-switcher">
-        <label for="team-switcher">当前团队</label>
         <select id="team-switcher" :value="activeTeamId ?? ''" @change="handleTeamChange">
           <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
         </select>
       </div>
-      <button class="nav-action" type="button" :disabled="activeTeamId === null" @click="emit('openTeamDetail')">
-        团队详情
+      <button
+        class="nav-action nav-icon-button"
+        type="button"
+        :disabled="activeTeamId === null"
+        title="团队详情"
+        aria-label="团队详情"
+        @click="emit('openTeamDetail')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16.9l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+        </svg>
       </button>
-      <button class="nav-action nav-action-accent" type="button" @click="emit('openCreateTeam')">
-        创建团队
+      <button
+        class="nav-action nav-action-accent nav-icon-button"
+        type="button"
+        title="创建团队"
+        aria-label="创建团队"
+        @click="emit('openCreateTeam')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 5v14"></path>
+          <path d="M5 12h14"></path>
+        </svg>
       </button>
     </div>
 
@@ -121,7 +137,7 @@ function handleTeamChange(event: Event): void {
   background: var(--topbar-bg);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 4px 10px;
 }
 
 .brand-group {
@@ -137,43 +153,56 @@ function handleTeamChange(event: Event): void {
   font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-}
-
-.brand-group h1 {
-  margin: 2px 0 0;
-  color: var(--text-strong);
-  font-size: 1rem;
-  line-height: 1.05;
+  line-height: 1;
 }
 
 .team-switcher {
-  display: grid;
-  gap: 2px;
-}
-
-.team-switcher label {
-  color: var(--muted);
-  font-size: 0.68rem;
+  display: flex;
+  align-items: center;
 }
 
 .team-switcher select {
+  appearance: none;
+  -webkit-appearance: none;
   min-width: 180px;
-  height: 32px;
+  height: 28px;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
-  background: var(--pill-bg);
+  background-color: var(--pill-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236f8298' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 9px center;
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
   color: var(--text-strong);
-  padding: 0 10px;
+  padding: 0 28px 0 10px;
+  outline: none;
+  box-shadow: none;
 }
 
 .nav-action {
-  height: 32px;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 28px;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   background: var(--pill-bg);
   color: var(--text-strong);
   padding: 0 12px;
   cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.nav-icon-button {
+  width: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-action:disabled {
@@ -181,8 +210,16 @@ function handleTeamChange(event: Event): void {
   cursor: not-allowed;
 }
 
-.nav-action-accent {
+.nav-action:not(:disabled):hover {
   border-color: var(--focus-border);
+  color: var(--text-strong);
+}
+
+.team-switcher select:focus-visible,
+.nav-action:focus-visible,
+.theme-switch:focus-visible {
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 2px var(--focus-glow);
 }
 
 .status-group {
@@ -245,6 +282,8 @@ function handleTeamChange(event: Event): void {
 }
 
 .theme-switch {
+  appearance: none;
+  -webkit-appearance: none;
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -255,6 +294,8 @@ function handleTeamChange(event: Event): void {
   background: var(--pill-bg);
   color: var(--muted);
   cursor: pointer;
+  outline: none;
+  box-shadow: none;
   transition:
     border-color 140ms ease,
     background 140ms ease,
@@ -266,7 +307,8 @@ function handleTeamChange(event: Event): void {
   color: var(--text-strong);
 }
 
-.theme-switch svg {
+.theme-switch svg,
+.nav-icon-button svg {
   width: 12px;
   height: 12px;
   fill: none;
@@ -351,6 +393,10 @@ function handleTeamChange(event: Event): void {
   .topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .brand-group {
+    width: 100%;
   }
 
   .status-group {
