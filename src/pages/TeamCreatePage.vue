@@ -183,13 +183,14 @@ onMounted(() => {
 
 .primary-button,
 .secondary-button {
-  min-width: 92px;
-  height: 38px;
+  min-width: 78px;
+  height: 30px;
   border: 1px solid var(--team-create-control-border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--panel-bg);
   color: var(--text-strong);
-  padding: 0 18px;
+  padding: 0 14px;
+  font-size: 0.88rem;
   transition:
     border-color 0.18s ease,
     background 0.18s ease,

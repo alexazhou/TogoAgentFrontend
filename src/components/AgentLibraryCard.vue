@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AgentTemplateCard from './AgentTemplateCard.vue';
+
 defineProps<{
   keyword: string;
   filteredAgents: string[];
@@ -26,26 +28,18 @@ const emit = defineEmits<{
     </div>
 
     <div class="agent-grid">
-      <button
+      <AgentTemplateCard
         v-for="agentName in filteredAgents"
         :key="agentName"
-        class="agent-tile"
-        :class="{ selected: selectedAgents.includes(agentName) }"
-        type="button"
+        :agent-name="agentName"
+        :selected="selectedAgents.includes(agentName)"
         @click="emit('toggleAgent', agentName)"
-      >
-        <span class="agent-avatar">{{ agentName.slice(0, 1).toUpperCase() }}</span>
-        <strong>{{ agentName }}</strong>
-      </button>
+      />
 
       <div v-if="!filteredAgents.length" class="empty-state">
         Agent 加载失败
       </div>
     </div>
-
-    <p class="library-note">
-      选择的 Agent 会作为团队成员加入默认群聊 `团队群聊`，再次点击可移除。
-    </p>
   </section>
 </template>
 
@@ -60,7 +54,7 @@ const emit = defineEmits<{
   padding: 10px 12px;
   grid-column: 1 / -1;
   grid-row: 2;
-  min-height: 0;
+  min-height: 120px;
   overflow: hidden;
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
@@ -89,19 +83,19 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 220px;
+  min-width: 180px;
   color: var(--text-strong);
 }
 
 .search-box input {
-  width: 220px;
-  height: 32px;
-  font-size: 0.84rem;
+  width: 180px;
+  height: 28px;
+  font-size: 0.8rem;
   border-radius: 10px;
   border: 1px solid var(--team-create-control-border);
   background: var(--surface-soft);
   color: var(--text-strong);
-  padding: 0 12px;
+  padding: 0 10px;
   outline: none;
   box-shadow: none;
   transition:
@@ -118,10 +112,11 @@ const emit = defineEmits<{
 
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px 16px;
+  grid-template-columns: repeat(auto-fill, 78px);
+  justify-content: start;
+  gap: 8px 12px;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   align-content: start;
   padding-right: 4px;
 }
@@ -132,60 +127,9 @@ const emit = defineEmits<{
   justify-content: center;
 }
 
-.agent-tile {
-  min-height: 88px;
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 18px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 8px;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.agent-tile.selected {
-  border-color: var(--focus-border);
-  background: var(--selected);
-  box-shadow: none;
-}
-
-.agent-tile:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--focus-border) 70%, var(--panel-border) 30%);
-  background: var(--selected);
-}
-
-.agent-avatar {
-  width: 42px;
-  height: 42px;
-  border: 1px solid currentColor;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.library-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
 .empty-state {
   min-height: 88px;
   min-width: min(280px, 100%);
-  border: 1px dashed var(--team-create-control-border);
   border-radius: 18px;
   display: grid;
   place-items: center;
@@ -197,7 +141,7 @@ const emit = defineEmits<{
 
 @media (max-width: 960px) {
   .agent-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, 78px);
   }
 
   .library-head {
@@ -217,7 +161,8 @@ const emit = defineEmits<{
 
 @media (max-width: 640px) {
   .agent-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, 78px);
+    justify-content: center;
   }
 
   .search-box {
