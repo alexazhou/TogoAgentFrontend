@@ -12,7 +12,6 @@ const emit = defineEmits<{
 
 const leaderAgent = computed(() => props.selectedAgents[0] ?? '');
 const memberAgents = computed(() => props.selectedAgents.slice(1));
-const isSingleMemberLayout = computed(() => memberAgents.value.length === 1);
 const visibleMemberSlots = computed(() => [
   ...memberAgents.value.map((agentName) => ({
     name: agentName,
@@ -20,6 +19,7 @@ const visibleMemberSlots = computed(() => [
   })),
   { name: '', agent: '' },
 ]);
+const isSingleMemberLayout = computed(() => visibleMemberSlots.value.length === 1);
 const memberGridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(visibleMemberSlots.value.length, 1)}, minmax(180px, 220px))`,
 }));
@@ -38,7 +38,8 @@ const memberGridStyle = computed(() => ({
     </button>
 
     <div class="member-tree" :class="{ 'is-single-member': isSingleMemberLayout }">
-      <div class="member-rail" aria-hidden="true"></div>
+      <div v-if="!isSingleMemberLayout" class="member-rail" aria-hidden="true"></div>
+      <div v-else class="member-single-link" aria-hidden="true"></div>
 
       <div class="member-slots" :class="{ 'is-single-member': isSingleMemberLayout }" :style="memberGridStyle">
         <button
@@ -154,6 +155,7 @@ const memberGridStyle = computed(() => ({
   display: grid;
   gap: var(--member-gap);
   justify-content: center;
+  justify-items: center;
 }
 
 .member-slots.is-single-member {
@@ -203,13 +205,17 @@ const memberGridStyle = computed(() => ({
 }
 
 .member-tree.is-single-member .member-rail {
-  left: 50%;
-  right: calc(var(--member-card-width) / 2);
+  display: none;
 }
 
-.member-tree.is-single-member .member-rail::before {
-  left: 0;
-  transform: none;
+.member-single-link {
+  position: absolute;
+  top: -38px;
+  left: 50%;
+  width: 1px;
+  height: 96px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--panel-border-strong) 78%, transparent);
 }
 
 @media (max-width: 960px) {
