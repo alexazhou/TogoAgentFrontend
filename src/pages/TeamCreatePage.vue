@@ -42,10 +42,15 @@ function toggleAgent(agentName: string): void {
 }
 
 async function loadAvailableAgents(): Promise<void> {
-  const runtimeAgents = await getAgents();
-  const unique = new Set<string>();
-  runtimeAgents.forEach((agent: AgentInfo) => unique.add(agent.template_name || agent.name));
-  availableAgents.value = Array.from(unique).sort((left, right) => left.localeCompare(right));
+  try {
+    const runtimeAgents = await getAgents();
+    const unique = new Set<string>();
+    runtimeAgents.forEach((agent: AgentInfo) => unique.add(agent.template_name || agent.name));
+    availableAgents.value = Array.from(unique).sort((left, right) => left.localeCompare(right));
+  } catch (error) {
+    availableAgents.value = [];
+    console.error(error);
+  }
 }
 
 async function handleSubmit(): Promise<void> {
@@ -92,7 +97,7 @@ async function handleSubmit(): Promise<void> {
 
 onMounted(() => {
   totalMessageCount.value = 0;
-  loadAvailableAgents().catch(console.error);
+  loadAvailableAgents();
 });
 </script>
 

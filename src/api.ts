@@ -7,6 +7,7 @@ import type {
   TeamDetail,
   TeamSummary,
 } from './types';
+import { showGlobalRequestError } from './appUiState';
 
 type RawRoomInfo = Partial<RoomInfo> & {
   name?: string;
@@ -51,19 +52,30 @@ function makeWsUrl(path: string): string {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(makeUrl(path), {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
+  try {
+    const response = await fetch(makeUrl(path), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+      ...init,
+    });
 
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    if (!response.ok) {
+      const message = `请求失败：${response.status} ${path}`;
+      showGlobalRequestError(message);
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Request failed:')) {
+      throw error;
+    }
+
+    showGlobalRequestError(`无法连接后端：${path}`);
+    throw error;
   }
-
-  return response.json() as Promise<T>;
 }
 
 function normalizeRoom(room: RawRoomInfo): RoomInfo {

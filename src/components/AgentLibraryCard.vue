@@ -37,6 +37,10 @@ const emit = defineEmits<{
         <span class="agent-avatar">{{ agentName.slice(0, 1).toUpperCase() }}</span>
         <strong>{{ agentName }}</strong>
       </button>
+
+      <div v-if="!filteredAgents.length" class="empty-state">
+        暂无可用 Agent。
+      </div>
     </div>
 
     <p class="library-note">
@@ -170,6 +174,18 @@ const emit = defineEmits<{
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.empty-state {
+  min-height: 88px;
+  border: 1px dashed var(--team-create-control-border);
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+  text-align: center;
 }
 
 @media (max-width: 960px) {
