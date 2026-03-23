@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
-import { connectionState, reconnectProgress, totalMessageCount } from './appUiState';
+import { clearGlobalRequestError, connectionState, globalRequestError, reconnectProgress, totalMessageCount } from './appUiState';
 import TopBar from './components/TopBar.vue';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
 import { formatConnectionState } from './utils';
@@ -123,6 +123,10 @@ onMounted(async () => {
     />
 
     <main class="workspace">
+      <div v-if="globalRequestError" class="global-error-toast" role="alert">
+        <span>{{ globalRequestError }}</span>
+        <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError">×</button>
+      </div>
       <RouterView />
     </main>
   </div>
@@ -165,5 +169,41 @@ onMounted(async () => {
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+.global-error-toast {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  width: min(345px, calc(100% - 16px));
+  min-height: 96px;
+  padding: 18px 20px;
+  border: 2px dashed color-mix(in srgb, var(--danger) 45%, var(--panel-border) 55%);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--danger) 12%, var(--panel-bg) 88%);
+  color: #ff5f56;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.global-error-toast span {
+  flex: 1;
+}
+
+.global-error-toast button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.2rem;
 }
 </style>
