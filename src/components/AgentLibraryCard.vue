@@ -39,7 +39,7 @@ const emit = defineEmits<{
       </button>
 
       <div v-if="!filteredAgents.length" class="empty-state">
-        暂无可用 Agent。
+        Agent 加载失败
       </div>
     </div>
 
@@ -126,6 +126,12 @@ const emit = defineEmits<{
   padding-right: 4px;
 }
 
+.agent-grid:has(.empty-state:only-child) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .agent-tile {
   min-height: 88px;
   border: 1px solid var(--team-create-control-border);
@@ -178,6 +184,7 @@ const emit = defineEmits<{
 
 .empty-state {
   min-height: 88px;
+  min-width: min(280px, 100%);
   border: 1px dashed var(--team-create-control-border);
   border-radius: 18px;
   display: grid;
