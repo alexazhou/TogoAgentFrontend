@@ -70,12 +70,20 @@ onMounted(() => {
           <strong>{{ team.working_directory || '未设置' }}</strong>
         </article>
         <article class="summary-card">
+          <span>团队口号</span>
+          <strong>{{ String(team.config?.slogan || '未设置') }}</strong>
+        </article>
+        <article class="summary-card">
           <span>创建时间</span>
           <strong>{{ team.created_at }}</strong>
         </article>
         <article class="summary-card">
           <span>更新时间</span>
           <strong>{{ team.updated_at }}</strong>
+        </article>
+        <article class="summary-card summary-card-wide">
+          <span>团队制度</span>
+          <strong>{{ String(team.config?.rules || '未设置') }}</strong>
         </article>
       </div>
 
@@ -175,6 +183,10 @@ onMounted(() => {
 
 .summary-card {
   padding: 16px;
+}
+
+.summary-card-wide {
+  grid-column: 1 / -1;
 }
 
 .summary-card span,

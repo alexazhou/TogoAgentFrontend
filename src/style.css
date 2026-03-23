@@ -14,6 +14,9 @@
   --panel-bg: #17212b;
   --panel-border: #223040;
   --panel-border-strong: #223040;
+  --team-create-panel-border: #3a4d63;
+  --team-create-control-border: #44586f;
+  --team-create-node-border: #51677f;
   --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
   --accent: #7f91a4;
   --accent-soft: rgba(127, 145, 164, 0.14);
@@ -71,6 +74,9 @@
   --panel-bg: rgba(255, 255, 255, 0.88);
   --panel-border: #d6e1ee;
   --panel-border-strong: #d6e1ee;
+  --team-create-panel-border: #d6e1ee;
+  --team-create-control-border: #d6e1ee;
+  --team-create-node-border: #d6e1ee;
   --panel-shadow: none;
   --accent: #6f8298;
   --accent-soft: rgba(111, 130, 152, 0.12);
