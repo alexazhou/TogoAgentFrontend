@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAgentAvatarUrl } from '../avatar';
 import type { AgentInfo } from '../types';
 
 defineProps<{
@@ -25,9 +26,12 @@ const emit = defineEmits<{
         type="button"
         @click="emit('selectAgent', agent.name)"
       >
-        <div>
+        <div class="agent-primary">
+          <img class="agent-avatar" :src="getAgentAvatarUrl(agent.name)" :alt="`${agent.name} avatar`" />
+          <div>
           <strong>{{ agent.name }}</strong>
           <p>{{ agent.model }}</p>
+          </div>
         </div>
         <div class="agent-state" :data-state="agent.status">
           <span class="status-dot" :class="{ 'status-dot-pulse': agent.status === 'active' }"></span>
@@ -56,6 +60,22 @@ const emit = defineEmits<{
   cursor: pointer;
   color: inherit;
   text-align: left;
+}
+
+.agent-primary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.agent-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
 }
 
 .agent-card strong {

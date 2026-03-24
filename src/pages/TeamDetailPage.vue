@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
 import { getTeamDetail } from '../api';
+import { getAgentAvatarUrl } from '../avatar';
 import type { TeamDetail } from '../types';
 
 const route = useRoute();
@@ -101,8 +102,11 @@ onMounted(() => {
               class="member-chip"
               @click="openAgent(member.name)"
             >
-              <strong>{{ member.name }}</strong>
-              <small>{{ member.agent }}</small>
+              <img class="member-avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${member.name} avatar`" />
+              <div>
+                <strong>{{ member.name }}</strong>
+                <small>{{ member.agent }}</small>
+              </div>
             </button>
           </div>
         </section>
@@ -227,10 +231,24 @@ onMounted(() => {
   background: var(--panel-bg);
   color: var(--text-strong);
   cursor: pointer;
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 12px;
   text-align: left;
+}
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
+}
+
+.member-chip div {
+  min-width: 0;
 }
 
 .member-chip strong {

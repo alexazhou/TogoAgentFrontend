@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getAgentAvatarUrl } from '../avatar';
+
 defineProps<{
   agentName: string;
   selected: boolean;
@@ -11,7 +13,7 @@ defineEmits<{
 
 <template>
   <button class="agent-card" :class="{ selected }" type="button" @click="$emit('click')">
-    <span class="agent-card__avatar">{{ agentName.slice(0, 1).toUpperCase() }}</span>
+    <img class="agent-card__avatar" :src="getAgentAvatarUrl(agentName)" :alt="`${agentName} avatar`" />
     <strong class="agent-card__name">{{ agentName }}</strong>
     <small class="agent-card__meta">Agent</small>
   </button>
@@ -55,15 +57,12 @@ defineEmits<{
 }
 
 .agent-card__avatar {
-  width: 24px;
-  height: 24px;
-  border: 1px solid currentColor;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.82rem;
-  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: block;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
 }
 
 .agent-card__name {
