@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { getAgentAvatarUrl } from '../avatar';
 
 const props = defineProps<{
   teamName: string;
@@ -33,6 +34,12 @@ const memberGridStyle = computed(() => ({
       type="button"
       @click="leaderAgent && emit('toggleAgent', leaderAgent)"
     >
+      <img
+        v-if="leaderAgent"
+        class="member-avatar"
+        :src="getAgentAvatarUrl(leaderAgent)"
+        :alt="`${leaderAgent} avatar`"
+      />
       <span>{{ leaderAgent || (teamName.trim() ? `${teamName.trim()} Leader` : '+') }}</span>
       <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
     </button>
@@ -50,6 +57,12 @@ const memberGridStyle = computed(() => ({
           type="button"
           @click="member.name && emit('toggleAgent', member.name)"
         >
+          <img
+            v-if="member.name"
+            class="member-avatar"
+            :src="getAgentAvatarUrl(member.name)"
+            :alt="`${member.name} avatar`"
+          />
           <span>{{ member.name || '+' }}</span>
           <small>{{ member.name ? member.agent : '成员' }}</small>
         </button>
@@ -78,6 +91,7 @@ const memberGridStyle = computed(() => ({
   border-radius: 24px;
   display: grid;
   place-items: center;
+  align-content: center;
   text-align: center;
   padding: 10px;
   color: var(--text-strong);
@@ -181,6 +195,7 @@ const memberGridStyle = computed(() => ({
   color: var(--text-strong);
   display: grid;
   place-items: center;
+  align-content: center;
   gap: 2px;
   padding: 10px;
   text-align: center;
@@ -191,6 +206,16 @@ const memberGridStyle = computed(() => ({
     border-color 0.18s ease,
     box-shadow 0.18s ease,
     background 0.18s ease;
+}
+
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+  margin-bottom: 4px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
 }
 
 .member-node::before {
