@@ -30,7 +30,7 @@ const NAME_COLORS = [
 ];
 
 function senderColor(sender: string): string {
-  if (sender === 'Operator') {
+  if (sender === 'OPERATOR') {
     return '#7f91a4';
   }
   const hash = Array.from(sender).reduce((sum, char) => sum + char.charCodeAt(0), 0);

@@ -43,7 +43,7 @@ export function bubbleSide(sender: string): BubbleSide {
   if (sender === 'system') {
     return 'center';
   }
-  if (sender === 'Operator') {
+  if (sender === 'OPERATOR') {
     return 'right';
   }
   return 'left';
