@@ -103,9 +103,13 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     room_name: roomName,
     team_name: teamName,
     room_type: roomType === 'private' ? 'private' : 'group',
-    state: room.state ?? 'idle',
+    state: (room.state ?? 'idle').toLowerCase(),
     members: room.members ?? room.agents ?? [],
   };
+}
+
+function normalizeAgent(agent: AgentInfo): AgentInfo {
+  return { ...agent, status: (agent.status as string).toLowerCase() as AgentStatus };
 }
 
 export async function getAgents(): Promise<AgentInfo[]> {
@@ -113,7 +117,7 @@ export async function getAgents(): Promise<AgentInfo[]> {
     '/agents/list.json',
     '/agents.json',
   );
-  return data.agents;
+  return data.agents.map(normalizeAgent);
 }
 
 export async function getAgentsByTeam(teamName: string): Promise<AgentInfo[]> {
@@ -121,7 +125,7 @@ export async function getAgentsByTeam(teamName: string): Promise<AgentInfo[]> {
     withSearch('/agents/list.json', { team_name: teamName }),
     withSearch('/agents.json', { team_name: teamName }),
   );
-  return data.agents;
+  return data.agents.map(normalizeAgent);
 }
 
 export async function getRooms(teamName?: string): Promise<RoomInfo[]> {
