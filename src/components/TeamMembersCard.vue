@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import TeamMemberGraph from './TeamMemberGraph.vue';
 
-defineProps<{
+withDefaults(defineProps<{
   teamName: string;
   selectedAgents: string[];
-}>();
+  readonly?: boolean;
+}>(), {
+  readonly: false,
+});
 
 const emit = defineEmits<{
   toggleAgent: [agentName: string];
@@ -17,7 +20,12 @@ const emit = defineEmits<{
       <span class="panel-label">团队成员</span>
     </div>
 
-    <TeamMemberGraph :team-name="teamName" :selected-agents="selectedAgents" @toggle-agent="emit('toggleAgent', $event)" />
+    <TeamMemberGraph
+      :team-name="teamName"
+      :selected-agents="selectedAgents"
+      :readonly="readonly"
+      @toggle-agent="emit('toggleAgent', $event)"
+    />
   </section>
 </template>
 

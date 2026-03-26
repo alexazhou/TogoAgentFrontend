@@ -3,7 +3,6 @@ import AgentDetailPage from './pages/AgentDetailPage.vue';
 import ConsolePage from './pages/ConsolePage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
 import TeamCreatePage from './pages/TeamCreatePage.vue';
-import TeamDetailPage from './pages/TeamDetailPage.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,7 +25,11 @@ const router = createRouter({
     {
       path: '/teams/:teamId/detail',
       name: 'team-detail',
-      component: TeamDetailPage,
+      redirect: (to) => ({
+        name: 'settings',
+        params: { teamId: to.params.teamId, section: 'teams' },
+        query: { detailTeamId: String(to.params.teamId ?? '') },
+      }),
     },
     {
       path: '/teams/:teamId/settings/:section?',

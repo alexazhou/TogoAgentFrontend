@@ -1,10 +1,13 @@
 <script setup lang="ts">
-defineProps<{
+const props = withDefaults(defineProps<{
   name: string;
   workingDirectory: string;
   slogan: string;
   rules: string;
-}>();
+  readonly?: boolean;
+}>(), {
+  readonly: false,
+});
 
 const emit = defineEmits<{
   'update:name': [value: string];
@@ -22,6 +25,7 @@ const emit = defineEmits<{
       :value="name"
       type="text"
       placeholder="例如：alpha-delivery"
+      :readonly="props.readonly"
       @input="emit('update:name', ($event.target as HTMLInputElement).value)"
     />
     <span class="field-label">工作目录</span>
@@ -29,6 +33,7 @@ const emit = defineEmits<{
       :value="workingDirectory"
       type="text"
       placeholder="例如：/workspace/alpha-delivery"
+      :readonly="props.readonly"
       @input="emit('update:workingDirectory', ($event.target as HTMLInputElement).value)"
     />
     <span class="field-label">团队口号</span>
@@ -36,6 +41,7 @@ const emit = defineEmits<{
       :value="slogan"
       type="text"
       placeholder="例如：硅基动力，优秀实力"
+      :readonly="props.readonly"
       @input="emit('update:slogan', ($event.target as HTMLInputElement).value)"
     />
     <span class="field-label">团队制度</span>
@@ -43,6 +49,7 @@ const emit = defineEmits<{
       :value="rules"
       rows="3"
       placeholder="例如：1. 先沟通后执行 2. 结果同步到群聊"
+      :readonly="props.readonly"
       @input="emit('update:rules', ($event.target as HTMLTextAreaElement).value)"
     ></textarea>
   </label>
@@ -99,6 +106,11 @@ textarea {
   resize: vertical;
   padding: 10px 12px;
   line-height: 1.45;
+}
+
+input[readonly],
+textarea[readonly] {
+  cursor: default;
 }
 
 input:focus,
