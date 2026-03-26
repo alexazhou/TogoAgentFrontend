@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgents, getTeamDetail } from '../api';
+import { getAgents, getTeamDetail, updateTeam } from '../api';
 import { connectionState, totalMessageCount } from '../appUiState';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
-import { teams } from '../teamStore';
+import { loadTeams, teams } from '../teamStore';
 import type { AgentInfo, TeamDetail } from '../types';
 
 const route = useRoute();
@@ -24,6 +24,14 @@ const driverStates = [
 const agents = ref<AgentInfo[]>([]);
 const teamSummaries = ref<Record<number, { memberCount: number; roomCount: number }>>({});
 const selectedTeamDetail = ref<TeamDetail | null>(null);
+const teamInfoDraft = ref({
+  name: '',
+  workingDirectory: '',
+  slogan: '',
+  rules: '',
+});
+const isSavingTeamInfo = ref(false);
+const teamInfoStatus = ref('');
 let uptimeTimer: number | null = null;
 
 const navItems = [
@@ -55,6 +63,17 @@ const detailTeamId = computed(() => {
   return Number.isFinite(value) ? value : null;
 });
 const selectedTeamMembers = computed(() => selectedTeamDetail.value?.members.map((member) => member.name) ?? []);
+const hasTeamInfoChanges = computed(() => {
+  if (!selectedTeamDetail.value) {
+    return false;
+  }
+
+  return (
+    teamInfoDraft.value.workingDirectory !== (selectedTeamDetail.value.working_directory || '') ||
+    teamInfoDraft.value.slogan !== String(selectedTeamDetail.value.config?.slogan || '') ||
+    teamInfoDraft.value.rules !== String(selectedTeamDetail.value.config?.rules || '')
+  );
+});
 const breadcrumbItems = computed(() => {
   const items = [
     { key: 'settings', label: '系统设置', action: () => openSection(defaultSectionId), current: false },
@@ -128,15 +147,68 @@ async function loadTeamSummaries(): Promise<void> {
 async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
   if (targetTeamId === null) {
     selectedTeamDetail.value = null;
+    teamInfoStatus.value = '';
     return;
   }
 
   try {
     selectedTeamDetail.value = await getTeamDetail(targetTeamId);
+    teamInfoDraft.value = {
+      name: selectedTeamDetail.value.name,
+      workingDirectory: selectedTeamDetail.value.working_directory || '',
+      slogan: String(selectedTeamDetail.value.config?.slogan || ''),
+      rules: String(selectedTeamDetail.value.config?.rules || ''),
+    };
+    teamInfoStatus.value = '';
   } catch (error) {
     console.error(error);
     selectedTeamDetail.value = null;
   }
+}
+
+async function saveTeamInfo(): Promise<void> {
+  if (!selectedTeamDetail.value || isSavingTeamInfo.value || !hasTeamInfoChanges.value) {
+    return;
+  }
+
+  isSavingTeamInfo.value = true;
+  teamInfoStatus.value = '';
+
+  try {
+    await updateTeam(selectedTeamDetail.value.id, {
+      working_directory: teamInfoDraft.value.workingDirectory,
+      config: {
+        ...(selectedTeamDetail.value.config || {}),
+        slogan: teamInfoDraft.value.slogan,
+        rules: teamInfoDraft.value.rules,
+      },
+    });
+    await Promise.all([
+      loadSelectedTeamDetail(selectedTeamDetail.value.id),
+      loadTeamSummaries(),
+      loadTeams(),
+    ]);
+    teamInfoStatus.value = '已保存';
+  } catch (error) {
+    console.error(error);
+    teamInfoStatus.value = '保存失败';
+  } finally {
+    isSavingTeamInfo.value = false;
+  }
+}
+
+function resetTeamInfoDraft(): void {
+  if (!selectedTeamDetail.value) {
+    return;
+  }
+
+  teamInfoDraft.value = {
+    name: selectedTeamDetail.value.name,
+    workingDirectory: selectedTeamDetail.value.working_directory || '',
+    slogan: String(selectedTeamDetail.value.config?.slogan || ''),
+    rules: String(selectedTeamDetail.value.config?.rules || ''),
+  };
+  teamInfoStatus.value = '';
 }
 
 function formatDuration(ms: number): string {
@@ -357,16 +429,39 @@ onBeforeUnmount(() => {
                 <p class="section-eyebrow">Team Detail</p>
                 <h4>{{ selectedTeamDetail.name }}</h4>
               </div>
-              <button type="button" class="secondary-button" @click="clearTeamDetail">返回团队列表</button>
+              <div class="team-detail-actions">
+                <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
+                <button
+                  v-if="hasTeamInfoChanges"
+                  type="button"
+                  class="ghost-button"
+                  :disabled="isSavingTeamInfo"
+                  @click="resetTeamInfoDraft"
+                >
+                  重置
+                </button>
+                <button
+                  type="button"
+                  class="secondary-button"
+                  :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
+                  @click="saveTeamInfo"
+                >
+                  {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
+                </button>
+                <button type="button" class="secondary-button" @click="clearTeamDetail">返回团队列表</button>
+              </div>
             </div>
 
             <div class="team-detail-stack">
               <TeamInfoCard
-                :name="selectedTeamDetail.name"
-                :working-directory="selectedTeamDetail.working_directory || ''"
-                :slogan="String(selectedTeamDetail.config?.slogan || '')"
-                :rules="String(selectedTeamDetail.config?.rules || '')"
-                readonly
+                :name="teamInfoDraft.name"
+                :working-directory="teamInfoDraft.workingDirectory"
+                :slogan="teamInfoDraft.slogan"
+                :rules="teamInfoDraft.rules"
+                :editable-name="false"
+                @update:working-directory="teamInfoDraft.workingDirectory = $event"
+                @update:slogan="teamInfoDraft.slogan = $event"
+                @update:rules="teamInfoDraft.rules = $event"
               />
 
               <TeamMembersCard
@@ -1026,12 +1121,26 @@ onBeforeUnmount(() => {
   margin-bottom: 2px;
 }
 
+.team-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.team-detail-status {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .team-detail-stack {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
   margin-top: 10px;
   min-height: 0;
+  align-items: start;
 }
 
 .empty-card p {
@@ -1075,6 +1184,12 @@ onBeforeUnmount(() => {
   font-size: 0.84rem;
 }
 
+.secondary-button:disabled,
+.ghost-button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1100px) {
   .settings-layout {
     grid-template-columns: 1fr;
@@ -1112,6 +1227,15 @@ onBeforeUnmount(() => {
   .team-card-footer {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .team-detail-head {
+    flex-direction: column;
+  }
+
+  .team-detail-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 </style>

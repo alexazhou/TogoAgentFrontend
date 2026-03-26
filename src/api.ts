@@ -172,6 +172,19 @@ export async function getTeamDetail(teamId: number): Promise<TeamDetail> {
   return requestJson<TeamDetail>(`/teams/${teamId}.json`);
 }
 
+export async function updateTeam(
+  teamId: number,
+  payload: {
+    working_directory?: string;
+    config?: Record<string, unknown>;
+  },
+): Promise<{ status: string; name: string }> {
+  return requestJson(`/teams/${teamId}/modify.json`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function createTeam(payload: CreateTeamPayload): Promise<{ status: string; name: string }> {
   return requestJson('/teams/create.json', {
     method: 'POST',
