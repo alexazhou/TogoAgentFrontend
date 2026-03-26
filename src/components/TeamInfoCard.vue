@@ -5,8 +5,10 @@ const props = withDefaults(defineProps<{
   slogan: string;
   rules: string;
   readonly?: boolean;
+  editableName?: boolean;
 }>(), {
   readonly: false,
+  editableName: true,
 });
 
 const emit = defineEmits<{
@@ -15,44 +17,88 @@ const emit = defineEmits<{
   'update:slogan': [value: string];
   'update:rules': [value: string];
 }>();
+
+function displayValue(value: string, fallback = '未设置'): string {
+  return value.trim() || fallback;
+}
 </script>
 
 <template>
-  <label class="name-panel">
-    <span class="panel-title">团队信息</span>
-    <span class="field-label">团队名称</span>
-    <input
-      :value="name"
-      type="text"
-      placeholder="例如：alpha-delivery"
-      :readonly="props.readonly"
-      @input="emit('update:name', ($event.target as HTMLInputElement).value)"
-    />
-    <span class="field-label">工作目录</span>
-    <input
-      :value="workingDirectory"
-      type="text"
-      placeholder="例如：/workspace/alpha-delivery"
-      :readonly="props.readonly"
-      @input="emit('update:workingDirectory', ($event.target as HTMLInputElement).value)"
-    />
-    <span class="field-label">团队口号</span>
-    <input
-      :value="slogan"
-      type="text"
-      placeholder="例如：硅基动力，优秀实力"
-      :readonly="props.readonly"
-      @input="emit('update:slogan', ($event.target as HTMLInputElement).value)"
-    />
-    <span class="field-label">团队制度</span>
-    <textarea
-      :value="rules"
-      rows="3"
-      placeholder="例如：1. 先沟通后执行 2. 结果同步到群聊"
-      :readonly="props.readonly"
-      @input="emit('update:rules', ($event.target as HTMLTextAreaElement).value)"
-    ></textarea>
-  </label>
+  <section class="name-panel" :class="{ readonly: props.readonly }">
+    <div class="panel-head">
+      <span class="panel-title">团队信息</span>
+      <span v-if="props.readonly" class="panel-badge">只读</span>
+    </div>
+
+    <template v-if="props.readonly">
+      <div class="info-table">
+        <div class="info-row">
+          <span class="info-key">团队名称</span>
+          <div class="info-value">{{ displayValue(name) }}</div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">工作目录</span>
+          <div class="info-value info-value-path">{{ displayValue(workingDirectory) }}</div>
+        </div>
+
+        <div class="info-row">
+          <span class="info-key">团队口号</span>
+          <div class="info-value">{{ displayValue(slogan) }}</div>
+        </div>
+
+        <div class="info-row info-row-multiline">
+          <span class="info-key">团队须知</span>
+          <div class="info-value info-value-multiline">{{ displayValue(rules) }}</div>
+        </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <div class="edit-grid">
+        <label class="edit-field">
+          <span class="field-label">团队名称</span>
+          <input
+            :value="name"
+            type="text"
+            placeholder="例如：alpha-delivery"
+            :disabled="!props.editableName"
+            @input="emit('update:name', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="edit-field">
+          <span class="field-label">工作目录</span>
+          <input
+            :value="workingDirectory"
+            type="text"
+            placeholder="例如：/workspace/alpha-delivery"
+            @input="emit('update:workingDirectory', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="edit-field">
+          <span class="field-label">团队口号</span>
+          <input
+            :value="slogan"
+            type="text"
+            placeholder="例如：硅基动力，优秀实力"
+            @input="emit('update:slogan', ($event.target as HTMLInputElement).value)"
+          />
+        </label>
+
+        <label class="edit-field edit-field-wide">
+          <span class="field-label">团队须知</span>
+          <textarea
+            :value="rules"
+            rows="3"
+            placeholder="例如：1. 先沟通后执行 2. 结果同步到群聊"
+            @input="emit('update:rules', ($event.target as HTMLTextAreaElement).value)"
+          ></textarea>
+        </label>
+      </div>
+    </template>
+  </section>
 </template>
 
 <style scoped>
@@ -67,6 +113,13 @@ const emit = defineEmits<{
   align-content: start;
 }
 
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .panel-title {
   color: var(--text-strong);
   font-size: 0.96rem;
@@ -74,11 +127,101 @@ const emit = defineEmits<{
   letter-spacing: 0.01em;
 }
 
+.panel-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--selected) 48%, var(--panel-bg) 52%);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  margin-top: 2px;
+}
+
+.edit-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.edit-field-wide {
+  grid-column: 1 / -1;
+}
+
 .field-label {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.info-table {
+  margin-top: 4px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-soft) 72%, var(--panel-bg) 28%);
+  overflow: hidden;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--focus-border) 10%, var(--panel-border) 90%);
+}
+
+.info-row:first-child {
+  border-top: none;
+}
+
+.info-row-multiline {
+  align-items: flex-start;
+}
+
+.info-key {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.info-value {
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.info-value-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace;
+  font-size: 0.83rem;
+  color: color-mix(in srgb, var(--text-strong) 88%, var(--accent) 12%);
+}
+
+.info-value-multiline {
+  white-space: pre-wrap;
 }
 
 input,
@@ -108,9 +251,10 @@ textarea {
   line-height: 1.45;
 }
 
-input[readonly],
-textarea[readonly] {
-  cursor: default;
+input:disabled,
+textarea:disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
 }
 
 input:focus,
@@ -118,5 +262,17 @@ textarea:focus {
   border-color: var(--focus-border);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-border) 18%, transparent);
   background: var(--panel-bg);
+}
+
+@media (max-width: 780px) {
+  .edit-grid,
+  .info-row {
+    grid-template-columns: 1fr;
+  }
+
+  .info-row {
+    gap: 6px;
+    padding: 10px;
+  }
 }
 </style>
