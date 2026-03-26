@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAgentAvatarUrl } from '../avatar';
 import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import type { MessageInfo } from '../types';
 import { bubbleSide, formatTime } from '../utils';
@@ -87,21 +88,27 @@ onBeforeUnmount(() => {
       </template>
       <template v-else>
         <div class="message-meta">
-          <span
-            v-if="bubbleSide(message.sender) === 'left'"
-            class="sender"
-            :style="{ color: senderColor(message.sender) }"
-          >
-            {{ message.sender }}
-          </span>
+          <template v-if="bubbleSide(message.sender) === 'left'">
+            <img
+              class="sender-avatar"
+              :src="getAgentAvatarUrl(message.sender)"
+              :alt="`${message.sender} avatar`"
+            />
+            <span class="sender" :style="{ color: senderColor(message.sender) }">
+              {{ message.sender }}
+            </span>
+          </template>
           <span class="time">{{ formatTime(message.time) }}</span>
-          <span
-            v-if="bubbleSide(message.sender) === 'right'"
-            class="sender"
-            :style="{ color: senderColor(message.sender) }"
-          >
-            {{ message.sender }}
-          </span>
+          <template v-if="bubbleSide(message.sender) === 'right'">
+            <span class="sender" :style="{ color: senderColor(message.sender) }">
+              {{ message.sender }}
+            </span>
+            <img
+              class="sender-avatar"
+              :src="getAgentAvatarUrl(message.sender)"
+              :alt="`${message.sender} avatar`"
+            />
+          </template>
         </div>
         <div class="bubble">{{ message.content }}</div>
       </template>
@@ -118,6 +125,27 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.message-stream::-webkit-scrollbar {
+  width: 10px;
+}
+
+.message-stream::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+.message-stream::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+.message-stream::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .message-row {
@@ -155,6 +183,16 @@ onBeforeUnmount(() => {
   font-weight: 600;
   font-size: 0.84rem;
   line-height: 1;
+}
+
+.sender-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
+  background: color-mix(in srgb, var(--panel-bg-elevated) 84%, var(--panel-border) 16%);
 }
 
 .time {
