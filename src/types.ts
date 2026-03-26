@@ -33,6 +33,7 @@ export interface MessageInfo {
 export interface WsMessageEvent {
   event: 'message';
   room_id: number;
+  room_key: string;
   room_name: string;
   team_name: string;
   sender: string;
@@ -41,8 +42,8 @@ export interface WsMessageEvent {
 }
 
 export interface WsAgentStatusEvent {
-  event: 'agent_status';
-  agent_name: string;
+  event: 'member_status';
+  member_name: string;
   team_name: string;
   status: 'ACTIVE' | 'IDLE';
 }
@@ -60,7 +61,7 @@ export interface TeamSummary {
   working_directory: string;
   config: Record<string, unknown>;
   max_function_calls: number | null;
-  enabled: number;
+  enabled: boolean;
   created_at: string;
   updated_at: string;
 }

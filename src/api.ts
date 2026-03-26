@@ -1,4 +1,5 @@
 import type {
+  AgentStatus,
   AgentDetail,
   AgentInfo,
   CreateTeamPayload,
@@ -18,6 +19,14 @@ type RawRoomInfo = Partial<RoomInfo> & {
     send_time?: string;
   }>;
   room_type?: string;
+};
+
+type RawAgentInfo = Partial<AgentInfo> & {
+  status?: string;
+};
+
+type RawAgentDetail = Partial<AgentDetail> & {
+  status?: string;
 };
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -108,29 +117,48 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
   };
 }
 
-function normalizeAgent(agent: AgentInfo): AgentInfo {
-  return { ...agent, status: (agent.status as string).toLowerCase() as AgentStatus };
+function normalizeAgentStatus(status?: string): AgentStatus {
+  return status?.toLowerCase() === 'active' ? 'active' : 'idle';
+}
+
+function normalizeAgent(agent: RawAgentInfo): AgentInfo {
+  return {
+    name: String(agent.name ?? ''),
+    template_name: agent.template_name ?? null,
+    model: String(agent.model ?? ''),
+    team_name: String(agent.team_name ?? ''),
+    status: normalizeAgentStatus(agent.status),
+  };
+}
+
+function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
+  return {
+    ...normalizeAgent(agent),
+    agent_name: String(agent.agent_name ?? agent.template_name ?? agent.name ?? ''),
+    driver_type: String(agent.driver_type ?? ''),
+    prompt: String(agent.prompt ?? ''),
+  };
 }
 
 export async function getAgents(): Promise<AgentInfo[]> {
-  const data = await requestJsonWithFallback<{ agents: AgentInfo[] }>(
-    '/agents/list.json',
+  const data = await requestJsonWithFallback<{ agents: RawAgentInfo[] }>(
+    '/members/list.json',
     '/agents.json',
   );
   return data.agents.map(normalizeAgent);
 }
 
-export async function getAgentsByTeam(teamName: string): Promise<AgentInfo[]> {
-  const data = await requestJsonWithFallback<{ agents: AgentInfo[] }>(
-    withSearch('/agents/list.json', { team_name: teamName }),
-    withSearch('/agents.json', { team_name: teamName }),
+export async function getAgentsByTeamId(teamId: number): Promise<AgentInfo[]> {
+  const data = await requestJsonWithFallback<{ agents: RawAgentInfo[] }>(
+    withSearch('/members/list.json', { team_id: teamId }),
+    '/agents.json',
   );
   return data.agents.map(normalizeAgent);
 }
 
-export async function getRooms(teamName?: string): Promise<RoomInfo[]> {
+export async function getRooms(teamId?: number): Promise<RoomInfo[]> {
   const data = await requestJson<{ rooms: RawRoomInfo[] }>(
-    withSearch('/rooms/list.json', { team_name: teamName }),
+    withSearch('/rooms/list.json', { team_id: teamId }),
   );
   return data.rooms.map(normalizeRoom);
 }
@@ -152,7 +180,10 @@ export async function createTeam(payload: CreateTeamPayload): Promise<{ status: 
 }
 
 export async function getAgentDetail(teamId: number, agentName: string): Promise<AgentDetail> {
-  return requestJson<AgentDetail>(`/teams/${teamId}/agents/${encodeURIComponent(agentName)}.json`);
+  const data = await requestJson<RawAgentDetail>(
+    `/teams/${teamId}/members/${encodeURIComponent(agentName)}.json`,
+  );
+  return normalizeAgentDetail(data);
 }
 
 export async function getRoomMessages(roomId: number): Promise<MessageInfo[]> {
