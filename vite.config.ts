@@ -7,7 +7,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/agents/list.json': 'http://127.0.0.1:8080',
+      '/members/list.json': 'http://127.0.0.1:8080',
       '/rooms/list.json': 'http://127.0.0.1:8080',
       '/rooms/': 'http://127.0.0.1:8080',
       '/teams/list.json': 'http://127.0.0.1:8080',

@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState, reconnectProgress, totalMessageCount } from '../appUiState';
-import { createEventsSocket, getAgentsByTeam, getRoomMessages, getRooms, postRoomMessage } from '../api';
+import { createEventsSocket, getAgentsByTeamId, getRoomMessages, getRooms, postRoomMessage } from '../api';
 import AgentListSection from '../components/AgentListSection.vue';
 import ChatPanel from '../components/ChatPanel.vue';
 import RoomListSection from '../components/RoomListSection.vue';
@@ -175,8 +175,8 @@ async function loadRoomMessages(
   }
 }
 
-async function hydrateRooms(teamName: string): Promise<RoomState[]> {
-  const baseRooms = await getRooms(teamName);
+async function hydrateRooms(targetTeamId: number): Promise<RoomState[]> {
+  const baseRooms = await getRooms(targetTeamId);
   const previews = await Promise.all(
     baseRooms.map(async (room) => {
       try {
@@ -215,8 +215,8 @@ async function refreshAll(): Promise<void> {
 
   try {
     const [nextAgents, nextRooms] = await Promise.all([
-      getAgentsByTeam(currentTeam.value.name),
-      hydrateRooms(currentTeam.value.name),
+      getAgentsByTeamId(teamId.value),
+      hydrateRooms(teamId.value),
     ]);
     agents.value = nextAgents;
     rooms.value = nextRooms;
@@ -287,7 +287,7 @@ function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
 
   const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
   agents.value = agents.value.map((agent) =>
-    agent.name === event.agent_name && agent.team_name === event.team_name
+    agent.name === event.member_name && agent.team_name === event.team_name
       ? { ...agent, status: normalizedStatus }
       : agent,
   );
@@ -362,7 +362,9 @@ function connectWebSocket(): void {
       applyMessageEvent(payload);
       return;
     }
-    applyAgentStatusEvent(payload);
+    if (payload.event === 'member_status') {
+      applyAgentStatusEvent(payload);
+    }
   });
 
   ws.addEventListener('close', () => {

@@ -16,6 +16,7 @@ const emit = defineEmits<{
   toggleTheme: [];
   selectTeam: [teamId: number];
   openCreateTeam: [];
+  openSettings: [];
   openTeamDetail: [];
 }>();
 
@@ -38,6 +39,23 @@ function handleTeamChange(event: Event): void {
           <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
         </select>
       </div>
+      <button
+        class="nav-action nav-icon-button"
+        type="button"
+        :disabled="activeTeamId === null"
+        title="系统设置"
+        aria-label="系统设置"
+        @click="emit('openSettings')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 5.5h16"></path>
+          <path d="M4 12h16"></path>
+          <path d="M4 18.5h16"></path>
+          <circle cx="8" cy="5.5" r="2"></circle>
+          <circle cx="15" cy="12" r="2"></circle>
+          <circle cx="11" cy="18.5" r="2"></circle>
+        </svg>
+      </button>
       <button
         class="nav-action nav-icon-button"
         type="button"

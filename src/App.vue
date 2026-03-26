@@ -40,6 +40,13 @@ function openCreateTeam(): void {
   router.push({ name: 'team-create' }).catch(console.error);
 }
 
+function openSettings(): void {
+  if (activeTeamId.value === null) {
+    return;
+  }
+  router.push({ name: 'settings', params: { teamId: activeTeamId.value, section: 'general' } }).catch(console.error);
+}
+
 function openTeamDetail(): void {
   if (activeTeamId.value === null) {
     return;
@@ -119,6 +126,7 @@ onMounted(async () => {
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @open-create-team="openCreateTeam"
+      @open-settings="openSettings"
       @open-team-detail="openTeamDetail"
     />
 
