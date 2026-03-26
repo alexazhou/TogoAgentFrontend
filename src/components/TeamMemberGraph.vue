@@ -5,6 +5,7 @@ import { getAgentAvatarUrl } from '../avatar';
 const props = defineProps<{
   teamName: string;
   selectedAgents: string[];
+  readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -30,9 +31,9 @@ const memberGridStyle = computed(() => ({
   <div class="member-graph">
     <button
       class="team-root"
-      :class="{ 'is-empty': !leaderAgent }"
+      :class="{ 'is-empty': !leaderAgent, 'is-readonly': props.readonly }"
       type="button"
-      @click="leaderAgent && emit('toggleAgent', leaderAgent)"
+      @click="leaderAgent && !props.readonly && emit('toggleAgent', leaderAgent)"
     >
       <img
         v-if="leaderAgent"
@@ -53,9 +54,9 @@ const memberGridStyle = computed(() => ({
           v-for="(member, index) in visibleMemberSlots"
           :key="member.name || `empty-${index}`"
           class="member-node"
-          :class="{ 'is-empty': !member.name }"
+          :class="{ 'is-empty': !member.name, 'is-readonly': props.readonly }"
           type="button"
-          @click="member.name && emit('toggleAgent', member.name)"
+          @click="member.name && !props.readonly && emit('toggleAgent', member.name)"
         >
           <img
             v-if="member.name"
@@ -121,6 +122,19 @@ const memberGridStyle = computed(() => ({
   border-color: var(--focus-border);
   background: var(--selected);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 55%, transparent);
+}
+
+.team-root.is-readonly,
+.member-node.is-readonly {
+  cursor: default;
+}
+
+.team-root.is-readonly:not(.is-empty):hover,
+.member-node.is-readonly:not(.is-empty):hover {
+  transform: none;
+  border-color: var(--team-create-node-border);
+  background: var(--surface-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 70%, transparent);
 }
 
 .team-root.is-empty,

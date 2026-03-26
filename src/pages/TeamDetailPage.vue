@@ -3,7 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
 import { getTeamDetail } from '../api';
-import { getAgentAvatarUrl } from '../avatar';
+import TeamInfoCard from '../components/TeamInfoCard.vue';
+import TeamMembersCard from '../components/TeamMembersCard.vue';
 import type { TeamDetail } from '../types';
 
 const route = useRoute();
@@ -14,6 +15,7 @@ const loading = ref(true);
 const errorMessage = ref('');
 
 const teamId = computed(() => Number(route.params.teamId));
+const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
 
 async function loadDetail(): Promise<void> {
   loading.value = true;
@@ -30,8 +32,8 @@ async function loadDetail(): Promise<void> {
   }
 }
 
-function openAgent(agentName: string): void {
-  router.push({ name: 'agent-detail', params: { teamId: teamId.value, agentName } }).catch(console.error);
+function openRoom(roomId: number): void {
+  router.push({ name: 'console', params: { teamId: teamId.value, roomId } }).catch(console.error);
 }
 
 watch(() => route.params.teamId, () => {
@@ -45,86 +47,56 @@ onMounted(() => {
 
 <template>
   <section class="page panel">
-    <div class="page-head">
-      <div>
-        <p class="page-eyebrow">Team Snapshot</p>
-        <h2>{{ team?.name ?? '团队详情' }}</h2>
-      </div>
-      <button type="button" class="secondary-button" @click="$router.back()">返回</button>
-    </div>
-
     <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
     <div v-else-if="loading" class="loading-card">正在加载团队详情…</div>
 
     <template v-else-if="team">
-      <div class="summary-grid">
-        <article class="summary-card">
-          <span>团队 ID</span>
-          <strong>{{ team.id }}</strong>
-        </article>
-        <article class="summary-card">
-          <span>最大函数调用</span>
-          <strong>{{ team.max_function_calls ?? '未设置' }}</strong>
-        </article>
-        <article class="summary-card">
-          <span>工作目录</span>
-          <strong>{{ team.working_directory || '未设置' }}</strong>
-        </article>
-        <article class="summary-card">
-          <span>团队口号</span>
-          <strong>{{ String(team.config?.slogan || '未设置') }}</strong>
-        </article>
-        <article class="summary-card">
-          <span>创建时间</span>
-          <strong>{{ team.created_at }}</strong>
-        </article>
-        <article class="summary-card">
-          <span>更新时间</span>
-          <strong>{{ team.updated_at }}</strong>
-        </article>
-        <article class="summary-card summary-card-wide">
-          <span>团队制度</span>
-          <strong>{{ String(team.config?.rules || '未设置') }}</strong>
-        </article>
-      </div>
+      <div class="form-grid">
+        <TeamInfoCard
+          :name="team.name"
+          :working-directory="team.working_directory || ''"
+          :slogan="String(team.config?.slogan || '')"
+          :rules="String(team.config?.rules || '')"
+          readonly
+        />
 
-      <div class="detail-grid">
-        <section class="detail-card">
-          <div class="detail-head">
-            <h3>成员列表</h3>
-            <span>{{ team.members.length }}</span>
+        <TeamMembersCard
+          :team-name="team.name"
+          :selected-agents="selectedAgents"
+          readonly
+        />
+
+        <section class="rooms-panel">
+          <div class="rooms-head">
+            <div>
+              <span class="panel-label">团队房间</span>
+              <small>{{ team.rooms.length }} 个房间</small>
+            </div>
+            <button type="button" class="secondary-button" @click="$router.back()">返回</button>
           </div>
-          <div class="member-list">
+
+          <div class="rooms-grid">
             <button
-              v-for="member in team.members"
-              :key="member.name"
+              v-for="room in team.rooms"
+              :key="room.id"
               type="button"
-              class="member-chip"
-              @click="openAgent(member.name)"
+              class="room-tile"
+              @click="openRoom(room.id)"
             >
-              <img class="member-avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${member.name} avatar`" />
-              <div>
-                <strong>{{ member.name }}</strong>
-                <small>{{ member.agent }}</small>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        <section class="detail-card">
-          <div class="detail-head">
-            <h3>聊天室</h3>
-            <span>{{ team.rooms.length }}</span>
-          </div>
-          <div class="room-list">
-            <article v-for="room in team.rooms" :key="room.id" class="room-card">
-              <div class="room-title">
+              <div class="room-tile-head">
                 <strong>{{ room.name }}</strong>
                 <span>{{ room.members.length }} 人</span>
               </div>
               <p>{{ room.initial_topic || '无初始话题' }}</p>
-              <small>max_turns = {{ room.max_turns }}</small>
-            </article>
+              <div class="room-tile-meta">
+                <span>max_turns {{ room.max_turns }}</span>
+                <span>{{ room.members.join(' / ') }}</span>
+              </div>
+            </button>
+
+            <div v-if="!team.rooms.length" class="empty-state">
+              当前团队还没有房间。
+            </div>
           </div>
         </section>
       </div>
@@ -135,146 +107,139 @@ onMounted(() => {
 <style scoped>
 .page {
   height: 100%;
-  overflow: auto;
-  padding: 22px;
+  overflow: hidden;
+  padding: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
 }
 
-.page-head,
-.detail-head,
-.room-title {
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, auto) minmax(0, 1fr);
+  gap: 8px;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.rooms-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--team-create-panel-border);
+  border-radius: 20px;
+  background: var(--panel-bg);
+  box-shadow: var(--panel-shadow);
+  padding: 10px 12px;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-height: 120px;
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.rooms-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 14px;
+  margin: -2px 0 0;
 }
 
-.page-head {
-  margin-bottom: 20px;
+.rooms-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.page-eyebrow {
-  margin: 0 0 4px;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+.panel-label {
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.rooms-head small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  padding-right: 4px;
+}
+
+.room-tile {
+  border: 1px solid var(--team-create-control-border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  color: var(--text-strong);
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.room-tile:hover {
+  border-color: var(--focus-border);
+  background: color-mix(in srgb, var(--selected) 70%, var(--surface-soft) 30%);
+  transform: translateY(-1px);
+}
+
+.room-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.room-tile-head strong {
+  font-size: 0.9rem;
+}
+
+.room-tile-head span,
+.room-tile p,
+.room-tile-meta {
+  color: var(--muted);
+}
+
+.room-tile p {
+  margin: 8px 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.room-tile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   font-size: 0.72rem;
 }
 
-.page-head h2,
-.detail-head h3 {
-  margin: 0;
-  color: var(--text-strong);
-}
-
-.summary-grid,
-.detail-grid {
-  display: grid;
-  gap: 16px;
-}
-
-.summary-grid {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin-bottom: 16px;
-}
-
-.summary-card,
-.detail-card,
-.loading-card {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--surface-soft);
-}
-
-.summary-card {
-  padding: 16px;
-}
-
-.summary-card-wide {
-  grid-column: 1 / -1;
-}
-
-.summary-card span,
-.room-card p,
-.room-card small {
-  color: var(--muted);
-}
-
-.summary-card strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--text-strong);
-}
-
-.detail-card {
-  padding: 16px;
-}
-
-.member-list,
-.room-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.member-list {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-}
-
-.member-chip,
 .secondary-button {
-  border-radius: 10px;
-}
-
-.member-chip {
-  min-height: 48px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  text-align: left;
-}
-
-.member-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  flex-shrink: 0;
-  object-fit: cover;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
-}
-
-.member-chip div {
-  min-width: 0;
-}
-
-.member-chip strong {
-  font-size: 0.88rem;
-}
-
-.member-chip small {
-  color: var(--muted);
-}
-
-.room-card {
-  border: 1px solid var(--panel-border);
+  min-width: 72px;
+  height: 28px;
+  border: 1px solid var(--team-create-control-border);
   border-radius: 12px;
   background: var(--panel-bg);
-  padding: 14px;
-}
-
-.room-card p {
-  margin: 8px 0;
-}
-
-.secondary-button {
-  border: 1px solid var(--panel-border);
-  background: var(--pill-bg);
   color: var(--text-strong);
-  padding: 0 14px;
+  padding: 0 12px;
   cursor: pointer;
 }
 
@@ -287,5 +252,29 @@ onMounted(() => {
   border-radius: 10px;
   background: var(--banner-error-bg);
   color: var(--banner-error-text);
+}
+
+.empty-state {
+  min-height: 88px;
+  min-width: min(280px, 100%);
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
+  text-align: center;
+}
+
+@media (max-width: 960px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .rooms-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>

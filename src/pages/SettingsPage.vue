@@ -3,8 +3,10 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAgents, getTeamDetail } from '../api';
 import { connectionState, totalMessageCount } from '../appUiState';
+import TeamInfoCard from '../components/TeamInfoCard.vue';
+import TeamMembersCard from '../components/TeamMembersCard.vue';
 import { teams } from '../teamStore';
-import type { AgentInfo } from '../types';
+import type { AgentInfo, TeamDetail } from '../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -21,6 +23,7 @@ const driverStates = [
 ];
 const agents = ref<AgentInfo[]>([]);
 const teamSummaries = ref<Record<number, { memberCount: number; roomCount: number }>>({});
+const selectedTeamDetail = ref<TeamDetail | null>(null);
 let uptimeTimer: number | null = null;
 
 const navItems = [
@@ -40,9 +43,48 @@ const routeSection = computed(() =>
 const currentSectionId = computed(() =>
   validSectionIds.has(routeSection.value) ? routeSection.value : defaultSectionId,
 );
+const currentNavItem = computed(() =>
+  navItems.find((item) => item.id === currentSectionId.value) ?? navItems[0],
+);
+const detailTeamId = computed(() => {
+  const raw = route.query.detailTeamId;
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+});
+const selectedTeamMembers = computed(() => selectedTeamDetail.value?.members.map((member) => member.name) ?? []);
+const breadcrumbItems = computed(() => {
+  const items = [
+    { key: 'settings', label: '系统设置', action: () => openSection(defaultSectionId), current: false },
+    {
+      key: `section-${currentNavItem.value.id}`,
+      label: currentNavItem.value.label,
+      action: () => openSection(currentNavItem.value.id),
+      current: detailTeamId.value === null,
+    },
+  ];
+
+  if (currentSectionId.value === 'teams' && selectedTeamDetail.value) {
+    items[items.length - 1].current = false;
+    items.push({
+      key: 'team-detail',
+      label: '团队详情',
+      action: () => clearTeamDetail(),
+      current: true,
+    });
+  }
+
+  return items;
+});
 
 function openSection(sectionId: string): void {
-  router.push({ name: 'settings', params: { teamId: teamId.value, section: sectionId } }).catch(console.error);
+  router.push({
+    name: 'settings',
+    params: { teamId: teamId.value, section: sectionId },
+    query: sectionId === 'teams' && detailTeamId.value ? { detailTeamId: String(detailTeamId.value) } : {},
+  }).catch(console.error);
 }
 
 function goBack(): void {
@@ -54,7 +96,18 @@ function openCreateTeam(): void {
 }
 
 function openTeamDetail(targetTeamId: number): void {
-  router.push({ name: 'team-detail', params: { teamId: targetTeamId } }).catch(console.error);
+  router.push({
+    name: 'settings',
+    params: { teamId: teamId.value, section: 'teams' },
+    query: { detailTeamId: String(targetTeamId) },
+  }).catch(console.error);
+}
+
+function clearTeamDetail(): void {
+  router.push({
+    name: 'settings',
+    params: { teamId: teamId.value, section: 'teams' },
+  }).catch(console.error);
 }
 
 async function loadTeamSummaries(): Promise<void> {
@@ -70,6 +123,20 @@ async function loadTeamSummaries(): Promise<void> {
     }),
   );
   teamSummaries.value = Object.fromEntries(entries);
+}
+
+async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
+  if (targetTeamId === null) {
+    selectedTeamDetail.value = null;
+    return;
+  }
+
+  try {
+    selectedTeamDetail.value = await getTeamDetail(targetTeamId);
+  } catch (error) {
+    console.error(error);
+    selectedTeamDetail.value = null;
+  }
 }
 
 function formatDuration(ms: number): string {
@@ -126,6 +193,18 @@ watch(
   { immediate: true },
 );
 
+watch(
+  [currentSectionId, detailTeamId],
+  ([sectionId, targetTeamId]) => {
+    if (sectionId === 'teams') {
+      loadSelectedTeamDetail(targetTeamId).catch(console.error);
+      return;
+    }
+    selectedTeamDetail.value = null;
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   updateUptime();
   uptimeTimer = window.setInterval(updateUptime, 1000);
@@ -150,9 +229,11 @@ onBeforeUnmount(() => {
 <template>
   <section class="settings-shell panel">
     <header class="settings-head">
-      <div class="settings-title-row">
-        <h2>系统设置</h2>
-        <p class="settings-eyebrow">Admin Console</p>
+      <div class="settings-head-main">
+        <div class="settings-title-row">
+          <h2>系统设置</h2>
+          <p class="settings-eyebrow">Admin Console</p>
+        </div>
       </div>
       <button type="button" class="secondary-button" @click="goBack">返回主界面</button>
     </header>
@@ -182,6 +263,18 @@ onBeforeUnmount(() => {
 
       <main class="settings-main">
         <section v-if="currentSectionId === 'general'" id="general" class="config-section">
+          <nav class="settings-breadcrumb" aria-label="当前位置">
+            <button
+              v-for="item in breadcrumbItems"
+              :key="item.key"
+              type="button"
+              class="breadcrumb-link"
+              :class="{ current: item.current }"
+              @click="!item.current && item.action()"
+            >
+              {{ item.label }}
+            </button>
+          </nav>
           <div class="section-head">
             <div>
               <p class="section-eyebrow">General</p>
@@ -245,14 +338,50 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-else-if="currentSectionId === 'teams'" id="teams" class="config-section">
-          <div class="section-head">
-            <div>
-              <p class="section-eyebrow">Teams</p>
-              <h3>团队管理</h3>
+          <nav class="settings-breadcrumb" aria-label="当前位置">
+            <button
+              v-for="item in breadcrumbItems"
+              :key="item.key"
+              type="button"
+              class="breadcrumb-link"
+              :class="{ current: item.current }"
+              @click="!item.current && item.action()"
+            >
+              {{ item.label }}
+            </button>
+          </nav>
+
+          <template v-if="selectedTeamDetail">
+            <div class="team-detail-head">
+              <div>
+                <p class="section-eyebrow">Team Detail</p>
+                <h4>{{ selectedTeamDetail.name }}</h4>
+              </div>
+              <button type="button" class="secondary-button" @click="clearTeamDetail">返回团队列表</button>
             </div>
-            <button type="button" class="secondary-button" @click="openCreateTeam">新建团队</button>
-          </div>
-          <div class="teams-grid">
+
+            <div class="team-detail-stack">
+              <TeamInfoCard
+                :name="selectedTeamDetail.name"
+                :working-directory="selectedTeamDetail.working_directory || ''"
+                :slogan="String(selectedTeamDetail.config?.slogan || '')"
+                :rules="String(selectedTeamDetail.config?.rules || '')"
+                readonly
+              />
+
+              <TeamMembersCard
+                :team-name="selectedTeamDetail.name"
+                :selected-agents="selectedTeamMembers"
+                readonly
+              />
+            </div>
+          </template>
+
+          <div v-else class="teams-grid">
+            <div class="section-head teams-list-head">
+              <div></div>
+              <button type="button" class="secondary-button" @click="openCreateTeam">新建团队</button>
+            </div>
             <article v-for="team in teams" :key="team.id" class="team-card">
               <div class="team-card-head">
                 <div class="team-card-title-group">
@@ -287,6 +416,18 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-else-if="currentSectionId === 'roles'" id="roles" class="config-section">
+          <nav class="settings-breadcrumb" aria-label="当前位置">
+            <button
+              v-for="item in breadcrumbItems"
+              :key="item.key"
+              type="button"
+              class="breadcrumb-link"
+              :class="{ current: item.current }"
+              @click="!item.current && item.action()"
+            >
+              {{ item.label }}
+            </button>
+          </nav>
           <div class="section-head">
             <div>
               <p class="section-eyebrow">Roles</p>
@@ -317,6 +458,18 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-else-if="currentSectionId === 'models'" id="models" class="config-section">
+          <nav class="settings-breadcrumb" aria-label="当前位置">
+            <button
+              v-for="item in breadcrumbItems"
+              :key="item.key"
+              type="button"
+              class="breadcrumb-link"
+              :class="{ current: item.current }"
+              @click="!item.current && item.action()"
+            >
+              {{ item.label }}
+            </button>
+          </nav>
           <div class="section-head">
             <div>
               <p class="section-eyebrow">Models</p>
@@ -339,6 +492,18 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-else id="runtime" class="config-section">
+          <nav class="settings-breadcrumb" aria-label="当前位置">
+            <button
+              v-for="item in breadcrumbItems"
+              :key="item.key"
+              type="button"
+              class="breadcrumb-link"
+              :class="{ current: item.current }"
+              @click="!item.current && item.action()"
+            >
+              {{ item.label }}
+            </button>
+          </nav>
           <div class="section-head">
             <div>
               <p class="section-eyebrow">Runtime</p>
@@ -386,9 +551,49 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.settings-head-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
 .settings-head {
   padding-bottom: 8px;
   border-bottom: 1px solid var(--divider);
+}
+
+.settings-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.breadcrumb-link {
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--hint-text);
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.breadcrumb-link:not(:last-child)::after {
+  content: '/';
+  margin-left: 6px;
+  color: var(--panel-border);
+}
+
+.breadcrumb-link.current {
+  color: var(--text-strong);
+  cursor: default;
+}
+
+.breadcrumb-link:hover:not(.current) {
+  color: var(--accent);
 }
 
 .settings-title-row {
@@ -547,6 +752,11 @@ onBeforeUnmount(() => {
 
 .teams-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.teams-list-head {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
 }
 
 .field-card,
@@ -798,6 +1008,32 @@ onBeforeUnmount(() => {
   font-size: 0.68rem;
 }
 
+.team-detail-head {
+  margin-top: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.team-detail-head h4 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.team-detail-head .section-eyebrow {
+  margin-bottom: 2px;
+}
+
+.team-detail-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+  min-height: 0;
+}
+
 .empty-card p {
   margin: 4px 0 0;
   color: var(--muted);
@@ -856,6 +1092,7 @@ onBeforeUnmount(() => {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
+
 }
 
 @media (max-width: 780px) {

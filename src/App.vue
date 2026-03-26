@@ -51,7 +51,11 @@ function openTeamDetail(): void {
   if (activeTeamId.value === null) {
     return;
   }
-  router.push({ name: 'team-detail', params: { teamId: activeTeamId.value } }).catch(console.error);
+  router.push({
+    name: 'settings',
+    params: { teamId: activeTeamId.value, section: 'teams' },
+    query: { detailTeamId: String(activeTeamId.value) },
+  }).catch(console.error);
 }
 
 function selectTeam(teamId: number): void {
