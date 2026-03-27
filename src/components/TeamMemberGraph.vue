@@ -7,11 +7,13 @@ const props = defineProps<{
   teamName: string;
   selectedAgents: string[];
   readonly?: boolean;
+  showEditAction?: boolean;
 }>();
 
 const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
+  editAgent: [agentName: string];
 }>();
 
 const leaderAgent = computed(() => props.selectedAgents[0] ?? '');
@@ -54,10 +56,14 @@ function handlePrimaryAction(agentName: string): void {
     return;
   }
 
+  if (props.showEditAction) {
+    return;
+  }
+
   emit('toggleAgent', agentName);
 }
 
-function handleActionButton(agentName: string): void {
+function handleViewAction(agentName: string): void {
   if (!agentName) {
     return;
   }
@@ -68,6 +74,14 @@ function handleActionButton(agentName: string): void {
   }
 
   emit('toggleAgent', agentName);
+}
+
+function handleEditAction(agentName: string): void {
+  if (!agentName) {
+    return;
+  }
+
+  emit('editAgent', agentName);
 }
 </script>
 
@@ -100,15 +114,26 @@ function handleActionButton(agentName: string): void {
           <span>{{ leaderAgent || (teamName.trim() ? `${teamName.trim()} Leader` : '+') }}</span>
           <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
         </button>
-        <button
-          v-if="leaderAgent && readonly"
-          class="member-action-button"
-          type="button"
-          @pointerdown.stop
-          @click.stop="handleActionButton(leaderAgent)"
-        >
-          {{ readonly ? '查看' : '移除' }}
-        </button>
+        <div v-if="leaderAgent && (readonly || props.showEditAction)" class="member-action-group">
+          <button
+            v-if="readonly"
+            class="member-action-button"
+            type="button"
+            @pointerdown.stop
+            @click.stop="handleViewAction(leaderAgent)"
+          >
+            查看
+          </button>
+          <button
+            v-else
+            class="member-action-button"
+            type="button"
+            @pointerdown.stop
+            @click.stop="handleEditAction(leaderAgent)"
+          >
+            编辑
+          </button>
+        </div>
       </div>
 
       <div ref="memberTreeRef" class="member-tree" :class="{ 'is-single-member': isSingleMemberLayout }">
@@ -137,15 +162,44 @@ function handleActionButton(agentName: string): void {
               <span>{{ member.name || '+' }}</span>
               <small>{{ member.name ? member.agent : '成员' }}</small>
             </button>
-            <button
-              v-if="member.name"
-              class="member-action-button"
-              type="button"
-              @pointerdown.stop
-              @click.stop="handleActionButton(member.name)"
-            >
-              {{ readonly ? '查看' : '移除' }}
-            </button>
+            <div v-if="member.name" class="member-action-group">
+              <button
+                v-if="readonly"
+                class="member-action-button"
+                type="button"
+                @pointerdown.stop
+                @click.stop="handleViewAction(member.name)"
+              >
+                查看
+              </button>
+              <template v-else-if="props.showEditAction">
+                <button
+                  class="member-action-button"
+                  type="button"
+                  @pointerdown.stop
+                  @click.stop="handleEditAction(member.name)"
+                >
+                  编辑
+                </button>
+                <button
+                  class="member-action-button member-action-button--danger"
+                  type="button"
+                  @pointerdown.stop
+                  @click.stop="emit('toggleAgent', member.name)"
+                >
+                  移除
+                </button>
+              </template>
+              <button
+                v-else
+                class="member-action-button"
+                type="button"
+                @pointerdown.stop
+                @click.stop="emit('toggleAgent', member.name)"
+              >
+                移除
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -264,10 +318,21 @@ function handleActionButton(agentName: string): void {
   width: 100%;
 }
 
-.member-action-button {
+.member-action-group {
   position: absolute;
   top: 10px;
   right: 10px;
+  display: inline-flex;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  z-index: 3;
+}
+
+.member-action-button {
   min-width: 44px;
   height: 24px;
   border: 1px solid color-mix(in srgb, var(--focus-border) 48%, var(--panel-border) 52%);
@@ -278,18 +343,13 @@ function handleActionButton(agentName: string): void {
   font-size: 0.72rem;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transform: translateY(-4px);
   transition:
-    opacity 0.16s ease,
-    transform 0.16s ease,
     border-color 0.16s ease,
     background 0.16s ease;
-  z-index: 3;
 }
 
-.member-card-shell.has-action:hover .member-action-button,
-.member-card-shell.has-action:focus-within .member-action-button {
+.member-card-shell.has-action:hover .member-action-group,
+.member-card-shell.has-action:focus-within .member-action-group {
   opacity: 1;
   transform: translateY(0);
 }
@@ -297,6 +357,11 @@ function handleActionButton(agentName: string): void {
 .member-action-button:hover {
   border-color: var(--focus-border);
   background: var(--selected);
+}
+
+.member-action-button--danger:hover {
+  border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
+  background: color-mix(in srgb, #fee2e2 82%, #fff 18%);
 }
 
 .team-root.is-empty,
@@ -443,6 +508,10 @@ function handleActionButton(agentName: string): void {
   }
 
   .member-action-button {
+    transform: none;
+  }
+
+  .member-action-group {
     opacity: 1;
     transform: none;
   }

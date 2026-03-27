@@ -11,8 +11,6 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
   const memberTreeRef = ref<HTMLElement | null>(null);
   const graphWidth = ref(0);
   const graphHeight = ref(0);
-  const canvasWidth = ref(0);
-  const canvasHeight = ref(0);
   const dragContentMinLeft = ref(0);
   const dragContentMaxRight = ref(0);
   const dragContentMinTop = ref(0);
@@ -42,8 +40,6 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
   function updateMetrics(): void {
     graphWidth.value = graphRef.value?.clientWidth ?? 0;
     graphHeight.value = graphRef.value?.clientHeight ?? 0;
-    canvasWidth.value = canvasRef.value?.offsetWidth ?? 0;
-    canvasHeight.value = canvasRef.value?.offsetHeight ?? 0;
 
     const canvas = canvasRef.value;
     const graph = graphRef.value;
