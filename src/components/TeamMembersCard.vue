@@ -13,14 +13,17 @@ withDefaults(defineProps<{
   selectedAgents: string[];
   readonly?: boolean;
   actions?: MemberPanelAction[];
+  showEditAction?: boolean;
 }>(), {
   readonly: false,
   actions: () => [],
+  showEditAction: false,
 });
 
 const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
+  editAgent: [agentName: string];
   action: [key: string];
 }>();
 </script>
@@ -50,8 +53,10 @@ const emit = defineEmits<{
       :team-name="teamName"
       :selected-agents="selectedAgents"
       :readonly="readonly"
+      :show-edit-action="showEditAction"
       @toggle-agent="emit('toggleAgent', $event)"
       @view-agent="emit('viewAgent', $event)"
+      @edit-agent="emit('editAgent', $event)"
     />
   </section>
 </template>

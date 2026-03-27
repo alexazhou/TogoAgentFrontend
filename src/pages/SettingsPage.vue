@@ -3,10 +3,11 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAgents, getTeamDetail, updateTeam } from '../api';
 import { connectionState, totalMessageCount } from '../appUiState';
+import AgentTemplateCard from '../components/AgentTemplateCard.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
 import { loadTeams, teams } from '../teamStore';
-import type { AgentInfo, TeamDetail } from '../types';
+import type { AgentInfo, TeamDetail, TeamMember } from '../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -26,14 +27,21 @@ const teamSummaries = ref<Record<number, { memberCount: number; roomCount: numbe
 const selectedTeamDetail = ref<TeamDetail | null>(null);
 const isEditingTeamMembers = ref(false);
 const teamMembersDraft = ref<string[]>([]);
+const teamMemberRoleDrafts = ref<Record<string, string>>({});
 const teamInfoDraft = ref({
   name: '',
   workingDirectory: '',
   slogan: '',
   rules: '',
 });
+const editingMemberName = ref('');
+const memberEditorKeyword = ref('');
+const memberEditorTemplate = ref('');
+const memberEditorMode = ref<'view' | 'edit'>('view');
 const isSavingTeamInfo = ref(false);
+const isSavingTeamMembers = ref(false);
 const teamInfoStatus = ref('');
+const teamMemberStatus = ref('');
 let uptimeTimer: number | null = null;
 
 const navItems = [
@@ -69,6 +77,32 @@ const selectedTeamMembers = computed(() => (
     ? teamMembersDraft.value
     : selectedTeamDetail.value?.members.map((member) => member.name) ?? []
 ));
+function buildTeamInfoDraft(detail: TeamDetail) {
+  return {
+    name: detail.name,
+    workingDirectory: detail.working_directory || '',
+    slogan: String(detail.config?.slogan || ''),
+    rules: String(detail.config?.rules || ''),
+  };
+}
+
+function buildTeamMemberDraft(detail: TeamDetail): string[] {
+  return detail.members.map((member) => member.name);
+}
+
+function buildTeamMemberRoleDraft(detail: TeamDetail): Record<string, string> {
+  return Object.fromEntries(
+    detail.members.map((member) => [member.name, member.role_template]),
+  );
+}
+
+function buildTeamMemberPayload(): TeamMember[] {
+  return teamMembersDraft.value.map((memberName) => ({
+    name: memberName,
+    role_template: teamMemberRoleDrafts.value[memberName] || memberName,
+  }));
+}
+
 const hasTeamInfoChanges = computed(() => {
   if (!selectedTeamDetail.value) {
     return false;
@@ -85,10 +119,45 @@ const hasTeamMemberChanges = computed(() => {
     return false;
   }
 
-  const currentMembers = selectedTeamDetail.value.members.map((member) => member.name);
-  return JSON.stringify(teamMembersDraft.value) !== JSON.stringify(currentMembers);
+  return JSON.stringify(buildTeamMemberPayload()) !== JSON.stringify(selectedTeamDetail.value.members);
 });
-const hasTeamChanges = computed(() => hasTeamInfoChanges.value || hasTeamMemberChanges.value);
+const memberTemplateOptions = computed(() => {
+  const definitions = new Map<string, { name: string; model: string }>();
+
+  agents.value.forEach((agent) => {
+    const templateName = agent.template_name || agent.name;
+    if (!definitions.has(templateName)) {
+      definitions.set(templateName, {
+        name: templateName,
+        model: agent.model || '未设置',
+      });
+    }
+  });
+
+  Object.values(teamMemberRoleDrafts.value).forEach((templateName) => {
+    if (!definitions.has(templateName)) {
+      definitions.set(templateName, {
+        name: templateName,
+        model: '未设置',
+      });
+    }
+  });
+
+  return Array.from(definitions.values()).sort((left, right) => left.name.localeCompare(right.name));
+});
+const filteredMemberTemplateOptions = computed(() => {
+  const keyword = memberEditorKeyword.value.trim().toLowerCase();
+  if (!keyword) {
+    return memberTemplateOptions.value;
+  }
+
+  return memberTemplateOptions.value.filter((item) => item.name.toLowerCase().includes(keyword));
+});
+const memberEditorOpen = computed(() => editingMemberName.value.length > 0);
+const memberEditorEditable = computed(() => memberEditorMode.value === 'edit');
+const currentMemberTemplateOption = computed(
+  () => memberTemplateOptions.value.find((item) => item.name === memberEditorTemplate.value) ?? null,
+);
 const breadcrumbItems = computed(() => {
   const items = [
     { key: 'settings', label: '系统设置', action: () => openSection(defaultSectionId), current: false },
@@ -115,18 +184,18 @@ const breadcrumbItems = computed(() => {
 const memberPanelActions = computed(() => {
   if (isEditingTeamMembers.value) {
     return [
-      { key: 'cancel', label: '取消', disabled: isSavingTeamInfo.value },
+      { key: 'cancel', label: '取消', disabled: isSavingTeamMembers.value },
       {
         key: 'save',
-        label: isSavingTeamInfo.value ? '保存中...' : '保存',
-        disabled: !hasTeamChanges.value || isSavingTeamInfo.value,
+        label: isSavingTeamMembers.value ? '保存中...' : '保存',
+        disabled: !hasTeamMemberChanges.value || isSavingTeamMembers.value,
         primary: true,
       },
     ];
   }
 
   return [
-    { key: 'edit', label: '编辑', disabled: isSavingTeamInfo.value },
+    { key: 'edit', label: '编辑', disabled: isSavingTeamMembers.value },
   ];
 });
 
@@ -161,14 +230,10 @@ function clearTeamDetail(): void {
   }).catch(console.error);
 }
 
-function openAgentDetail(agentName: string): void {
-  router.push({
-    name: 'agent-detail',
-    params: {
-      teamId: teamId.value,
-      agentName,
-    },
-  }).catch(console.error);
+function resolveMemberRoleTemplate(memberName: string): string {
+  return teamMemberRoleDrafts.value[memberName]
+    || selectedTeamDetail.value?.members.find((member) => member.name === memberName)?.role_template
+    || memberName;
 }
 
 async function loadTeamSummaries(): Promise<void> {
@@ -191,21 +256,28 @@ async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void
     selectedTeamDetail.value = null;
     isEditingTeamMembers.value = false;
     teamMembersDraft.value = [];
+    teamMemberRoleDrafts.value = {};
     teamInfoStatus.value = '';
+    teamMemberStatus.value = '';
+    editingMemberName.value = '';
+    memberEditorKeyword.value = '';
+    memberEditorTemplate.value = '';
+    memberEditorMode.value = 'view';
     return;
   }
 
   try {
     selectedTeamDetail.value = await getTeamDetail(targetTeamId);
-    teamInfoDraft.value = {
-      name: selectedTeamDetail.value.name,
-      workingDirectory: selectedTeamDetail.value.working_directory || '',
-      slogan: String(selectedTeamDetail.value.config?.slogan || ''),
-      rules: String(selectedTeamDetail.value.config?.rules || ''),
-    };
-    teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+    teamInfoDraft.value = buildTeamInfoDraft(selectedTeamDetail.value);
+    teamMembersDraft.value = buildTeamMemberDraft(selectedTeamDetail.value);
+    teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(selectedTeamDetail.value);
     isEditingTeamMembers.value = false;
     teamInfoStatus.value = '';
+    teamMemberStatus.value = '';
+    editingMemberName.value = '';
+    memberEditorKeyword.value = '';
+    memberEditorTemplate.value = '';
+    memberEditorMode.value = 'view';
   } catch (error) {
     console.error(error);
     selectedTeamDetail.value = null;
@@ -213,7 +285,7 @@ async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void
 }
 
 async function saveTeamInfo(): Promise<void> {
-  if (!selectedTeamDetail.value || isSavingTeamInfo.value || !hasTeamChanges.value) {
+  if (!selectedTeamDetail.value || isSavingTeamInfo.value || !hasTeamInfoChanges.value) {
     return;
   }
 
@@ -228,20 +300,12 @@ async function saveTeamInfo(): Promise<void> {
         slogan: teamInfoDraft.value.slogan,
         rules: teamInfoDraft.value.rules,
       },
-      members: teamMembersDraft.value.map((agentName) => {
-        const existingMember = selectedTeamDetail.value?.members.find((member) => member.name === agentName);
-        return {
-          name: agentName,
-          role_template: existingMember?.role_template || agentName,
-        };
-      }),
     });
     await Promise.all([
       loadSelectedTeamDetail(selectedTeamDetail.value.id),
       loadTeamSummaries(),
       loadTeams(),
     ]);
-    isEditingTeamMembers.value = false;
     teamInfoStatus.value = '已保存';
   } catch (error) {
     console.error(error);
@@ -251,19 +315,39 @@ async function saveTeamInfo(): Promise<void> {
   }
 }
 
+async function saveTeamMembers(): Promise<void> {
+  if (!selectedTeamDetail.value || isSavingTeamMembers.value || !hasTeamMemberChanges.value) {
+    return;
+  }
+
+  isSavingTeamMembers.value = true;
+  teamMemberStatus.value = '';
+
+  try {
+    await updateTeam(selectedTeamDetail.value.id, {
+      members: buildTeamMemberPayload(),
+    });
+    await Promise.all([
+      loadSelectedTeamDetail(selectedTeamDetail.value.id),
+      loadTeamSummaries(),
+      loadTeams(),
+    ]);
+    isEditingTeamMembers.value = false;
+    teamMemberStatus.value = '已保存';
+  } catch (error) {
+    console.error(error);
+    teamMemberStatus.value = '保存失败';
+  } finally {
+    isSavingTeamMembers.value = false;
+  }
+}
+
 function resetTeamInfoDraft(): void {
   if (!selectedTeamDetail.value) {
     return;
   }
 
-  teamInfoDraft.value = {
-    name: selectedTeamDetail.value.name,
-    workingDirectory: selectedTeamDetail.value.working_directory || '',
-    slogan: String(selectedTeamDetail.value.config?.slogan || ''),
-    rules: String(selectedTeamDetail.value.config?.rules || ''),
-  };
-  teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
-  isEditingTeamMembers.value = false;
+  teamInfoDraft.value = buildTeamInfoDraft(selectedTeamDetail.value);
   teamInfoStatus.value = '';
 }
 
@@ -272,7 +356,9 @@ function toggleTeamMemberEdit(): void {
     return;
   }
 
-  teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+  teamMembersDraft.value = buildTeamMemberDraft(selectedTeamDetail.value);
+  teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(selectedTeamDetail.value);
+  teamMemberStatus.value = '';
   isEditingTeamMembers.value = true;
 }
 
@@ -281,8 +367,11 @@ function cancelTeamMemberEdit(): void {
     return;
   }
 
-  teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+  teamMembersDraft.value = buildTeamMemberDraft(selectedTeamDetail.value);
+  teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(selectedTeamDetail.value);
   isEditingTeamMembers.value = false;
+  teamMemberStatus.value = '';
+  closeMemberEditor();
 }
 
 function handleMemberPanelAction(actionKey: string): void {
@@ -297,7 +386,7 @@ function handleMemberPanelAction(actionKey: string): void {
   }
 
   if (actionKey === 'save') {
-    saveTeamInfo();
+    saveTeamMembers();
   }
 }
 
@@ -308,10 +397,53 @@ function toggleTeamMember(agentName: string): void {
 
   if (teamMembersDraft.value.includes(agentName)) {
     teamMembersDraft.value = teamMembersDraft.value.filter((item) => item !== agentName);
+    const nextRoleDrafts = { ...teamMemberRoleDrafts.value };
+    delete nextRoleDrafts[agentName];
+    teamMemberRoleDrafts.value = nextRoleDrafts;
+    if (editingMemberName.value === agentName) {
+      closeMemberEditor();
+    }
     return;
   }
 
   teamMembersDraft.value = [...teamMembersDraft.value, agentName];
+  teamMemberRoleDrafts.value = {
+    ...teamMemberRoleDrafts.value,
+    [agentName]: teamMemberRoleDrafts.value[agentName] || agentName,
+  };
+}
+
+function openMemberEditor(agentName: string): void {
+  memberEditorMode.value = 'edit';
+  editingMemberName.value = agentName;
+  memberEditorKeyword.value = '';
+  memberEditorTemplate.value = resolveMemberRoleTemplate(agentName);
+}
+
+function openMemberViewer(agentName: string): void {
+  memberEditorMode.value = 'view';
+  editingMemberName.value = agentName;
+  memberEditorKeyword.value = '';
+  memberEditorTemplate.value = resolveMemberRoleTemplate(agentName);
+}
+
+function closeMemberEditor(): void {
+  editingMemberName.value = '';
+  memberEditorKeyword.value = '';
+  memberEditorTemplate.value = '';
+  memberEditorMode.value = 'view';
+}
+
+function saveMemberEditor(): void {
+  if (!editingMemberName.value || !memberEditorTemplate.value) {
+    return;
+  }
+
+  teamMemberRoleDrafts.value = {
+    ...teamMemberRoleDrafts.value,
+    [editingMemberName.value]: memberEditorTemplate.value,
+  };
+  closeMemberEditor();
 }
 
 function formatDuration(ms: number): string {
@@ -535,7 +667,7 @@ onBeforeUnmount(() => {
               <div class="team-detail-actions">
                 <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
                 <button
-                  v-if="hasTeamChanges"
+                  v-if="hasTeamInfoChanges"
                   type="button"
                   class="ghost-button"
                   :disabled="isSavingTeamInfo"
@@ -546,7 +678,7 @@ onBeforeUnmount(() => {
                 <button
                   type="button"
                   class="secondary-button"
-                  :disabled="!hasTeamChanges || isSavingTeamInfo"
+                  :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
                   @click="saveTeamInfo"
                 >
                   {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
@@ -567,14 +699,18 @@ onBeforeUnmount(() => {
                 @update:rules="teamInfoDraft.rules = $event"
               />
 
+              <p v-if="teamMemberStatus" class="team-member-status">{{ teamMemberStatus }}</p>
+
               <TeamMembersCard
                 :team-name="selectedTeamDetail.name"
                 :selected-agents="selectedTeamMembers"
                 :readonly="!isEditingTeamMembers"
                 :actions="memberPanelActions"
+                :show-edit-action="isEditingTeamMembers"
                 @action="handleMemberPanelAction"
                 @toggle-agent="toggleTeamMember"
-                @view-agent="openAgentDetail"
+                @view-agent="openMemberViewer"
+                @edit-agent="openMemberEditor"
               />
             </div>
           </template>
@@ -731,6 +867,81 @@ onBeforeUnmount(() => {
       </main>
     </div>
   </section>
+
+  <Teleport to="body">
+    <div v-if="memberEditorOpen" class="member-editor-overlay" @click.self="closeMemberEditor">
+      <section
+        class="member-editor-dialog panel"
+        :class="{ 'member-editor-dialog--readonly': !memberEditorEditable }"
+      >
+        <div class="member-editor-head">
+          <div>
+            <p class="section-eyebrow">{{ memberEditorEditable ? 'Member Editor' : 'Member Viewer' }}</p>
+            <h3>{{ editingMemberName }}</h3>
+          </div>
+          <button type="button" class="ghost-button" @click="closeMemberEditor">关闭</button>
+        </div>
+
+        <div class="member-editor-summary">
+          <label class="member-editor-field">
+            <span>成员名称</span>
+            <input :value="editingMemberName" type="text" readonly />
+          </label>
+          <label class="member-editor-field">
+            <span>当前模板</span>
+            <input :value="memberEditorTemplate" type="text" readonly />
+          </label>
+          <label class="member-editor-field">
+            <span>模型</span>
+            <input :value="currentMemberTemplateOption?.model || '未设置'" type="text" readonly />
+          </label>
+        </div>
+
+        <section class="member-template-panel">
+          <div class="member-template-head">
+            <span class="panel-label">Agent 模板</span>
+            <label class="member-template-search">
+              <input
+                v-model="memberEditorKeyword"
+                type="text"
+                placeholder="搜索模板"
+                :disabled="!memberEditorEditable"
+              />
+            </label>
+          </div>
+
+          <div class="member-template-grid">
+            <AgentTemplateCard
+              v-for="item in filteredMemberTemplateOptions"
+              :key="item.name"
+              :agent-name="item.name"
+              :selected="item.name === memberEditorTemplate"
+              @click="memberEditorEditable && (memberEditorTemplate = item.name)"
+            />
+
+            <div v-if="!filteredMemberTemplateOptions.length" class="member-template-empty">
+              当前没有可用模板
+            </div>
+          </div>
+        </section>
+
+        <div class="member-editor-actions">
+          <button type="button" class="ghost-button" @click="closeMemberEditor">
+            {{ memberEditorEditable ? '取消' : '关闭' }}
+          </button>
+          <button
+            v-if="memberEditorEditable"
+            type="button"
+            class="secondary-button"
+            :disabled="!memberEditorTemplate"
+            @click="saveMemberEditor"
+          >
+            保存
+          </button>
+        </div>
+      </section>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -1250,6 +1461,130 @@ onBeforeUnmount(() => {
   align-items: start;
 }
 
+.team-member-status {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.member-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(6, 10, 16, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+.member-editor-dialog {
+  width: min(920px, 100%);
+  max-height: min(760px, calc(100vh - 56px));
+  padding: 16px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 32%, var(--panel-border) 68%);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--panel-bg) 94%, transparent) 0%,
+      color-mix(in srgb, var(--surface-soft) 92%, transparent) 100%
+    );
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.36);
+}
+
+.member-editor-head,
+.member-template-head,
+.member-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.member-editor-head h3 {
+  margin: 2px 0 0;
+  color: var(--text-strong);
+  font-size: 1.32rem;
+}
+
+.member-editor-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) repeat(2, minmax(160px, 0.8fr));
+  gap: 12px;
+}
+
+.member-editor-field {
+  display: grid;
+  gap: 6px;
+}
+
+.member-editor-field span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.member-editor-field input,
+.member-template-search input {
+  width: 100%;
+  height: 36px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
+  color: var(--text-strong);
+  padding: 0 12px;
+  outline: none;
+}
+
+.member-editor-dialog--readonly .member-template-search input:disabled {
+  opacity: 0.64;
+  cursor: default;
+}
+
+.member-editor-field input[readonly] {
+  cursor: default;
+}
+
+.member-template-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-soft) 74%, var(--panel-bg) 26%);
+}
+
+.member-template-search {
+  width: 220px;
+}
+
+.member-template-grid {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 78px);
+  gap: 10px 12px;
+  align-content: start;
+  padding-right: 4px;
+}
+
+.member-template-empty {
+  min-height: 120px;
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-soft) 78%, transparent);
+}
+
 .empty-card p {
   margin: 4px 0 0;
   color: var(--muted);
@@ -1313,6 +1648,10 @@ onBeforeUnmount(() => {
   .settings-nav {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .member-editor-summary {
+    grid-template-columns: 1fr;
   }
 
 }
