@@ -36,6 +36,16 @@ function openRoom(roomId: number): void {
   router.push({ name: 'console', params: { teamId: teamId.value, roomId } }).catch(console.error);
 }
 
+function openAgentDetail(agentName: string): void {
+  router.push({
+    name: 'agent-detail',
+    params: {
+      teamId: teamId.value,
+      agentName,
+    },
+  }).catch(console.error);
+}
+
 watch(() => route.params.teamId, () => {
   loadDetail().catch(console.error);
 });
@@ -64,6 +74,7 @@ onMounted(() => {
           :team-name="team.name"
           :selected-agents="selectedAgents"
           readonly
+          @view-agent="openAgentDetail"
         />
 
         <section class="rooms-panel">

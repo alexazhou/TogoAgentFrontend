@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import TeamMemberGraph from './TeamMemberGraph.vue';
 
+type MemberPanelAction = {
+  key: string;
+  label: string;
+  disabled?: boolean;
+  primary?: boolean;
+};
+
 withDefaults(defineProps<{
   teamName: string;
   selectedAgents: string[];
   readonly?: boolean;
-  actionLabel?: string;
-  actionDisabled?: boolean;
+  actions?: MemberPanelAction[];
 }>(), {
   readonly: false,
-  actionLabel: '',
-  actionDisabled: false,
+  actions: () => [],
 });
 
 const emit = defineEmits<{
   toggleAgent: [agentName: string];
-  action: [];
+  viewAgent: [agentName: string];
+  action: [key: string];
 }>();
 </script>
 
@@ -25,14 +31,17 @@ const emit = defineEmits<{
       <div class="member-panel-head-segment member-panel-head-segment--label">
         <span class="panel-label">团队成员</span>
       </div>
-      <div v-if="actionLabel" class="member-panel-head-segment member-panel-head-segment--action">
+      <div v-if="actions.length" class="member-panel-head-segment member-panel-head-segment--action">
         <button
+          v-for="action in actions"
+          :key="action.key"
           type="button"
           class="member-panel-action"
-          :disabled="actionDisabled"
-          @click="emit('action')"
+          :class="{ 'member-panel-action--primary': action.primary }"
+          :disabled="action.disabled"
+          @click="emit('action', action.key)"
         >
-          {{ actionLabel }}
+          {{ action.label }}
         </button>
       </div>
     </div>
@@ -42,6 +51,7 @@ const emit = defineEmits<{
       :selected-agents="selectedAgents"
       :readonly="readonly"
       @toggle-agent="emit('toggleAgent', $event)"
+      @view-agent="emit('viewAgent', $event)"
     />
   </section>
 </template>
@@ -84,6 +94,7 @@ const emit = defineEmits<{
 
 .member-panel-head-segment--action {
   margin-left: auto;
+  gap: 8px;
 }
 
 .panel-label {
@@ -122,5 +133,10 @@ const emit = defineEmits<{
 .member-panel-action:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.member-panel-action--primary {
+  border-color: color-mix(in srgb, var(--focus-border) 45%, var(--team-create-control-border) 55%);
+  background: color-mix(in srgb, var(--selected) 22%, #fff 78%);
 }
 </style>
