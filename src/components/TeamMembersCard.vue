@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TeamMemberGraph from './TeamMemberGraph.vue';
+import type { TeamGraphNode } from './teamGraphTypes';
 
 type MemberPanelAction = {
   key: string;
@@ -12,11 +13,13 @@ withDefaults(defineProps<{
   teamName: string;
   selectedAgents: string[];
   memberTemplates?: Record<string, string>;
+  rootNode?: TeamGraphNode | null;
   readonly?: boolean;
   actions?: MemberPanelAction[];
   showEditAction?: boolean;
 }>(), {
   memberTemplates: () => ({}),
+  rootNode: null,
   readonly: false,
   actions: () => [],
   showEditAction: false,
@@ -26,6 +29,9 @@ const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
   editAgent: [agentName: string];
+  addSubordinate: [agentName: string];
+  editPendingSlot: [slotId: string];
+  removePendingSlot: [slotId: string];
   action: [key: string];
 }>();
 </script>
@@ -55,11 +61,15 @@ const emit = defineEmits<{
       :team-name="teamName"
       :selected-agents="selectedAgents"
       :member-templates="memberTemplates"
+      :root-node="rootNode"
       :readonly="readonly"
       :show-edit-action="showEditAction"
       @toggle-agent="emit('toggleAgent', $event)"
       @view-agent="emit('viewAgent', $event)"
       @edit-agent="emit('editAgent', $event)"
+      @add-subordinate="emit('addSubordinate', $event)"
+      @edit-pending-slot="emit('editPendingSlot', $event)"
+      @remove-pending-slot="emit('removePendingSlot', $event)"
     />
   </section>
 </template>

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import AgentCardBase from './AgentCardBase.vue';
+import TeamMemberTreeNode from './TeamMemberTreeNode.vue';
+import type { TeamGraphNode } from './teamGraphTypes';
 import { useTeamGraphLayout } from './useTeamGraphLayout';
 
 const props = defineProps<{
   teamName: string;
   selectedAgents: string[];
   memberTemplates?: Record<string, string>;
+  rootNode?: TeamGraphNode | null;
   readonly?: boolean;
   showEditAction?: boolean;
 }>();
@@ -15,28 +18,65 @@ const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
   editAgent: [agentName: string];
+  addSubordinate: [agentName: string];
+  editPendingSlot: [slotId: string];
+  removePendingSlot: [slotId: string];
 }>();
 
-const leaderAgent = computed(() => props.selectedAgents[0] ?? '');
-const memberAgents = computed(() => props.selectedAgents.slice(1));
-const visibleMemberSlots = computed(() => {
-  const slots = memberAgents.value.map((agentName) => ({
-    name: agentName,
-    agent: agentName,
-  }));
-
-  if (!props.readonly) {
-    slots.push({ name: '', agent: '' });
-  }
-
-  return slots;
-});
-const isSingleMemberLayout = computed(() => visibleMemberSlots.value.length === 1);
-const memberGridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${Math.max(visibleMemberSlots.value.length, 1)}, minmax(180px, 220px))`,
-}));
 const readonly = computed(() => !!props.readonly);
 const memberTemplates = computed(() => props.memberTemplates ?? {});
+
+function buildFallbackRootNode(): TeamGraphNode | null {
+  const leaderName = props.selectedAgents[0] ?? '';
+  if (!leaderName) {
+    return null;
+  }
+
+  return {
+    id: leaderName,
+    kind: 'member',
+    name: leaderName,
+    subtitle: 'Leader',
+    avatarName: leaderName,
+    children: props.selectedAgents.slice(1).map((agentName) => ({
+      id: agentName,
+      kind: 'member',
+      name: agentName,
+      subtitle: memberTemplates.value[agentName] || agentName,
+      avatarName: agentName,
+      children: [],
+    })),
+  };
+}
+
+const graphRootNode = computed(() => props.rootNode ?? buildFallbackRootNode());
+const leaderNode = computed(() => graphRootNode.value);
+const leaderAgent = computed(() => leaderNode.value?.name ?? '');
+const topLevelNodes = computed(() => leaderNode.value?.children ?? []);
+const isSingleMemberLayout = computed(() => topLevelNodes.value.length === 1);
+const memberGridStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${Math.max(topLevelNodes.value.length, 1)}, minmax(180px, 220px))`,
+}));
+
+function collectGraphNodeNames(node: TeamGraphNode | null): string[] {
+  if (!node) {
+    return [];
+  }
+
+  const names: string[] = [];
+  const stack = [node];
+  while (stack.length) {
+    const current = stack.pop()!;
+    if (current.kind === 'member' && current.name) {
+      names.push(current.name);
+    }
+    for (let index = current.children.length - 1; index >= 0; index -= 1) {
+      stack.push(current.children[index]);
+    }
+  }
+  return names;
+}
+
 const {
   graphRef,
   canvasRef,
@@ -50,7 +90,8 @@ const {
   handleWheelZoom,
 } = useTeamGraphLayout({
   readonly,
-  selectedAgents: computed(() => props.selectedAgents),
+  selectedAgents: computed(() => collectGraphNodeNames(graphRootNode.value)),
+  contentVersion: computed(() => JSON.stringify(graphRootNode.value ?? null)),
 });
 
 function handlePrimaryAction(agentName: string): void {
@@ -84,10 +125,6 @@ function handleEditAction(agentName: string): void {
   }
 
   emit('editAgent', agentName);
-}
-
-function getMemberSubtitle(agentName: string, fallback: string): string {
-  return memberTemplates.value[agentName] || fallback;
 }
 </script>
 
@@ -134,68 +171,46 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
           >
             编辑
           </button>
+          <button
+            v-if="!readonly"
+            class="member-action-button"
+            type="button"
+            @pointerdown.stop
+            @click.stop="emit('addSubordinate', leaderAgent)"
+          >
+            添加下属
+          </button>
         </div>
       </div>
 
-      <div ref="memberTreeRef" class="member-tree" :class="{ 'is-single-member': isSingleMemberLayout }">
+      <div
+        v-if="topLevelNodes.length"
+        ref="memberTreeRef"
+        class="member-tree"
+        :class="{ 'is-single-member': isSingleMemberLayout }"
+      >
         <div v-if="!isSingleMemberLayout" class="member-rail" :style="railStyle" aria-hidden="true"></div>
         <div v-else class="member-single-link" aria-hidden="true"></div>
 
         <div class="member-slots" :class="{ 'is-single-member': isSingleMemberLayout }" :style="memberGridStyle">
           <div
-            v-for="(member, index) in visibleMemberSlots"
-            :key="member.name || `empty-${index}`"
-            class="member-card-shell member-node-shell"
-            :class="{ 'has-action': !!member.name }"
+            v-for="(memberNode, index) in topLevelNodes"
+            :key="memberNode.id || `member-${index}`"
+            class="member-node-shell"
           >
-            <AgentCardBase
-              class="member-node member-card-button"
-              :empty="!member.name"
+            <span v-if="!isSingleMemberLayout" class="member-top-link" aria-hidden="true"></span>
+            <TeamMemberTreeNode
+              :node="memberNode"
               :readonly="readonly"
-              :title="member.name || '+'"
-              :subtitle="member.name ? getMemberSubtitle(member.name, member.agent) : '成员'"
-              :avatar-name="member.name"
-              variant="graph"
-              @click="handlePrimaryAction(member.name)"
+              :show-edit-action="!!props.showEditAction"
+              :top-level="true"
+              @toggle-agent="emit('toggleAgent', $event)"
+              @view-agent="emit('viewAgent', $event)"
+              @edit-agent="emit('editAgent', $event)"
+              @add-subordinate="emit('addSubordinate', $event)"
+              @edit-pending-slot="emit('editPendingSlot', $event)"
+              @remove-pending-slot="emit('removePendingSlot', $event)"
             />
-            <div v-if="member.name" class="member-action-group">
-              <button
-                v-if="readonly"
-                class="member-action-button"
-                type="button"
-                @pointerdown.stop
-                @click.stop="handleViewAction(member.name)"
-              >
-                查看
-              </button>
-              <template v-else-if="props.showEditAction">
-                <button
-                  class="member-action-button"
-                  type="button"
-                  @pointerdown.stop
-                  @click.stop="handleEditAction(member.name)"
-                >
-                  编辑
-                </button>
-                <button
-                  class="member-action-button member-action-button--danger"
-                  type="button"
-                  @pointerdown.stop
-                  @click.stop="emit('toggleAgent', member.name)"
-                >
-                  移除
-                </button>
-              </template>
-              <button
-                v-else
-                class="member-action-button"
-                type="button"
-                @pointerdown.stop
-                @click.stop="emit('toggleAgent', member.name)"
-              >
-                移除
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -252,7 +267,7 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
 }
 
 .member-graph.is-panning .team-root.is-readonly,
-.member-graph.is-panning .member-node.is-readonly {
+.member-graph.is-panning :deep(.member-node.is-readonly) {
   cursor: grabbing;
 }
 
@@ -260,6 +275,7 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
   position: relative;
   display: grid;
   justify-items: center;
+  align-content: start;
 }
 
 .team-root-shell {
@@ -268,52 +284,6 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
 
 .member-card-button {
   width: 100%;
-}
-
-.member-action-group {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  display: inline-flex;
-  gap: 6px;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-  z-index: 3;
-}
-
-.member-action-button {
-  min-width: 44px;
-  height: 24px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 48%, var(--panel-border) 52%);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-bg) 76%, var(--selected) 24%);
-  color: var(--text-strong);
-  padding: 0 10px;
-  font-size: 0.72rem;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    border-color 0.16s ease,
-    background 0.16s ease;
-}
-
-.member-card-shell.has-action:hover .member-action-group,
-.member-card-shell.has-action:focus-within .member-action-group {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.member-action-button:hover {
-  border-color: var(--focus-border);
-  background: var(--selected);
-}
-
-.member-action-button--danger:hover {
-  border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
-  background: color-mix(in srgb, #fee2e2 82%, #fff 18%);
 }
 
 .member-tree {
@@ -364,13 +334,14 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
   grid-column: 3;
 }
 
-.member-node {
+.member-node-shell {
   position: relative;
-  width: var(--member-card-width);
+  display: grid;
+  justify-items: center;
+  align-content: start;
 }
 
-.member-node::before {
-  content: '';
+.member-top-link {
   position: absolute;
   top: calc(-1 * var(--member-branch-offset));
   left: 50%;
@@ -378,6 +349,11 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
   height: var(--member-branch-offset);
   transform: translateX(-50%);
   background: var(--member-connector-line);
+}
+
+:deep(.member-node) {
+  position: relative;
+  width: var(--member-card-width);
 }
 
 .member-tree.is-single-member .member-rail {
@@ -392,6 +368,116 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
   height: 96px;
   transform: translateX(-50%);
   background: var(--member-connector-line);
+}
+
+:deep(.member-child-tree) {
+  --member-child-offset: 18px;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: max-content;
+  margin-top: 18px;
+  padding-top: var(--member-child-offset);
+}
+
+:deep(.member-child-tree::before) {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--member-child-offset));
+  left: 50%;
+  width: 1px;
+  height: var(--member-child-offset);
+  transform: translateX(-50%);
+  background: var(--member-connector-line);
+}
+
+:deep(.member-child-tree.is-single-child::before) {
+  height: calc(var(--member-child-offset) * 2);
+}
+
+:deep(.member-child-list) {
+  position: relative;
+  display: grid;
+  gap: var(--member-gap);
+  justify-items: center;
+  width: max-content;
+}
+
+:deep(.member-child-rail) {
+  position: absolute;
+  top: 0;
+  left: calc(var(--member-card-width) / 2);
+  right: calc(var(--member-card-width) / 2);
+  height: var(--member-child-offset);
+  border-top: 1px solid var(--member-connector-line);
+}
+
+:deep(.member-child-shell) {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+}
+
+:deep(.member-child-link) {
+  position: absolute;
+  top: calc(-1 * var(--member-child-offset));
+  left: 50%;
+  width: 1px;
+  height: var(--member-child-offset);
+  transform: translateX(-50%);
+  background: var(--member-connector-line);
+}
+
+:deep(.member-action-group) {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  z-index: 3;
+}
+
+:deep(.member-action-button) {
+  width: 78px;
+  min-width: 0;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 48%, var(--panel-border) 52%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-bg) 76%, var(--selected) 24%);
+  color: var(--text-strong);
+  padding: 0 8px;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease;
+}
+
+.member-card-shell.has-action:hover :deep(.member-action-group),
+.member-card-shell.has-action:focus-within :deep(.member-action-group),
+:deep(.member-card-shell.has-action:hover .member-action-group),
+:deep(.member-card-shell.has-action:focus-within .member-action-group) {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+:deep(.member-action-button:hover) {
+  border-color: var(--focus-border);
+  background: var(--selected);
+}
+
+:deep(.member-action-button--danger:hover) {
+  border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
+  background: color-mix(in srgb, #fee2e2 82%, #fff 18%);
 }
 
 @media (max-width: 960px) {
@@ -412,15 +498,15 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
   }
 
   .member-rail,
-  .member-node::before {
+  .member-top-link,
+  .member-single-link,
+  :deep(.member-child-rail),
+  :deep(.member-child-link),
+  :deep(.member-child-tree::before) {
     display: none;
   }
 
-  .member-action-button {
-    transform: none;
-  }
-
-  .member-action-group {
+  :deep(.member-action-group) {
     opacity: 1;
     transform: none;
   }
@@ -429,5 +515,4 @@ function getMemberSubtitle(agentName: string, fallback: string): string {
     min-height: auto;
   }
 }
-
 </style>
