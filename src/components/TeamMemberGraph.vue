@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed } from 'vue';
 import { getAgentAvatarUrl } from '../avatar';
+import { useTeamGraphLayout } from './useTeamGraphLayout';
 
 const props = defineProps<{
   teamName: string;
@@ -11,38 +11,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   toggleAgent: [agentName: string];
+  viewAgent: [agentName: string];
 }>();
-const route = useRoute();
-const router = useRouter();
 
 const leaderAgent = computed(() => props.selectedAgents[0] ?? '');
 const memberAgents = computed(() => props.selectedAgents.slice(1));
-const teamId = computed(() => {
-  const raw = route.params.teamId;
-  const value = Number(raw);
-  return Number.isFinite(value) ? value : null;
-});
-const graphRef = ref<HTMLElement | null>(null);
-const canvasRef = ref<HTMLElement | null>(null);
-const memberTreeRef = ref<HTMLElement | null>(null);
-const graphWidth = ref(0);
-const graphHeight = ref(0);
-const canvasWidth = ref(0);
-const canvasHeight = ref(0);
-const baseContentMinLeft = ref(0);
-const baseContentMaxRight = ref(0);
-const baseContentMinTop = ref(0);
-const baseContentMaxBottom = ref(0);
-const dragContentMinLeft = ref(0);
-const dragContentMaxRight = ref(0);
-const dragContentMinTop = ref(0);
-const dragContentMaxBottom = ref(0);
-const panX = ref(0);
-const panY = ref(0);
-const zoom = ref(1);
-const isPanning = ref(false);
-const railStartX = ref(0);
-const railEndX = ref(0);
 const visibleMemberSlots = computed(() => {
   const slots = memberAgents.value.map((agentName) => ({
     name: agentName,
@@ -59,202 +32,22 @@ const isSingleMemberLayout = computed(() => visibleMemberSlots.value.length === 
 const memberGridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(visibleMemberSlots.value.length, 1)}, minmax(180px, 220px))`,
 }));
-const canvasStyle = computed(() => ({
-  transform: `translate(-50%, 0) translate(${panX.value}px, ${panY.value}px) scale(${zoom.value})`,
-}));
-const boundingFrameStyle = computed(() => ({
-  left: `${baseContentMinLeft.value}px`,
-  top: `${baseContentMinTop.value}px`,
-  width: `${Math.max(baseContentMaxRight.value - baseContentMinLeft.value, 0)}px`,
-  height: `${Math.max(baseContentMaxBottom.value - baseContentMinTop.value, 0)}px`,
-}));
-const railStyle = computed(() => ({
-  left: `${railStartX.value}px`,
-  right: `${railEndX.value}px`,
-}));
-let resizeObserver: ResizeObserver | null = null;
-let panStartX = 0;
-let panStartY = 0;
-let panOriginX = 0;
-let panOriginY = 0;
-let metricsFrame = 0;
-
-function updateMetrics(): void {
-  graphWidth.value = graphRef.value?.clientWidth ?? 0;
-  graphHeight.value = graphRef.value?.clientHeight ?? 0;
-  canvasWidth.value = canvasRef.value?.offsetWidth ?? 0;
-  canvasHeight.value = canvasRef.value?.offsetHeight ?? 0;
-
-  const canvas = canvasRef.value;
-  const graph = graphRef.value;
-  if (!canvas || !graph) {
-    baseContentMinLeft.value = 0;
-    baseContentMaxRight.value = canvasWidth.value;
-    baseContentMinTop.value = 0;
-    baseContentMaxBottom.value = canvasHeight.value;
-    return;
-  }
-
-  const nodes = Array.from(canvas.querySelectorAll<HTMLElement>(
-    '.team-root, .member-node, .member-action-button, .member-rail, .member-single-link',
-  ));
-  if (nodes.length === 0) {
-    baseContentMinLeft.value = 0;
-    baseContentMaxRight.value = canvasWidth.value;
-    baseContentMinTop.value = 0;
-    baseContentMaxBottom.value = canvasHeight.value;
-    return;
-  }
-
-  const graphRect = graph.getBoundingClientRect();
-  const canvasRect = canvas.getBoundingClientRect();
-  const treeRect = memberTreeRef.value?.getBoundingClientRect() ?? null;
-  let minLeft = Number.POSITIVE_INFINITY;
-  let maxRight = Number.NEGATIVE_INFINITY;
-  let minTop = Number.POSITIVE_INFINITY;
-  let maxBottom = Number.NEGATIVE_INFINITY;
-  let graphMinLeft = Number.POSITIVE_INFINITY;
-  let graphMaxRight = Number.NEGATIVE_INFINITY;
-  let graphMinTop = Number.POSITIVE_INFINITY;
-  let graphMaxBottom = Number.NEGATIVE_INFINITY;
-  const memberCenters: number[] = [];
-
-  for (const node of nodes) {
-    const rect = node.getBoundingClientRect();
-    minLeft = Math.min(minLeft, rect.left - canvasRect.left);
-    maxRight = Math.max(maxRight, rect.right - canvasRect.left);
-    minTop = Math.min(minTop, rect.top - canvasRect.top);
-    maxBottom = Math.max(maxBottom, rect.bottom - canvasRect.top);
-    graphMinLeft = Math.min(graphMinLeft, rect.left - graphRect.left);
-    graphMaxRight = Math.max(graphMaxRight, rect.right - graphRect.left);
-    graphMinTop = Math.min(graphMinTop, rect.top - graphRect.top);
-    graphMaxBottom = Math.max(graphMaxBottom, rect.bottom - graphRect.top);
-  }
-
-  if (treeRect) {
-    const memberNodes = Array.from(canvas.querySelectorAll<HTMLElement>('.member-node'));
-    for (const node of memberNodes) {
-      const rect = node.getBoundingClientRect();
-      memberCenters.push((rect.left + rect.right) / 2 - treeRect.left);
-    }
-  }
-
-  baseContentMinLeft.value = minLeft;
-  baseContentMaxRight.value = maxRight;
-  baseContentMinTop.value = minTop;
-  baseContentMaxBottom.value = maxBottom;
-  dragContentMinLeft.value = graphMinLeft - panX.value;
-  dragContentMaxRight.value = graphMaxRight - panX.value;
-  dragContentMinTop.value = graphMinTop - panY.value;
-  dragContentMaxBottom.value = graphMaxBottom - panY.value;
-  if (memberCenters.length > 0 && treeRect) {
-    const scale = zoom.value || 1;
-    railStartX.value = Math.min(...memberCenters) / scale;
-    railEndX.value = Math.max((treeRect.width - Math.max(...memberCenters)) / scale, 0);
-  } else {
-    railStartX.value = 0;
-    railEndX.value = 0;
-  }
-}
-
-function scheduleMetricsUpdate(): void {
-  if (metricsFrame) {
-    cancelAnimationFrame(metricsFrame);
-  }
-  metricsFrame = requestAnimationFrame(() => {
-    metricsFrame = 0;
-    updateMetrics();
-  });
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function clampPan(nextX: number, nextY: number): { x: number; y: number } {
-  const keepVisiblePx = 10;
-  const minX = keepVisiblePx - dragContentMaxRight.value;
-  const maxX = graphWidth.value - keepVisiblePx - dragContentMinLeft.value;
-  const minY = keepVisiblePx - dragContentMaxBottom.value;
-  const maxY = graphHeight.value - keepVisiblePx - dragContentMinTop.value;
-
-  return {
-    x: clamp(nextX, Math.min(minX, maxX), Math.max(minX, maxX)),
-    y: clamp(nextY, Math.min(minY, maxY), Math.max(minY, maxY)),
-  };
-}
-
-function resetPan(): void {
-  const next = clampPan(
-    (graphWidth.value - dragContentMaxRight.value - dragContentMinLeft.value) / 2,
-    (graphHeight.value - dragContentMaxBottom.value - dragContentMinTop.value) / 2,
-  );
-  panX.value = next.x;
-  panY.value = next.y;
-  scheduleMetricsUpdate();
-}
-
-function startPan(event: PointerEvent): void {
-  if (event.button !== 0 || !graphRef.value) {
-    return;
-  }
-
-  const target = event.target instanceof HTMLElement ? event.target : null;
-  if (!props.readonly && target?.closest('button')) {
-    return;
-  }
-
-  isPanning.value = true;
-  panStartX = event.clientX;
-  panStartY = event.clientY;
-  panOriginX = panX.value;
-  panOriginY = panY.value;
-  graphRef.value.setPointerCapture(event.pointerId);
-}
-
-function movePan(event: PointerEvent): void {
-  if (!isPanning.value) {
-    return;
-  }
-
-  const next = clampPan(
-    panOriginX + event.clientX - panStartX,
-    panOriginY + event.clientY - panStartY,
-  );
-  panX.value = next.x;
-  panY.value = next.y;
-  scheduleMetricsUpdate();
-}
-
-function endPan(event?: PointerEvent): void {
-  if (!isPanning.value) {
-    return;
-  }
-
-  if (event && graphRef.value?.hasPointerCapture(event.pointerId)) {
-    graphRef.value.releasePointerCapture(event.pointerId);
-  }
-
-  isPanning.value = false;
-}
-
-function handleWheelZoom(event: WheelEvent): void {
-  if (!graphRef.value || event.deltaY === 0) {
-    return;
-  }
-
-  event.preventDefault();
-  const minZoom = 0.6;
-  const maxZoom = 1.8;
-  const zoomFactor = Math.exp(-event.deltaY * 0.0015);
-  const nextZoom = clamp(zoom.value * zoomFactor, minZoom, maxZoom);
-
-  if (Math.abs(nextZoom - zoom.value) < 0.0001) {
-    return;
-  }
-
-  zoom.value = nextZoom;
-}
+const readonly = computed(() => !!props.readonly);
+const {
+  graphRef,
+  canvasRef,
+  memberTreeRef,
+  isPanning,
+  canvasStyle,
+  railStyle,
+  startPan,
+  movePan,
+  endPan,
+  handleWheelZoom,
+} = useTeamGraphLayout({
+  readonly,
+  selectedAgents: computed(() => props.selectedAgents),
+});
 
 function handlePrimaryAction(agentName: string): void {
   if (!agentName || props.readonly) {
@@ -269,70 +62,13 @@ function handleActionButton(agentName: string): void {
     return;
   }
 
-  if (props.readonly) {
-    if (teamId.value === null) {
-      return;
-    }
-
-    router.push({
-      name: 'agent-detail',
-      params: {
-        teamId: teamId.value,
-        agentName,
-      },
-    }).catch(console.error);
+  if (readonly.value) {
+    emit('viewAgent', agentName);
     return;
   }
 
   emit('toggleAgent', agentName);
 }
-
-onMounted(() => {
-  updateMetrics();
-  resetPan();
-  if (!graphRef.value || !canvasRef.value) {
-    return;
-  }
-
-  resizeObserver = new ResizeObserver(() => {
-    updateMetrics();
-    resetPan();
-  });
-  resizeObserver.observe(graphRef.value);
-  resizeObserver.observe(canvasRef.value);
-});
-
-onBeforeUnmount(() => {
-  resizeObserver?.disconnect();
-  resizeObserver = null;
-  if (metricsFrame) {
-    cancelAnimationFrame(metricsFrame);
-    metricsFrame = 0;
-  }
-});
-
-watch(
-  () => props.selectedAgents,
-  async () => {
-    await nextTick();
-    updateMetrics();
-    resetPan();
-  },
-  { deep: true, immediate: true },
-);
-
-watch([panX, panY], async () => {
-  await nextTick();
-  updateMetrics();
-});
-
-watch(zoom, async () => {
-  await nextTick();
-  updateMetrics();
-  const next = clampPan(panX.value, panY.value);
-  panX.value = next.x;
-  panY.value = next.y;
-});
 </script>
 
 <template>
@@ -348,11 +84,10 @@ watch(zoom, async () => {
     @wheel.prevent="handleWheelZoom"
   >
     <div ref="canvasRef" class="member-canvas" :style="canvasStyle">
-      <div class="member-bounding-frame" :style="boundingFrameStyle" aria-hidden="true"></div>
       <div class="member-card-shell team-root-shell" :class="{ 'has-action': !!leaderAgent }">
         <button
           class="team-root member-card-button"
-          :class="{ 'is-empty': !leaderAgent, 'is-readonly': props.readonly }"
+          :class="{ 'is-empty': !leaderAgent, 'is-readonly': readonly }"
           type="button"
           @click="handlePrimaryAction(leaderAgent)"
         >
@@ -366,13 +101,13 @@ watch(zoom, async () => {
           <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
         </button>
         <button
-          v-if="leaderAgent && props.readonly"
+          v-if="leaderAgent && readonly"
           class="member-action-button"
           type="button"
           @pointerdown.stop
           @click.stop="handleActionButton(leaderAgent)"
         >
-          {{ props.readonly ? '查看' : '移除' }}
+          {{ readonly ? '查看' : '移除' }}
         </button>
       </div>
 
@@ -389,7 +124,7 @@ watch(zoom, async () => {
           >
             <button
               class="member-node member-card-button"
-              :class="{ 'is-empty': !member.name, 'is-readonly': props.readonly }"
+              :class="{ 'is-empty': !member.name, 'is-readonly': readonly }"
               type="button"
               @click="handlePrimaryAction(member.name)"
             >
@@ -409,7 +144,7 @@ watch(zoom, async () => {
               @pointerdown.stop
               @click.stop="handleActionButton(member.name)"
             >
-              {{ props.readonly ? '查看' : '移除' }}
+              {{ readonly ? '查看' : '移除' }}
             </button>
           </div>
         </div>
@@ -446,15 +181,6 @@ watch(zoom, async () => {
 
 .member-graph.is-panning {
   cursor: grabbing;
-}
-
-.member-bounding-frame {
-  position: absolute;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  pointer-events: none;
-  z-index: 0;
 }
 
 .member-canvas {

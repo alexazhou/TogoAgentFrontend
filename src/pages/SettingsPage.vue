@@ -112,6 +112,23 @@ const breadcrumbItems = computed(() => {
 
   return items;
 });
+const memberPanelActions = computed(() => {
+  if (isEditingTeamMembers.value) {
+    return [
+      { key: 'cancel', label: '取消', disabled: isSavingTeamInfo.value },
+      {
+        key: 'save',
+        label: isSavingTeamInfo.value ? '保存中...' : '保存',
+        disabled: !hasTeamChanges.value || isSavingTeamInfo.value,
+        primary: true,
+      },
+    ];
+  }
+
+  return [
+    { key: 'edit', label: '编辑', disabled: isSavingTeamInfo.value },
+  ];
+});
 
 function openSection(sectionId: string): void {
   router.push({
@@ -141,6 +158,16 @@ function clearTeamDetail(): void {
   router.push({
     name: 'settings',
     params: { teamId: teamId.value, section: 'teams' },
+  }).catch(console.error);
+}
+
+function openAgentDetail(agentName: string): void {
+  router.push({
+    name: 'agent-detail',
+    params: {
+      teamId: teamId.value,
+      agentName,
+    },
   }).catch(console.error);
 }
 
@@ -245,14 +272,33 @@ function toggleTeamMemberEdit(): void {
     return;
   }
 
-  if (isEditingTeamMembers.value) {
-    teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
-    isEditingTeamMembers.value = false;
+  teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+  isEditingTeamMembers.value = true;
+}
+
+function cancelTeamMemberEdit(): void {
+  if (!selectedTeamDetail.value) {
     return;
   }
 
   teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
-  isEditingTeamMembers.value = true;
+  isEditingTeamMembers.value = false;
+}
+
+function handleMemberPanelAction(actionKey: string): void {
+  if (actionKey === 'edit') {
+    toggleTeamMemberEdit();
+    return;
+  }
+
+  if (actionKey === 'cancel') {
+    cancelTeamMemberEdit();
+    return;
+  }
+
+  if (actionKey === 'save') {
+    saveTeamInfo();
+  }
 }
 
 function toggleTeamMember(agentName: string): void {
@@ -525,10 +571,10 @@ onBeforeUnmount(() => {
                 :team-name="selectedTeamDetail.name"
                 :selected-agents="selectedTeamMembers"
                 :readonly="!isEditingTeamMembers"
-                :action-label="isEditingTeamMembers ? '取消编辑' : '编辑'"
-                :action-disabled="isSavingTeamInfo"
-                @action="toggleTeamMemberEdit"
+                :actions="memberPanelActions"
+                @action="handleMemberPanelAction"
                 @toggle-agent="toggleTeamMember"
+                @view-agent="openAgentDetail"
               />
             </div>
           </template>
