@@ -158,6 +158,16 @@ export async function updateTeam(
   payload: {
     working_directory?: string;
     config?: Record<string, unknown>;
+    members?: Array<{
+      name: string;
+      role_template: string;
+    }>;
+    preset_rooms?: Array<{
+      name: string;
+      members: string[];
+      initial_topic?: string | null;
+      max_turns: number;
+    }>;
   },
 ): Promise<{ status: string; name: string }> {
   return requestJson(`/teams/${teamId}/modify.json`, {

@@ -38,6 +38,7 @@ const dragContentMinTop = ref(0);
 const dragContentMaxBottom = ref(0);
 const panX = ref(0);
 const panY = ref(0);
+const zoom = ref(1);
 const isPanning = ref(false);
 const visibleMemberSlots = computed(() => [
   ...memberAgents.value.map((agentName) => ({
@@ -51,7 +52,7 @@ const memberGridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(visibleMemberSlots.value.length, 1)}, minmax(180px, 220px))`,
 }));
 const canvasStyle = computed(() => ({
-  transform: `translate(-50%, 0) translate(${panX.value}px, ${panY.value}px)`,
+  transform: `translate(-50%, 0) translate(${panX.value}px, ${panY.value}px) scale(${zoom.value})`,
 }));
 const boundingFrameStyle = computed(() => ({
   left: `${baseContentMinLeft.value}px`,
@@ -140,44 +141,16 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function getAxisBounds(contentMin: number, contentMax: number, viewportSize: number, keepVisiblePx: number): {
-  min: number;
-  max: number;
-} {
-  const contentSize = Math.max(contentMax - contentMin, 0);
-  const canKeepWholeContentVisible = contentSize <= viewportSize - keepVisiblePx * 2;
-
-  if (canKeepWholeContentVisible) {
-    return {
-      min: keepVisiblePx - contentMin,
-      max: viewportSize - keepVisiblePx - contentMax,
-    };
-  }
-
-  return {
-    min: keepVisiblePx - contentMax,
-    max: viewportSize - keepVisiblePx - contentMin,
-  };
-}
-
 function clampPan(nextX: number, nextY: number): { x: number; y: number } {
   const keepVisiblePx = 10;
-  const xBounds = getAxisBounds(
-    dragContentMinLeft.value,
-    dragContentMaxRight.value,
-    graphWidth.value,
-    keepVisiblePx,
-  );
-  const yBounds = getAxisBounds(
-    dragContentMinTop.value,
-    dragContentMaxBottom.value,
-    graphHeight.value,
-    keepVisiblePx,
-  );
+  const minX = keepVisiblePx - dragContentMaxRight.value;
+  const maxX = graphWidth.value - keepVisiblePx - dragContentMinLeft.value;
+  const minY = keepVisiblePx - dragContentMaxBottom.value;
+  const maxY = graphHeight.value - keepVisiblePx - dragContentMinTop.value;
 
   return {
-    x: clamp(nextX, Math.min(xBounds.min, xBounds.max), Math.max(xBounds.min, xBounds.max)),
-    y: clamp(nextY, Math.min(yBounds.min, yBounds.max), Math.max(yBounds.min, yBounds.max)),
+    x: clamp(nextX, Math.min(minX, maxX), Math.max(minX, maxX)),
+    y: clamp(nextY, Math.min(minY, maxY), Math.max(minY, maxY)),
   };
 }
 
@@ -233,6 +206,24 @@ function endPan(event?: PointerEvent): void {
   }
 
   isPanning.value = false;
+}
+
+function handleWheelZoom(event: WheelEvent): void {
+  if (!graphRef.value || event.deltaY === 0) {
+    return;
+  }
+
+  event.preventDefault();
+  const minZoom = 0.6;
+  const maxZoom = 1.8;
+  const zoomFactor = Math.exp(-event.deltaY * 0.0015);
+  const nextZoom = clamp(zoom.value * zoomFactor, minZoom, maxZoom);
+
+  if (Math.abs(nextZoom - zoom.value) < 0.0001) {
+    return;
+  }
+
+  zoom.value = nextZoom;
 }
 
 function handlePrimaryAction(agentName: string): void {
@@ -304,6 +295,14 @@ watch([panX, panY], async () => {
   await nextTick();
   updateMetrics();
 });
+
+watch(zoom, async () => {
+  await nextTick();
+  updateMetrics();
+  const next = clampPan(panX.value, panY.value);
+  panX.value = next.x;
+  panY.value = next.y;
+});
 </script>
 
 <template>
@@ -316,6 +315,7 @@ watch([panX, panY], async () => {
     @pointerup="endPan"
     @pointercancel="endPan"
     @pointerleave="endPan"
+    @wheel.prevent="handleWheelZoom"
   >
     <div ref="canvasRef" class="member-canvas" :style="canvasStyle">
       <div class="member-bounding-frame" :style="boundingFrameStyle" aria-hidden="true"></div>
@@ -390,12 +390,20 @@ watch([panX, panY], async () => {
 
 <style scoped>
 .member-graph {
+  --member-grid-size: 28px;
+  --member-grid-line: rgba(148, 163, 184, 0.16);
+  --member-connector-line: rgba(37, 99, 235, 0.62);
   position: relative;
   height: 452px;
   padding: 8px 6px 0;
   display: grid;
   justify-items: center;
   align-content: start;
+  background-image:
+    linear-gradient(to right, var(--member-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--member-grid-line) 1px, transparent 1px);
+  background-size: var(--member-grid-size) var(--member-grid-size);
+  background-position: 0 0;
   overflow: hidden;
   touch-action: none;
   user-select: none;
@@ -408,9 +416,9 @@ watch([panX, panY], async () => {
 
 .member-bounding-frame {
   position: absolute;
-  border: 1px dashed color-mix(in srgb, var(--focus-border) 62%, var(--panel-border) 38%);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--focus-border) 6%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   pointer-events: none;
   z-index: 0;
 }
@@ -428,6 +436,7 @@ watch([panX, panY], async () => {
   justify-items: center;
   gap: 28px;
   will-change: transform;
+  transform-origin: center center;
   z-index: 1;
 }
 
@@ -557,7 +566,7 @@ watch([panX, panY], async () => {
   left: calc(var(--member-card-width) / 2);
   right: calc(var(--member-card-width) / 2);
   height: 30px;
-  border-top: 1px solid color-mix(in srgb, var(--panel-border-strong) 78%, transparent);
+  border-top: 1px solid var(--member-connector-line);
 }
 
 .member-rail::before {
@@ -568,7 +577,7 @@ watch([panX, panY], async () => {
   width: 1px;
   height: 30px;
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--panel-border-strong) 78%, transparent);
+  background: var(--member-connector-line);
 }
 
 .member-slots {
@@ -633,7 +642,7 @@ watch([panX, panY], async () => {
   width: 1px;
   height: 50px;
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--panel-border-strong) 78%, transparent);
+  background: var(--member-connector-line);
 }
 
 .member-tree.is-single-member .member-rail {
@@ -647,7 +656,7 @@ watch([panX, panY], async () => {
   width: 1px;
   height: 96px;
   transform: translateX(-50%);
-  background: color-mix(in srgb, var(--panel-border-strong) 78%, transparent);
+  background: var(--member-connector-line);
 }
 
 @media (max-width: 960px) {

@@ -24,6 +24,8 @@ const driverStates = [
 const agents = ref<AgentInfo[]>([]);
 const teamSummaries = ref<Record<number, { memberCount: number; roomCount: number }>>({});
 const selectedTeamDetail = ref<TeamDetail | null>(null);
+const isEditingTeamMembers = ref(false);
+const teamMembersDraft = ref<string[]>([]);
 const teamInfoDraft = ref({
   name: '',
   workingDirectory: '',
@@ -62,7 +64,11 @@ const detailTeamId = computed(() => {
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 });
-const selectedTeamMembers = computed(() => selectedTeamDetail.value?.members.map((member) => member.name) ?? []);
+const selectedTeamMembers = computed(() => (
+  isEditingTeamMembers.value
+    ? teamMembersDraft.value
+    : selectedTeamDetail.value?.members.map((member) => member.name) ?? []
+));
 const hasTeamInfoChanges = computed(() => {
   if (!selectedTeamDetail.value) {
     return false;
@@ -74,6 +80,15 @@ const hasTeamInfoChanges = computed(() => {
     teamInfoDraft.value.rules !== String(selectedTeamDetail.value.config?.rules || '')
   );
 });
+const hasTeamMemberChanges = computed(() => {
+  if (!selectedTeamDetail.value) {
+    return false;
+  }
+
+  const currentMembers = selectedTeamDetail.value.members.map((member) => member.name);
+  return JSON.stringify(teamMembersDraft.value) !== JSON.stringify(currentMembers);
+});
+const hasTeamChanges = computed(() => hasTeamInfoChanges.value || hasTeamMemberChanges.value);
 const breadcrumbItems = computed(() => {
   const items = [
     { key: 'settings', label: '系统设置', action: () => openSection(defaultSectionId), current: false },
@@ -147,6 +162,8 @@ async function loadTeamSummaries(): Promise<void> {
 async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
   if (targetTeamId === null) {
     selectedTeamDetail.value = null;
+    isEditingTeamMembers.value = false;
+    teamMembersDraft.value = [];
     teamInfoStatus.value = '';
     return;
   }
@@ -159,6 +176,8 @@ async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void
       slogan: String(selectedTeamDetail.value.config?.slogan || ''),
       rules: String(selectedTeamDetail.value.config?.rules || ''),
     };
+    teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+    isEditingTeamMembers.value = false;
     teamInfoStatus.value = '';
   } catch (error) {
     console.error(error);
@@ -167,7 +186,7 @@ async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void
 }
 
 async function saveTeamInfo(): Promise<void> {
-  if (!selectedTeamDetail.value || isSavingTeamInfo.value || !hasTeamInfoChanges.value) {
+  if (!selectedTeamDetail.value || isSavingTeamInfo.value || !hasTeamChanges.value) {
     return;
   }
 
@@ -182,12 +201,20 @@ async function saveTeamInfo(): Promise<void> {
         slogan: teamInfoDraft.value.slogan,
         rules: teamInfoDraft.value.rules,
       },
+      members: teamMembersDraft.value.map((agentName) => {
+        const existingMember = selectedTeamDetail.value?.members.find((member) => member.name === agentName);
+        return {
+          name: agentName,
+          role_template: existingMember?.role_template || agentName,
+        };
+      }),
     });
     await Promise.all([
       loadSelectedTeamDetail(selectedTeamDetail.value.id),
       loadTeamSummaries(),
       loadTeams(),
     ]);
+    isEditingTeamMembers.value = false;
     teamInfoStatus.value = '已保存';
   } catch (error) {
     console.error(error);
@@ -208,7 +235,37 @@ function resetTeamInfoDraft(): void {
     slogan: String(selectedTeamDetail.value.config?.slogan || ''),
     rules: String(selectedTeamDetail.value.config?.rules || ''),
   };
+  teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+  isEditingTeamMembers.value = false;
   teamInfoStatus.value = '';
+}
+
+function toggleTeamMemberEdit(): void {
+  if (!selectedTeamDetail.value) {
+    return;
+  }
+
+  if (isEditingTeamMembers.value) {
+    teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+    isEditingTeamMembers.value = false;
+    return;
+  }
+
+  teamMembersDraft.value = selectedTeamDetail.value.members.map((member) => member.name);
+  isEditingTeamMembers.value = true;
+}
+
+function toggleTeamMember(agentName: string): void {
+  if (!isEditingTeamMembers.value) {
+    return;
+  }
+
+  if (teamMembersDraft.value.includes(agentName)) {
+    teamMembersDraft.value = teamMembersDraft.value.filter((item) => item !== agentName);
+    return;
+  }
+
+  teamMembersDraft.value = [...teamMembersDraft.value, agentName];
 }
 
 function formatDuration(ms: number): string {
@@ -432,7 +489,7 @@ onBeforeUnmount(() => {
               <div class="team-detail-actions">
                 <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
                 <button
-                  v-if="hasTeamInfoChanges"
+                  v-if="hasTeamChanges"
                   type="button"
                   class="ghost-button"
                   :disabled="isSavingTeamInfo"
@@ -443,7 +500,7 @@ onBeforeUnmount(() => {
                 <button
                   type="button"
                   class="secondary-button"
-                  :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
+                  :disabled="!hasTeamChanges || isSavingTeamInfo"
                   @click="saveTeamInfo"
                 >
                   {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
@@ -467,7 +524,11 @@ onBeforeUnmount(() => {
               <TeamMembersCard
                 :team-name="selectedTeamDetail.name"
                 :selected-agents="selectedTeamMembers"
-                readonly
+                :readonly="!isEditingTeamMembers"
+                :action-label="isEditingTeamMembers ? '取消编辑' : '编辑'"
+                :action-disabled="isSavingTeamInfo"
+                @action="toggleTeamMemberEdit"
+                @toggle-agent="toggleTeamMember"
               />
             </div>
           </template>
