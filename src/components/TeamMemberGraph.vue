@@ -40,13 +40,18 @@ const panX = ref(0);
 const panY = ref(0);
 const zoom = ref(1);
 const isPanning = ref(false);
-const visibleMemberSlots = computed(() => [
-  ...memberAgents.value.map((agentName) => ({
+const visibleMemberSlots = computed(() => {
+  const slots = memberAgents.value.map((agentName) => ({
     name: agentName,
     agent: agentName,
-  })),
-  { name: '', agent: '' },
-]);
+  }));
+
+  if (!props.readonly) {
+    slots.push({ name: '', agent: '' });
+  }
+
+  return slots;
+});
 const isSingleMemberLayout = computed(() => visibleMemberSlots.value.length === 1);
 const memberGridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(visibleMemberSlots.value.length, 1)}, minmax(180px, 220px))`,
@@ -309,7 +314,7 @@ watch(zoom, async () => {
   <div
     ref="graphRef"
     class="member-graph"
-    :class="{ 'is-panning': isPanning }"
+    :class="{ 'is-panning': isPanning, 'is-editing': !props.readonly }"
     @pointerdown="startPan"
     @pointermove="movePan"
     @pointerup="endPan"
@@ -336,7 +341,7 @@ watch(zoom, async () => {
           <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
         </button>
         <button
-          v-if="leaderAgent"
+          v-if="leaderAgent && props.readonly"
           class="member-action-button"
           type="button"
           @pointerdown.stop
@@ -408,6 +413,10 @@ watch(zoom, async () => {
   touch-action: none;
   user-select: none;
   cursor: grab;
+}
+
+.member-graph.is-editing {
+  background-color: color-mix(in srgb, var(--selected) 20%, #fff 80%);
 }
 
 .member-graph.is-panning {
