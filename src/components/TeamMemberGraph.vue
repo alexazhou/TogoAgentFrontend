@@ -24,6 +24,10 @@ const baseContentMinLeft = ref(0);
 const baseContentMaxRight = ref(0);
 const baseContentMinTop = ref(0);
 const baseContentMaxBottom = ref(0);
+const dragContentMinLeft = ref(0);
+const dragContentMaxRight = ref(0);
+const dragContentMinTop = ref(0);
+const dragContentMaxBottom = ref(0);
 const panX = ref(0);
 const panY = ref(0);
 const isPanning = ref(false);
@@ -85,19 +89,31 @@ function updateMetrics(): void {
   let maxRight = Number.NEGATIVE_INFINITY;
   let minTop = Number.POSITIVE_INFINITY;
   let maxBottom = Number.NEGATIVE_INFINITY;
+  let graphMinLeft = Number.POSITIVE_INFINITY;
+  let graphMaxRight = Number.NEGATIVE_INFINITY;
+  let graphMinTop = Number.POSITIVE_INFINITY;
+  let graphMaxBottom = Number.NEGATIVE_INFINITY;
 
   for (const node of nodes) {
     const rect = node.getBoundingClientRect();
-    minLeft = Math.min(minLeft, rect.left - graphRect.left);
-    maxRight = Math.max(maxRight, rect.right - graphRect.left);
-    minTop = Math.min(minTop, rect.top - graphRect.top);
-    maxBottom = Math.max(maxBottom, rect.bottom - graphRect.top);
+    minLeft = Math.min(minLeft, rect.left - canvasRect.left);
+    maxRight = Math.max(maxRight, rect.right - canvasRect.left);
+    minTop = Math.min(minTop, rect.top - canvasRect.top);
+    maxBottom = Math.max(maxBottom, rect.bottom - canvasRect.top);
+    graphMinLeft = Math.min(graphMinLeft, rect.left - graphRect.left);
+    graphMaxRight = Math.max(graphMaxRight, rect.right - graphRect.left);
+    graphMinTop = Math.min(graphMinTop, rect.top - graphRect.top);
+    graphMaxBottom = Math.max(graphMaxBottom, rect.bottom - graphRect.top);
   }
 
-  baseContentMinLeft.value = minLeft - (canvasRect.left - graphRect.left);
-  baseContentMaxRight.value = maxRight - (canvasRect.left - graphRect.left);
-  baseContentMinTop.value = minTop - (canvasRect.top - graphRect.top);
-  baseContentMaxBottom.value = maxBottom - (canvasRect.top - graphRect.top);
+  baseContentMinLeft.value = minLeft;
+  baseContentMaxRight.value = maxRight;
+  baseContentMinTop.value = minTop;
+  baseContentMaxBottom.value = maxBottom;
+  dragContentMinLeft.value = graphMinLeft - panX.value;
+  dragContentMaxRight.value = graphMaxRight - panX.value;
+  dragContentMinTop.value = graphMinTop - panY.value;
+  dragContentMaxBottom.value = graphMaxBottom - panY.value;
 }
 
 function scheduleMetricsUpdate(): void {
@@ -115,10 +131,11 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function clampPan(nextX: number, nextY: number): { x: number; y: number } {
-  const minX = -baseContentMaxRight.value;
-  const maxX = graphWidth.value - baseContentMinLeft.value;
-  const minY = -baseContentMaxBottom.value;
-  const maxY = graphHeight.value - baseContentMinTop.value;
+  const keepVisiblePx = 10;
+  const minX = keepVisiblePx - dragContentMaxRight.value;
+  const maxX = graphWidth.value - keepVisiblePx - dragContentMinLeft.value;
+  const minY = keepVisiblePx - dragContentMaxBottom.value;
+  const maxY = graphHeight.value - keepVisiblePx - dragContentMinTop.value;
 
   return {
     x: clamp(nextX, Math.min(minX, maxX), Math.max(minX, maxX)),
@@ -128,8 +145,8 @@ function clampPan(nextX: number, nextY: number): { x: number; y: number } {
 
 function resetPan(): void {
   const next = clampPan(
-    (graphWidth.value - baseContentMaxRight.value - baseContentMinLeft.value) / 2,
-    (graphHeight.value - baseContentMaxBottom.value - baseContentMinTop.value) / 2,
+    (graphWidth.value - dragContentMaxRight.value - dragContentMinLeft.value) / 2,
+    (graphHeight.value - dragContentMaxBottom.value - dragContentMinTop.value) / 2,
   );
   panX.value = next.x;
   panY.value = next.y;
@@ -317,7 +334,6 @@ watch([panX, panY], async () => {
   justify-items: center;
   gap: 28px;
   will-change: transform;
-  transition: transform 0.16s ease;
   z-index: 1;
 }
 
