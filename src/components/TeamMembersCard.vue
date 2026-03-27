@@ -31,6 +31,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .member-panel {
+  position: relative;
   display: grid;
   gap: 8px;
   border: 1px solid var(--team-create-panel-border);
@@ -44,6 +45,12 @@ const emit = defineEmits<{
 }
 
 .member-panel-head {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  z-index: 2;
+  pointer-events: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
