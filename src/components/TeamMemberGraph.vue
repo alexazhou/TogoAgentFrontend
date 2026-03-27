@@ -24,6 +24,7 @@ const teamId = computed(() => {
 });
 const graphRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLElement | null>(null);
+const memberTreeRef = ref<HTMLElement | null>(null);
 const graphWidth = ref(0);
 const graphHeight = ref(0);
 const canvasWidth = ref(0);
@@ -40,6 +41,8 @@ const panX = ref(0);
 const panY = ref(0);
 const zoom = ref(1);
 const isPanning = ref(false);
+const railStartX = ref(0);
+const railEndX = ref(0);
 const visibleMemberSlots = computed(() => {
   const slots = memberAgents.value.map((agentName) => ({
     name: agentName,
@@ -64,6 +67,10 @@ const boundingFrameStyle = computed(() => ({
   top: `${baseContentMinTop.value}px`,
   width: `${Math.max(baseContentMaxRight.value - baseContentMinLeft.value, 0)}px`,
   height: `${Math.max(baseContentMaxBottom.value - baseContentMinTop.value, 0)}px`,
+}));
+const railStyle = computed(() => ({
+  left: `${railStartX.value}px`,
+  right: `${railEndX.value}px`,
 }));
 let resizeObserver: ResizeObserver | null = null;
 let panStartX = 0;
@@ -101,6 +108,7 @@ function updateMetrics(): void {
 
   const graphRect = graph.getBoundingClientRect();
   const canvasRect = canvas.getBoundingClientRect();
+  const treeRect = memberTreeRef.value?.getBoundingClientRect() ?? null;
   let minLeft = Number.POSITIVE_INFINITY;
   let maxRight = Number.NEGATIVE_INFINITY;
   let minTop = Number.POSITIVE_INFINITY;
@@ -109,6 +117,7 @@ function updateMetrics(): void {
   let graphMaxRight = Number.NEGATIVE_INFINITY;
   let graphMinTop = Number.POSITIVE_INFINITY;
   let graphMaxBottom = Number.NEGATIVE_INFINITY;
+  const memberCenters: number[] = [];
 
   for (const node of nodes) {
     const rect = node.getBoundingClientRect();
@@ -122,6 +131,14 @@ function updateMetrics(): void {
     graphMaxBottom = Math.max(graphMaxBottom, rect.bottom - graphRect.top);
   }
 
+  if (treeRect) {
+    const memberNodes = Array.from(canvas.querySelectorAll<HTMLElement>('.member-node'));
+    for (const node of memberNodes) {
+      const rect = node.getBoundingClientRect();
+      memberCenters.push((rect.left + rect.right) / 2 - treeRect.left);
+    }
+  }
+
   baseContentMinLeft.value = minLeft;
   baseContentMaxRight.value = maxRight;
   baseContentMinTop.value = minTop;
@@ -130,6 +147,14 @@ function updateMetrics(): void {
   dragContentMaxRight.value = graphMaxRight - panX.value;
   dragContentMinTop.value = graphMinTop - panY.value;
   dragContentMaxBottom.value = graphMaxBottom - panY.value;
+  if (memberCenters.length > 0 && treeRect) {
+    const scale = zoom.value || 1;
+    railStartX.value = Math.min(...memberCenters) / scale;
+    railEndX.value = Math.max((treeRect.width - Math.max(...memberCenters)) / scale, 0);
+  } else {
+    railStartX.value = 0;
+    railEndX.value = 0;
+  }
 }
 
 function scheduleMetricsUpdate(): void {
@@ -351,8 +376,8 @@ watch(zoom, async () => {
         </button>
       </div>
 
-      <div class="member-tree" :class="{ 'is-single-member': isSingleMemberLayout }">
-        <div v-if="!isSingleMemberLayout" class="member-rail" aria-hidden="true"></div>
+      <div ref="memberTreeRef" class="member-tree" :class="{ 'is-single-member': isSingleMemberLayout }">
+        <div v-if="!isSingleMemberLayout" class="member-rail" :style="railStyle" aria-hidden="true"></div>
         <div v-else class="member-single-link" aria-hidden="true"></div>
 
         <div class="member-slots" :class="{ 'is-single-member': isSingleMemberLayout }" :style="memberGridStyle">
@@ -563,10 +588,11 @@ watch(zoom, async () => {
 }
 
 .member-tree {
+  --member-branch-offset: 58px;
   position: relative;
   width: max-content;
   max-width: none;
-  padding-top: 58px;
+  padding-top: var(--member-branch-offset);
 }
 
 .member-rail {
@@ -646,10 +672,10 @@ watch(zoom, async () => {
 .member-node::before {
   content: '';
   position: absolute;
-  top: -50px;
+  top: calc(-1 * var(--member-branch-offset));
   left: 50%;
   width: 1px;
-  height: 50px;
+  height: var(--member-branch-offset);
   transform: translateX(-50%);
   background: var(--member-connector-line);
 }
