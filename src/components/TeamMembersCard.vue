@@ -11,10 +11,12 @@ type MemberPanelAction = {
 withDefaults(defineProps<{
   teamName: string;
   selectedAgents: string[];
+  memberTemplates?: Record<string, string>;
   readonly?: boolean;
   actions?: MemberPanelAction[];
   showEditAction?: boolean;
 }>(), {
+  memberTemplates: () => ({}),
   readonly: false,
   actions: () => [],
   showEditAction: false,
@@ -52,6 +54,7 @@ const emit = defineEmits<{
     <TeamMemberGraph
       :team-name="teamName"
       :selected-agents="selectedAgents"
+      :member-templates="memberTemplates"
       :readonly="readonly"
       :show-edit-action="showEditAction"
       @toggle-agent="emit('toggleAgent', $event)"
