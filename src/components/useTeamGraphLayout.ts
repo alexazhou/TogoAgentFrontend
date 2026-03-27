@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type Ref } 
 type UseTeamGraphLayoutOptions = {
   readonly: Ref<boolean>;
   selectedAgents: Ref<string[]>;
+  contentVersion?: Ref<string>;
 };
 
 export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
@@ -48,7 +49,7 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
     }
 
     const nodes = Array.from(canvas.querySelectorAll<HTMLElement>(
-      '.team-root, .member-node, .member-action-button, .member-rail, .member-single-link',
+      '.team-root, .member-node, .member-action-button, .member-rail, .member-single-link, .member-top-link, .member-child-rail, .member-child-link',
     ));
     if (nodes.length === 0) {
       return;
@@ -71,7 +72,7 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
     }
 
     if (treeRect) {
-      const memberNodes = Array.from(canvas.querySelectorAll<HTMLElement>('.member-node'));
+      const memberNodes = Array.from(canvas.querySelectorAll<HTMLElement>('.top-level-node'));
       for (const node of memberNodes) {
         const rect = node.getBoundingClientRect();
         memberCenters.push((rect.left + rect.right) / 2 - treeRect.left);
@@ -218,7 +219,7 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
   });
 
   watch(
-    [options.selectedAgents, options.readonly],
+    [options.selectedAgents, options.readonly, options.contentVersion ?? computed(() => '')],
     async () => {
       await nextTick();
       updateMetrics();

@@ -18,6 +18,7 @@ type UseMemberEditorDialogOptions = {
   templateOptions: ComputedRef<MemberTemplateOption[]>;
   driverCatalog: Ref<MemberDriverOption[]>;
   resolveTemplate: (memberName: string) => string;
+  canLoadMemberDetail?: (memberName: string) => boolean;
 };
 
 export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
@@ -68,6 +69,11 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   async function loadMemberDriver(agentName: string): Promise<void> {
     const requestId = ++memberEditorRequestId;
 
+    if (options.canLoadMemberDetail && !options.canLoadMemberDetail(agentName)) {
+      memberEditorDriver.value = '';
+      return;
+    }
+
     if (memberDriverCache.has(agentName)) {
       memberEditorDriver.value = memberDriverCache.get(agentName) || '';
       return;
@@ -110,6 +116,14 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     void loadMemberDriver(agentName);
   }
 
+  function openPendingMemberEditor(displayName = '新成员'): void {
+    memberEditorMode.value = 'edit';
+    editingMemberName.value = displayName;
+    memberEditorKeyword.value = '';
+    memberEditorTemplate.value = '';
+    memberEditorDriver.value = '';
+  }
+
   function closeMemberEditor(): void {
     resetDialogState();
   }
@@ -131,6 +145,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     memberDriverOptions,
     openMemberEditor,
     openMemberViewer,
+    openPendingMemberEditor,
     closeMemberEditor,
     resetDialogState,
     replaceSelectedTemplate,
