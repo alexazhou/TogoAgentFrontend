@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { getAgentAvatarUrl } from '../avatar';
+import AgentCardBase from './AgentCardBase.vue';
 import { useTeamGraphLayout } from './useTeamGraphLayout';
 
 const props = defineProps<{
   teamName: string;
   selectedAgents: string[];
+  memberTemplates?: Record<string, string>;
   readonly?: boolean;
   showEditAction?: boolean;
 }>();
@@ -35,6 +36,7 @@ const memberGridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${Math.max(visibleMemberSlots.value.length, 1)}, minmax(180px, 220px))`,
 }));
 const readonly = computed(() => !!props.readonly);
+const memberTemplates = computed(() => props.memberTemplates ?? {});
 const {
   graphRef,
   canvasRef,
@@ -83,6 +85,10 @@ function handleEditAction(agentName: string): void {
 
   emit('editAgent', agentName);
 }
+
+function getMemberSubtitle(agentName: string, fallback: string): string {
+  return memberTemplates.value[agentName] || fallback;
+}
 </script>
 
 <template>
@@ -99,21 +105,16 @@ function handleEditAction(agentName: string): void {
   >
     <div ref="canvasRef" class="member-canvas" :style="canvasStyle">
       <div class="member-card-shell team-root-shell" :class="{ 'has-action': !!leaderAgent }">
-        <button
+        <AgentCardBase
           class="team-root member-card-button"
-          :class="{ 'is-empty': !leaderAgent, 'is-readonly': readonly }"
-          type="button"
+          :empty="!leaderAgent"
+          :readonly="readonly"
+          :title="leaderAgent || (teamName.trim() ? `${teamName.trim()} Leader` : '+')"
+          :subtitle="leaderAgent ? 'Leader' : '负责人'"
+          :avatar-name="leaderAgent"
+          variant="leader"
           @click="handlePrimaryAction(leaderAgent)"
-        >
-          <img
-            v-if="leaderAgent"
-            class="member-avatar"
-            :src="getAgentAvatarUrl(leaderAgent)"
-            :alt="`${leaderAgent} avatar`"
-          />
-          <span>{{ leaderAgent || (teamName.trim() ? `${teamName.trim()} Leader` : '+') }}</span>
-          <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
-        </button>
+        />
         <div v-if="leaderAgent && (readonly || props.showEditAction)" class="member-action-group">
           <button
             v-if="readonly"
@@ -147,21 +148,16 @@ function handleEditAction(agentName: string): void {
             class="member-card-shell member-node-shell"
             :class="{ 'has-action': !!member.name }"
           >
-            <button
+            <AgentCardBase
               class="member-node member-card-button"
-              :class="{ 'is-empty': !member.name, 'is-readonly': readonly }"
-              type="button"
+              :empty="!member.name"
+              :readonly="readonly"
+              :title="member.name || '+'"
+              :subtitle="member.name ? getMemberSubtitle(member.name, member.agent) : '成员'"
+              :avatar-name="member.name"
+              variant="graph"
               @click="handlePrimaryAction(member.name)"
-            >
-              <img
-                v-if="member.name"
-                class="member-avatar"
-                :src="getAgentAvatarUrl(member.name)"
-                :alt="`${member.name} avatar`"
-              />
-              <span>{{ member.name || '+' }}</span>
-              <small>{{ member.name ? member.agent : '成员' }}</small>
-            </button>
+            />
             <div v-if="member.name" class="member-action-group">
               <button
                 v-if="readonly"
@@ -218,11 +214,7 @@ function handleEditAction(agentName: string): void {
   display: grid;
   justify-items: center;
   align-content: start;
-  background-image:
-    linear-gradient(to right, var(--member-grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--member-grid-line) 1px, transparent 1px);
-  background-size: var(--member-grid-size) var(--member-grid-size);
-  background-position: 0 0;
+  background-image: none;
   overflow: hidden;
   touch-action: none;
   user-select: none;
@@ -230,7 +222,12 @@ function handleEditAction(agentName: string): void {
 }
 
 .member-graph.is-editing {
-  background-color: color-mix(in srgb, var(--selected) 20%, #fff 80%);
+  background-color: rgba(148, 163, 184, 0.12);
+  background-image:
+    linear-gradient(to right, var(--member-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--member-grid-line) 1px, transparent 1px);
+  background-size: var(--member-grid-size) var(--member-grid-size);
+  background-position: 0 0;
 }
 
 .member-graph.is-panning {
@@ -252,51 +249,6 @@ function handleEditAction(agentName: string): void {
   will-change: transform;
   transform-origin: center center;
   z-index: 1;
-}
-
-.team-root {
-  width: 132px;
-  aspect-ratio: 3 / 4;
-  box-sizing: border-box;
-  border: 1px solid var(--team-create-node-border);
-  border-radius: 24px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  text-align: center;
-  padding: 10px;
-  color: var(--text-strong);
-  background: var(--surface-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 70%, transparent);
-  transition:
-    border-color 0.18s ease,
-    transform 0.18s ease,
-    background 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.team-root span,
-.member-node span {
-  font-weight: 600;
-}
-
-.team-root small,
-.member-node small {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-
-.team-root:not(.is-empty):hover,
-.member-node:not(.is-empty):hover {
-  transform: translateY(-2px);
-  border-color: var(--focus-border);
-  background: var(--selected);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 55%, transparent);
-}
-
-.team-root.is-readonly,
-.member-node.is-readonly {
-  cursor: grab;
 }
 
 .member-graph.is-panning .team-root.is-readonly,
@@ -364,20 +316,6 @@ function handleEditAction(agentName: string): void {
   background: color-mix(in srgb, #fee2e2 82%, #fff 18%);
 }
 
-.team-root.is-empty,
-.member-node.is-empty {
-  color: var(--muted);
-  cursor: default;
-  background: color-mix(in srgb, var(--surface-soft) 92%, var(--selected) 8%);
-  border: 1px dashed color-mix(in srgb, var(--panel-border-strong) 88%, var(--focus-border) 12%);
-  box-shadow: none;
-}
-
-.team-root.is-empty span,
-.member-node.is-empty span {
-  color: color-mix(in srgb, var(--text-strong) 58%, var(--muted) 42%);
-}
-
 .member-tree {
   --member-branch-offset: 58px;
   position: relative;
@@ -429,35 +367,6 @@ function handleEditAction(agentName: string): void {
 .member-node {
   position: relative;
   width: var(--member-card-width);
-  aspect-ratio: 3 / 4;
-  box-sizing: border-box;
-  border: 1px solid var(--team-create-node-border);
-  border-radius: 16px;
-  background: var(--surface-soft);
-  color: var(--text-strong);
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 2px;
-  padding: 10px;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 70%, transparent);
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-}
-
-.member-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  display: block;
-  object-fit: cover;
-  margin-bottom: 4px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
 }
 
 .member-node::before {

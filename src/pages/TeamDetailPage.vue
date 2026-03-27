@@ -16,6 +16,9 @@ const errorMessage = ref('');
 
 const teamId = computed(() => Number(route.params.teamId));
 const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
+const selectedAgentTemplates = computed<Record<string, string>>(() =>
+  Object.fromEntries((team.value?.members ?? []).map((member) => [member.name, member.role_template])),
+);
 
 async function loadDetail(): Promise<void> {
   loading.value = true;
@@ -73,6 +76,7 @@ onMounted(() => {
         <TeamMembersCard
           :team-name="team.name"
           :selected-agents="selectedAgents"
+          :member-templates="selectedAgentTemplates"
           readonly
           @view-agent="openAgentDetail"
         />
