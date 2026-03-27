@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { getAgentAvatarUrl } from '../avatar';
 
 const props = defineProps<{
@@ -11,9 +12,16 @@ const props = defineProps<{
 const emit = defineEmits<{
   toggleAgent: [agentName: string];
 }>();
+const route = useRoute();
+const router = useRouter();
 
 const leaderAgent = computed(() => props.selectedAgents[0] ?? '');
 const memberAgents = computed(() => props.selectedAgents.slice(1));
+const teamId = computed(() => {
+  const raw = route.params.teamId;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+});
 const graphRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLElement | null>(null);
 const graphWidth = ref(0);
@@ -74,7 +82,9 @@ function updateMetrics(): void {
     return;
   }
 
-  const nodes = Array.from(canvas.querySelectorAll<HTMLElement>('.team-root, .member-node'));
+  const nodes = Array.from(canvas.querySelectorAll<HTMLElement>(
+    '.team-root, .member-node, .member-action-button, .member-rail, .member-single-link',
+  ));
   if (nodes.length === 0) {
     baseContentMinLeft.value = 0;
     baseContentMaxRight.value = canvasWidth.value;
@@ -130,16 +140,44 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function clampPan(nextX: number, nextY: number): { x: number; y: number } {
-  const keepVisiblePx = 10;
-  const minX = keepVisiblePx - dragContentMaxRight.value;
-  const maxX = graphWidth.value - keepVisiblePx - dragContentMinLeft.value;
-  const minY = keepVisiblePx - dragContentMaxBottom.value;
-  const maxY = graphHeight.value - keepVisiblePx - dragContentMinTop.value;
+function getAxisBounds(contentMin: number, contentMax: number, viewportSize: number, keepVisiblePx: number): {
+  min: number;
+  max: number;
+} {
+  const contentSize = Math.max(contentMax - contentMin, 0);
+  const canKeepWholeContentVisible = contentSize <= viewportSize - keepVisiblePx * 2;
+
+  if (canKeepWholeContentVisible) {
+    return {
+      min: keepVisiblePx - contentMin,
+      max: viewportSize - keepVisiblePx - contentMax,
+    };
+  }
 
   return {
-    x: clamp(nextX, Math.min(minX, maxX), Math.max(minX, maxX)),
-    y: clamp(nextY, Math.min(minY, maxY), Math.max(minY, maxY)),
+    min: keepVisiblePx - contentMax,
+    max: viewportSize - keepVisiblePx - contentMin,
+  };
+}
+
+function clampPan(nextX: number, nextY: number): { x: number; y: number } {
+  const keepVisiblePx = 10;
+  const xBounds = getAxisBounds(
+    dragContentMinLeft.value,
+    dragContentMaxRight.value,
+    graphWidth.value,
+    keepVisiblePx,
+  );
+  const yBounds = getAxisBounds(
+    dragContentMinTop.value,
+    dragContentMaxBottom.value,
+    graphHeight.value,
+    keepVisiblePx,
+  );
+
+  return {
+    x: clamp(nextX, Math.min(xBounds.min, xBounds.max), Math.max(xBounds.min, xBounds.max)),
+    y: clamp(nextY, Math.min(yBounds.min, yBounds.max), Math.max(yBounds.min, yBounds.max)),
   };
 }
 
@@ -197,6 +235,37 @@ function endPan(event?: PointerEvent): void {
   isPanning.value = false;
 }
 
+function handlePrimaryAction(agentName: string): void {
+  if (!agentName || props.readonly) {
+    return;
+  }
+
+  emit('toggleAgent', agentName);
+}
+
+function handleActionButton(agentName: string): void {
+  if (!agentName) {
+    return;
+  }
+
+  if (props.readonly) {
+    if (teamId.value === null) {
+      return;
+    }
+
+    router.push({
+      name: 'agent-detail',
+      params: {
+        teamId: teamId.value,
+        agentName,
+      },
+    }).catch(console.error);
+    return;
+  }
+
+  emit('toggleAgent', agentName);
+}
+
 onMounted(() => {
   updateMetrics();
   resetPan();
@@ -250,44 +319,69 @@ watch([panX, panY], async () => {
   >
     <div ref="canvasRef" class="member-canvas" :style="canvasStyle">
       <div class="member-bounding-frame" :style="boundingFrameStyle" aria-hidden="true"></div>
-      <button
-        class="team-root"
-        :class="{ 'is-empty': !leaderAgent, 'is-readonly': props.readonly }"
-        type="button"
-        @click="leaderAgent && !props.readonly && emit('toggleAgent', leaderAgent)"
-      >
-        <img
+      <div class="member-card-shell team-root-shell" :class="{ 'has-action': !!leaderAgent }">
+        <button
+          class="team-root member-card-button"
+          :class="{ 'is-empty': !leaderAgent, 'is-readonly': props.readonly }"
+          type="button"
+          @click="handlePrimaryAction(leaderAgent)"
+        >
+          <img
+            v-if="leaderAgent"
+            class="member-avatar"
+            :src="getAgentAvatarUrl(leaderAgent)"
+            :alt="`${leaderAgent} avatar`"
+          />
+          <span>{{ leaderAgent || (teamName.trim() ? `${teamName.trim()} Leader` : '+') }}</span>
+          <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
+        </button>
+        <button
           v-if="leaderAgent"
-          class="member-avatar"
-          :src="getAgentAvatarUrl(leaderAgent)"
-          :alt="`${leaderAgent} avatar`"
-        />
-        <span>{{ leaderAgent || (teamName.trim() ? `${teamName.trim()} Leader` : '+') }}</span>
-        <small>{{ leaderAgent ? 'Leader' : '负责人' }}</small>
-      </button>
+          class="member-action-button"
+          type="button"
+          @pointerdown.stop
+          @click.stop="handleActionButton(leaderAgent)"
+        >
+          {{ props.readonly ? '查看' : '移除' }}
+        </button>
+      </div>
 
       <div class="member-tree" :class="{ 'is-single-member': isSingleMemberLayout }">
         <div v-if="!isSingleMemberLayout" class="member-rail" aria-hidden="true"></div>
         <div v-else class="member-single-link" aria-hidden="true"></div>
 
         <div class="member-slots" :class="{ 'is-single-member': isSingleMemberLayout }" :style="memberGridStyle">
-          <button
+          <div
             v-for="(member, index) in visibleMemberSlots"
             :key="member.name || `empty-${index}`"
-            class="member-node"
-            :class="{ 'is-empty': !member.name, 'is-readonly': props.readonly }"
-            type="button"
-            @click="member.name && !props.readonly && emit('toggleAgent', member.name)"
+            class="member-card-shell member-node-shell"
+            :class="{ 'has-action': !!member.name }"
           >
-            <img
+            <button
+              class="member-node member-card-button"
+              :class="{ 'is-empty': !member.name, 'is-readonly': props.readonly }"
+              type="button"
+              @click="handlePrimaryAction(member.name)"
+            >
+              <img
+                v-if="member.name"
+                class="member-avatar"
+                :src="getAgentAvatarUrl(member.name)"
+                :alt="`${member.name} avatar`"
+              />
+              <span>{{ member.name || '+' }}</span>
+              <small>{{ member.name ? member.agent : '成员' }}</small>
+            </button>
+            <button
               v-if="member.name"
-              class="member-avatar"
-              :src="getAgentAvatarUrl(member.name)"
-              :alt="`${member.name} avatar`"
-            />
-            <span>{{ member.name || '+' }}</span>
-            <small>{{ member.name ? member.agent : '成员' }}</small>
-          </button>
+              class="member-action-button"
+              type="button"
+              @pointerdown.stop
+              @click.stop="handleActionButton(member.name)"
+            >
+              {{ props.readonly ? '查看' : '移除' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -379,15 +473,61 @@ watch([panX, panY], async () => {
 
 .team-root.is-readonly,
 .member-node.is-readonly {
-  cursor: default;
+  cursor: grab;
 }
 
-.team-root.is-readonly:not(.is-empty):hover,
-.member-node.is-readonly:not(.is-empty):hover {
-  transform: none;
-  border-color: var(--team-create-node-border);
-  background: var(--surface-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 70%, transparent);
+.member-graph.is-panning .team-root.is-readonly,
+.member-graph.is-panning .member-node.is-readonly {
+  cursor: grabbing;
+}
+
+.member-card-shell {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+
+.team-root-shell {
+  width: 132px;
+}
+
+.member-card-button {
+  width: 100%;
+}
+
+.member-action-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 44px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 48%, var(--panel-border) 52%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-bg) 76%, var(--selected) 24%);
+  color: var(--text-strong);
+  padding: 0 10px;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease;
+  z-index: 3;
+}
+
+.member-card-shell.has-action:hover .member-action-button,
+.member-card-shell.has-action:focus-within .member-action-button {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.member-action-button:hover {
+  border-color: var(--focus-border);
+  background: var(--selected);
 }
 
 .team-root.is-empty,
@@ -443,11 +583,11 @@ watch([panX, panY], async () => {
   grid-template-columns: repeat(3, var(--member-card-width)) !important;
 }
 
-.member-slots.is-single-member .member-node:nth-child(1) {
+.member-slots.is-single-member .member-node-shell:nth-child(1) {
   grid-column: 2;
 }
 
-.member-slots.is-single-member .member-node:nth-child(2) {
+.member-slots.is-single-member .member-node-shell:nth-child(2) {
   grid-column: 3;
 }
 
@@ -530,6 +670,11 @@ watch([panX, panY], async () => {
   .member-rail,
   .member-node::before {
     display: none;
+  }
+
+  .member-action-button {
+    opacity: 1;
+    transform: none;
   }
 
   .member-graph {
