@@ -81,7 +81,7 @@ export interface TeamDetail extends TeamSummary {
 
 export interface TeamMember {
   name: string;
-  agent: string;
+  role_template: string;
 }
 
 export interface CreateTeamPayload {

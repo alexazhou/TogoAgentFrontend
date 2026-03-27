@@ -71,7 +71,7 @@ async function handleSubmit(): Promise<void> {
       },
       members: selectedAgents.value.map((agentName) => ({
         name: agentName,
-        agent: agentName,
+        role_template: agentName,
       })),
       preset_rooms: [
         {

@@ -87,21 +87,6 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
-async function requestJsonWithFallback<T>(
-  primaryPath: string,
-  fallbackPath: string,
-  init?: RequestInit,
-): Promise<T> {
-  try {
-    return await requestJson<T>(primaryPath, init);
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Request failed: 404') {
-      return requestJson<T>(fallbackPath, init);
-    }
-    throw error;
-  }
-}
-
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const teamName = room.team_name ?? 'default';
   const roomName = room.room_name ?? room.name ?? '';
@@ -141,17 +126,13 @@ function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
 }
 
 export async function getAgents(): Promise<AgentInfo[]> {
-  const data = await requestJsonWithFallback<{ agents: RawAgentInfo[] }>(
-    '/members/list.json',
-    '/agents.json',
-  );
+  const data = await requestJson<{ agents: RawAgentInfo[] }>('/agents/list.json');
   return data.agents.map(normalizeAgent);
 }
 
 export async function getAgentsByTeamId(teamId: number): Promise<AgentInfo[]> {
-  const data = await requestJsonWithFallback<{ agents: RawAgentInfo[] }>(
-    withSearch('/members/list.json', { team_id: teamId }),
-    '/agents.json',
+  const data = await requestJson<{ agents: RawAgentInfo[] }>(
+    withSearch('/agents/list.json', { team_id: teamId }),
   );
   return data.agents.map(normalizeAgent);
 }
@@ -193,8 +174,9 @@ export async function createTeam(payload: CreateTeamPayload): Promise<{ status: 
 }
 
 export async function getAgentDetail(teamId: number, agentName: string): Promise<AgentDetail> {
+  const encodedAgentName = encodeURIComponent(agentName);
   const data = await requestJson<RawAgentDetail>(
-    `/teams/${teamId}/members/${encodeURIComponent(agentName)}.json`,
+    `/teams/${teamId}/agents/${encodedAgentName}.json`,
   );
   return normalizeAgentDetail(data);
 }
