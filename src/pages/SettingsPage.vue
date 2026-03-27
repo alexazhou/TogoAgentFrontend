@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgentDetail, getAgents, getTeamDetail, updateTeam } from '../api';
+import { getAgents, getTeamDetail, updateTeam } from '../api';
 import { connectionState, totalMessageCount } from '../appUiState';
-import AgentTemplateCard from '../components/AgentTemplateCard.vue';
-import TeamInfoCard from '../components/TeamInfoCard.vue';
-import TeamMembersCard from '../components/TeamMembersCard.vue';
+import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
+import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
+import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
+import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
+import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
 import { loadTeams, teams } from '../teamStore';
-import type { AgentInfo, TeamDetail, TeamMember } from '../types';
+import type { AgentInfo, TeamDetail } from '../types';
+import type { SettingsBreadcrumbItem } from '../components/settings/types';
 
 const route = useRoute();
 const router = useRouter();
@@ -25,25 +28,14 @@ const driverStates = [
 const agents = ref<AgentInfo[]>([]);
 const teamSummaries = ref<Record<number, { memberCount: number; roomCount: number }>>({});
 const selectedTeamDetail = ref<TeamDetail | null>(null);
-const isEditingTeamMembers = ref(false);
-const teamMembersDraft = ref<string[]>([]);
-const teamMemberRoleDrafts = ref<Record<string, string>>({});
 const teamInfoDraft = ref({
   name: '',
   workingDirectory: '',
   slogan: '',
   rules: '',
 });
-const editingMemberName = ref('');
-const memberEditorKeyword = ref('');
-const memberEditorTemplate = ref('');
-const memberEditorDriver = ref('');
-const memberEditorMode = ref<'view' | 'edit'>('view');
 const isSavingTeamInfo = ref(false);
-const isSavingTeamMembers = ref(false);
 const teamInfoStatus = ref('');
-const teamMemberStatus = ref('');
-let memberEditorRequestId = 0;
 let uptimeTimer: number | null = null;
 
 const navItems = [
@@ -74,20 +66,6 @@ const detailTeamId = computed(() => {
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 });
-const selectedTeamMembers = computed(() => (
-  isEditingTeamMembers.value
-    ? teamMembersDraft.value
-    : selectedTeamDetail.value?.members.map((member) => member.name) ?? []
-));
-const selectedTeamMemberTemplates = computed<Record<string, string>>(() => {
-  if (isEditingTeamMembers.value) {
-    return { ...teamMemberRoleDrafts.value };
-  }
-
-  return Object.fromEntries(
-    (selectedTeamDetail.value?.members ?? []).map((member) => [member.name, member.role_template]),
-  );
-});
 function buildTeamInfoDraft(detail: TeamDetail) {
   return {
     name: detail.name,
@@ -95,23 +73,6 @@ function buildTeamInfoDraft(detail: TeamDetail) {
     slogan: String(detail.config?.slogan || ''),
     rules: String(detail.config?.rules || ''),
   };
-}
-
-function buildTeamMemberDraft(detail: TeamDetail): string[] {
-  return detail.members.map((member) => member.name);
-}
-
-function buildTeamMemberRoleDraft(detail: TeamDetail): Record<string, string> {
-  return Object.fromEntries(
-    detail.members.map((member) => [member.name, member.role_template]),
-  );
-}
-
-function buildTeamMemberPayload(): TeamMember[] {
-  return teamMembersDraft.value.map((memberName) => ({
-    name: memberName,
-    role_template: teamMemberRoleDrafts.value[memberName] || memberName,
-  }));
 }
 
 const hasTeamInfoChanges = computed(() => {
@@ -125,70 +86,12 @@ const hasTeamInfoChanges = computed(() => {
     teamInfoDraft.value.rules !== String(selectedTeamDetail.value.config?.rules || '')
   );
 });
-const hasTeamMemberChanges = computed(() => {
-  if (!selectedTeamDetail.value) {
-    return false;
-  }
-
-  return JSON.stringify(buildTeamMemberPayload()) !== JSON.stringify(selectedTeamDetail.value.members);
-});
-const memberTemplateOptions = computed(() => {
-  const definitions = new Map<string, { name: string; model: string }>();
-
-  agents.value.forEach((agent) => {
-    const templateName = agent.template_name || agent.name;
-    if (!definitions.has(templateName)) {
-      definitions.set(templateName, {
-        name: templateName,
-        model: agent.model || '未设置',
-      });
-    }
-  });
-
-  Object.values(teamMemberRoleDrafts.value).forEach((templateName) => {
-    if (!definitions.has(templateName)) {
-      definitions.set(templateName, {
-        name: templateName,
-        model: '未设置',
-      });
-    }
-  });
-
-  return Array.from(definitions.values()).sort((left, right) => left.name.localeCompare(right.name));
-});
-const filteredMemberTemplateOptions = computed(() => {
-  const keyword = memberEditorKeyword.value.trim().toLowerCase();
-  if (!keyword) {
-    return memberTemplateOptions.value;
-  }
-
-  return memberTemplateOptions.value.filter((item) => item.name.toLowerCase().includes(keyword));
-});
-const memberEditorOpen = computed(() => editingMemberName.value.length > 0);
-const memberEditorEditable = computed(() => memberEditorMode.value === 'edit');
-const currentMemberTemplateOption = computed(
-  () => memberTemplateOptions.value.find((item) => item.name === memberEditorTemplate.value) ?? null,
-);
-const memberDriverOptions = computed(() => {
-  const options = new Map<string, string>();
-
-  driverStates.forEach((driver) => {
-    options.set(driver.key, driver.label);
-  });
-
-  if (memberEditorDriver.value && !options.has(memberEditorDriver.value)) {
-    options.set(memberEditorDriver.value, memberEditorDriver.value);
-  }
-
-  return Array.from(options.entries()).map(([value, label]) => ({ value, label }));
-});
-const breadcrumbItems = computed(() => {
-  const items = [
-    { key: 'settings', label: '系统设置', action: () => openSection(defaultSectionId), current: false },
+const breadcrumbItems = computed<SettingsBreadcrumbItem[]>(() => {
+  const items: SettingsBreadcrumbItem[] = [
+    { key: 'settings', label: '系统设置', current: false },
     {
       key: `section-${currentNavItem.value.id}`,
       label: currentNavItem.value.label,
-      action: () => openSection(currentNavItem.value.id),
       current: detailTeamId.value === null,
     },
   ];
@@ -198,37 +101,34 @@ const breadcrumbItems = computed(() => {
     items.push({
       key: 'team-detail',
       label: '团队详情',
-      action: () => clearTeamDetail(),
       current: true,
     });
   }
 
   return items;
 });
-const memberPanelActions = computed(() => {
-  if (isEditingTeamMembers.value) {
-    return [
-      { key: 'cancel', label: '取消', disabled: isSavingTeamMembers.value },
-      {
-        key: 'save',
-        label: isSavingTeamMembers.value ? '保存中...' : '保存',
-        disabled: !hasTeamMemberChanges.value || isSavingTeamMembers.value,
-        primary: true,
-      },
-    ];
-  }
-
-  return [
-    { key: 'edit', label: '编辑', disabled: isSavingTeamMembers.value },
-  ];
-});
-
 function openSection(sectionId: string): void {
   router.push({
     name: 'settings',
     params: { teamId: teamId.value, section: sectionId },
     query: sectionId === 'teams' && detailTeamId.value ? { detailTeamId: String(detailTeamId.value) } : {},
   }).catch(console.error);
+}
+
+function handleBreadcrumbNavigate(key: string): void {
+  if (key === 'settings') {
+    openSection(defaultSectionId);
+    return;
+  }
+
+  if (key === 'team-detail') {
+    clearTeamDetail();
+    return;
+  }
+
+  if (key.startsWith('section-')) {
+    openSection(key.slice('section-'.length));
+  }
 }
 
 function goBack(): void {
@@ -254,12 +154,6 @@ function clearTeamDetail(): void {
   }).catch(console.error);
 }
 
-function resolveMemberRoleTemplate(memberName: string): string {
-  return teamMemberRoleDrafts.value[memberName]
-    || selectedTeamDetail.value?.members.find((member) => member.name === memberName)?.role_template
-    || memberName;
-}
-
 async function loadTeamSummaries(): Promise<void> {
   const entries = await Promise.all(
     teams.value.map(async (team) => {
@@ -278,32 +172,14 @@ async function loadTeamSummaries(): Promise<void> {
 async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
   if (targetTeamId === null) {
     selectedTeamDetail.value = null;
-    isEditingTeamMembers.value = false;
-    teamMembersDraft.value = [];
-    teamMemberRoleDrafts.value = {};
     teamInfoStatus.value = '';
-    teamMemberStatus.value = '';
-    editingMemberName.value = '';
-    memberEditorKeyword.value = '';
-    memberEditorTemplate.value = '';
-    memberEditorDriver.value = '';
-    memberEditorMode.value = 'view';
     return;
   }
 
   try {
     selectedTeamDetail.value = await getTeamDetail(targetTeamId);
     teamInfoDraft.value = buildTeamInfoDraft(selectedTeamDetail.value);
-    teamMembersDraft.value = buildTeamMemberDraft(selectedTeamDetail.value);
-    teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(selectedTeamDetail.value);
-    isEditingTeamMembers.value = false;
     teamInfoStatus.value = '';
-    teamMemberStatus.value = '';
-    editingMemberName.value = '';
-    memberEditorKeyword.value = '';
-    memberEditorTemplate.value = '';
-    memberEditorDriver.value = '';
-    memberEditorMode.value = 'view';
   } catch (error) {
     console.error(error);
     selectedTeamDetail.value = null;
@@ -341,33 +217,6 @@ async function saveTeamInfo(): Promise<void> {
   }
 }
 
-async function saveTeamMembers(): Promise<void> {
-  if (!selectedTeamDetail.value || isSavingTeamMembers.value || !hasTeamMemberChanges.value) {
-    return;
-  }
-
-  isSavingTeamMembers.value = true;
-  teamMemberStatus.value = '';
-
-  try {
-    await updateTeam(selectedTeamDetail.value.id, {
-      members: buildTeamMemberPayload(),
-    });
-    await Promise.all([
-      loadSelectedTeamDetail(selectedTeamDetail.value.id),
-      loadTeamSummaries(),
-      loadTeams(),
-    ]);
-    isEditingTeamMembers.value = false;
-    teamMemberStatus.value = '已保存';
-  } catch (error) {
-    console.error(error);
-    teamMemberStatus.value = '保存失败';
-  } finally {
-    isSavingTeamMembers.value = false;
-  }
-}
-
 function resetTeamInfoDraft(): void {
   if (!selectedTeamDetail.value) {
     return;
@@ -375,127 +224,6 @@ function resetTeamInfoDraft(): void {
 
   teamInfoDraft.value = buildTeamInfoDraft(selectedTeamDetail.value);
   teamInfoStatus.value = '';
-}
-
-function toggleTeamMemberEdit(): void {
-  if (!selectedTeamDetail.value) {
-    return;
-  }
-
-  teamMembersDraft.value = buildTeamMemberDraft(selectedTeamDetail.value);
-  teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(selectedTeamDetail.value);
-  teamMemberStatus.value = '';
-  isEditingTeamMembers.value = true;
-}
-
-function cancelTeamMemberEdit(): void {
-  if (!selectedTeamDetail.value) {
-    return;
-  }
-
-  teamMembersDraft.value = buildTeamMemberDraft(selectedTeamDetail.value);
-  teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(selectedTeamDetail.value);
-  isEditingTeamMembers.value = false;
-  teamMemberStatus.value = '';
-  closeMemberEditor();
-}
-
-function handleMemberPanelAction(actionKey: string): void {
-  if (actionKey === 'edit') {
-    toggleTeamMemberEdit();
-    return;
-  }
-
-  if (actionKey === 'cancel') {
-    cancelTeamMemberEdit();
-    return;
-  }
-
-  if (actionKey === 'save') {
-    saveTeamMembers();
-  }
-}
-
-function toggleTeamMember(agentName: string): void {
-  if (!isEditingTeamMembers.value) {
-    return;
-  }
-
-  if (teamMembersDraft.value.includes(agentName)) {
-    teamMembersDraft.value = teamMembersDraft.value.filter((item) => item !== agentName);
-    const nextRoleDrafts = { ...teamMemberRoleDrafts.value };
-    delete nextRoleDrafts[agentName];
-    teamMemberRoleDrafts.value = nextRoleDrafts;
-    if (editingMemberName.value === agentName) {
-      closeMemberEditor();
-    }
-    return;
-  }
-
-  teamMembersDraft.value = [...teamMembersDraft.value, agentName];
-  teamMemberRoleDrafts.value = {
-    ...teamMemberRoleDrafts.value,
-    [agentName]: teamMemberRoleDrafts.value[agentName] || agentName,
-  };
-}
-
-async function loadMemberEditorDetail(agentName: string): Promise<void> {
-  const requestId = ++memberEditorRequestId;
-
-  try {
-    const detail = await getAgentDetail(teamId.value, agentName);
-    if (requestId !== memberEditorRequestId || editingMemberName.value !== agentName) {
-      return;
-    }
-
-    memberEditorDriver.value = detail.driver_type || memberDriverOptions.value[0]?.value || '';
-  } catch (error) {
-    console.error(error);
-    if (requestId !== memberEditorRequestId || editingMemberName.value !== agentName) {
-      return;
-    }
-
-    memberEditorDriver.value = memberDriverOptions.value[0]?.value || '';
-  }
-}
-
-function openMemberEditor(agentName: string): void {
-  memberEditorMode.value = 'edit';
-  editingMemberName.value = agentName;
-  memberEditorKeyword.value = '';
-  memberEditorTemplate.value = resolveMemberRoleTemplate(agentName);
-  memberEditorDriver.value = '';
-  void loadMemberEditorDetail(agentName);
-}
-
-function openMemberViewer(agentName: string): void {
-  memberEditorMode.value = 'view';
-  editingMemberName.value = agentName;
-  memberEditorKeyword.value = '';
-  memberEditorTemplate.value = resolveMemberRoleTemplate(agentName);
-  memberEditorDriver.value = '';
-  void loadMemberEditorDetail(agentName);
-}
-
-function closeMemberEditor(): void {
-  memberEditorRequestId += 1;
-  editingMemberName.value = '';
-  memberEditorKeyword.value = '';
-  memberEditorTemplate.value = '';
-  memberEditorDriver.value = '';
-  memberEditorMode.value = 'view';
-}
-
-function saveMemberEditor(): void {
-  if (!editingMemberName.value || !memberEditorTemplate.value) {
-    return;
-  }
-
-  teamMemberRoleDrafts.value = {
-    ...teamMemberRoleDrafts.value,
-    [editingMemberName.value]: memberEditorTemplate.value,
-  };
-  closeMemberEditor();
 }
 
 function formatDuration(ms: number): string {
@@ -583,6 +311,18 @@ onBeforeUnmount(() => {
     uptimeTimer = null;
   }
 });
+
+function handleTeamTreeSaved(): void {
+  if (!selectedTeamDetail.value) {
+    return;
+  }
+
+  Promise.all([
+    loadSelectedTeamDetail(selectedTeamDetail.value.id),
+    loadTeamSummaries(),
+    loadTeams(),
+  ]).catch(console.error);
+}
 </script>
 
 <template>
@@ -621,412 +361,65 @@ onBeforeUnmount(() => {
       </aside>
 
       <main class="settings-main">
-        <section v-if="currentSectionId === 'general'" id="general" class="config-section">
-          <nav class="settings-breadcrumb" aria-label="当前位置">
-            <button
-              v-for="item in breadcrumbItems"
-              :key="item.key"
-              type="button"
-              class="breadcrumb-link"
-              :class="{ current: item.current }"
-              @click="!item.current && item.action()"
-            >
-              {{ item.label }}
-            </button>
-          </nav>
-          <div class="section-head">
-            <div>
-              <p class="section-eyebrow">General</p>
-              <h3>系统状态</h3>
-            </div>
-            <span class="section-status">{{ connectionState === 'connected' ? '已连接' : '状态采集中' }}</span>
-          </div>
-          <div class="status-grid">
-            <article class="status-card">
-              <span>软件版本</span>
-              <strong>{{ systemVersion }}</strong>
-            </article>
-            <article class="status-card">
-              <span>系统平台</span>
-              <strong>{{ systemPlatform }}</strong>
-            </article>
-            <article class="status-card">
-              <span>运行时间</span>
-              <strong>{{ uptimeLabel }}</strong>
-            </article>
-          </div>
+        <GeneralSettingsSection
+          v-if="currentSectionId === 'general'"
+          :breadcrumb-items="breadcrumbItems"
+          :connection-state="connectionState"
+          :system-version="systemVersion"
+          :system-platform="systemPlatform"
+          :uptime-label="uptimeLabel"
+          :team-count="teamCount"
+          :member-count="memberCount"
+          :agent-count="agentCount"
+          :total-message-count="totalMessageCount"
+          :driver-states="driverStates"
+          @navigate-breadcrumb="handleBreadcrumbNavigate"
+        />
 
-          <div class="metric-grid">
-            <article class="metric-card">
-              <span>团队数量</span>
-              <strong>{{ teamCount }}</strong>
-            </article>
-            <article class="metric-card">
-              <span>团队成员数量</span>
-              <strong>{{ memberCount }}</strong>
-            </article>
-            <article class="metric-card">
-              <span>Agent 数量</span>
-              <strong>{{ agentCount }}</strong>
-            </article>
-            <article class="metric-card">
-              <span>消息数量</span>
-              <strong>{{ totalMessageCount }}</strong>
-            </article>
-          </div>
+        <TeamsSettingsSection
+          v-else-if="currentSectionId === 'teams'"
+          :breadcrumb-items="breadcrumbItems"
+          :selected-team-detail="selectedTeamDetail"
+          :team-info-draft="teamInfoDraft"
+          :has-team-info-changes="hasTeamInfoChanges"
+          :is-saving-team-info="isSavingTeamInfo"
+          :team-info-status="teamInfoStatus"
+          :team-summaries="teamSummaries"
+          :teams="teams"
+          :agents="agents"
+          :format-date-time="formatDateTime"
+          @navigate-breadcrumb="handleBreadcrumbNavigate"
+          @create-team="openCreateTeam"
+          @open-team-detail="openTeamDetail"
+          @clear-team-detail="clearTeamDetail"
+          @save-team-info="saveTeamInfo"
+          @reset-team-info-draft="resetTeamInfoDraft"
+          @tree-saved="handleTeamTreeSaved"
+          @update:working-directory="teamInfoDraft.workingDirectory = $event"
+          @update:slogan="teamInfoDraft.slogan = $event"
+          @update:rules="teamInfoDraft.rules = $event"
+        />
 
-          <section class="driver-card">
-            <div class="driver-head">
-              <div>
-                <p class="section-eyebrow">Drivers</p>
-                <h4>底层驱动状态</h4>
-              </div>
-            </div>
-            <div class="driver-list">
-              <div v-for="driver in driverStates" :key="driver.key" class="driver-row">
-                <div class="driver-meta">
-                  <strong>{{ driver.label }}</strong>
-                  <span>{{ driver.note }}</span>
-                </div>
-                <span class="driver-badge" :class="{ online: driver.available }">
-                  {{ driver.available ? '可用' : '不可用' }}
-                </span>
-              </div>
-            </div>
-          </section>
-        </section>
+        <RolesSettingsSection
+          v-else-if="currentSectionId === 'roles'"
+          :breadcrumb-items="breadcrumbItems"
+          @navigate-breadcrumb="handleBreadcrumbNavigate"
+        />
 
-        <section v-else-if="currentSectionId === 'teams'" id="teams" class="config-section">
-          <nav class="settings-breadcrumb" aria-label="当前位置">
-            <button
-              v-for="item in breadcrumbItems"
-              :key="item.key"
-              type="button"
-              class="breadcrumb-link"
-              :class="{ current: item.current }"
-              @click="!item.current && item.action()"
-            >
-              {{ item.label }}
-            </button>
-          </nav>
+        <ModelsSettingsSection
+          v-else-if="currentSectionId === 'models'"
+          :breadcrumb-items="breadcrumbItems"
+          @navigate-breadcrumb="handleBreadcrumbNavigate"
+        />
 
-          <template v-if="selectedTeamDetail">
-            <div class="team-detail-head">
-              <div>
-                <p class="section-eyebrow">Team Detail</p>
-                <h4>{{ selectedTeamDetail.name }}</h4>
-              </div>
-              <div class="team-detail-actions">
-                <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
-                <button
-                  v-if="hasTeamInfoChanges"
-                  type="button"
-                  class="ghost-button"
-                  :disabled="isSavingTeamInfo"
-                  @click="resetTeamInfoDraft"
-                >
-                  重置
-                </button>
-                <button
-                  type="button"
-                  class="secondary-button"
-                  :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
-                  @click="saveTeamInfo"
-                >
-                  {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
-                </button>
-                <button type="button" class="secondary-button" @click="clearTeamDetail">返回团队列表</button>
-              </div>
-            </div>
-
-            <div class="team-detail-stack">
-              <TeamInfoCard
-                :name="teamInfoDraft.name"
-                :working-directory="teamInfoDraft.workingDirectory"
-                :slogan="teamInfoDraft.slogan"
-                :rules="teamInfoDraft.rules"
-                :editable-name="false"
-                @update:working-directory="teamInfoDraft.workingDirectory = $event"
-                @update:slogan="teamInfoDraft.slogan = $event"
-                @update:rules="teamInfoDraft.rules = $event"
-              />
-
-              <p v-if="teamMemberStatus" class="team-member-status">{{ teamMemberStatus }}</p>
-
-              <TeamMembersCard
-                :team-name="selectedTeamDetail.name"
-                :selected-agents="selectedTeamMembers"
-                :member-templates="selectedTeamMemberTemplates"
-                :readonly="!isEditingTeamMembers"
-                :actions="memberPanelActions"
-                :show-edit-action="isEditingTeamMembers"
-                @action="handleMemberPanelAction"
-                @toggle-agent="toggleTeamMember"
-                @view-agent="openMemberViewer"
-                @edit-agent="openMemberEditor"
-              />
-            </div>
-          </template>
-
-          <div v-else class="teams-grid">
-            <div class="section-head teams-list-head">
-              <div></div>
-              <button type="button" class="secondary-button" @click="openCreateTeam">新建团队</button>
-            </div>
-            <article v-for="team in teams" :key="team.id" class="team-card">
-              <div class="team-card-head">
-                <div class="team-card-title-group">
-                  <strong>{{ team.name }}</strong>
-                  <span class="team-card-id">#{{ team.id }}</span>
-                </div>
-                <span class="team-card-badge" :class="{ enabled: team.enabled }">
-                  {{ team.enabled ? '启用中' : '已停用' }}
-                </span>
-              </div>
-              <div class="team-card-summary">
-                <div class="team-summary-row">
-                  <span class="team-summary-chip">成员 {{ teamSummaries[team.id]?.memberCount ?? 0 }}</span>
-                  <span class="team-summary-chip">房间 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
-                </div>
-                <div class="team-summary-row">
-                  <span class="team-summary-chip team-summary-chip-path">目录 {{ team.working_directory || '未设置' }}</span>
-                </div>
-              </div>
-              <div class="team-card-footer">
-                <span class="team-last-active">最后活跃 {{ formatDateTime(team.updated_at) }}</span>
-                <div class="team-card-actions">
-                <button type="button" class="ghost-button" @click="openTeamDetail(team.id)">查看详情</button>
-                </div>
-              </div>
-            </article>
-            <article v-if="teams.length === 0" class="empty-card">
-              <strong>当前没有团队</strong>
-              <p>先创建一个团队，再继续配置成员、角色和模型服务。</p>
-            </article>
-          </div>
-        </section>
-
-        <section v-else-if="currentSectionId === 'roles'" id="roles" class="config-section">
-          <nav class="settings-breadcrumb" aria-label="当前位置">
-            <button
-              v-for="item in breadcrumbItems"
-              :key="item.key"
-              type="button"
-              class="breadcrumb-link"
-              :class="{ current: item.current }"
-              @click="!item.current && item.action()"
-            >
-              {{ item.label }}
-            </button>
-          </nav>
-          <div class="section-head">
-            <div>
-              <p class="section-eyebrow">Roles</p>
-              <h3>角色管理</h3>
-            </div>
-            <span class="section-status">占位区</span>
-          </div>
-          <div class="table-card">
-            <div class="table-row table-row-head">
-              <span>角色</span>
-              <span>模板</span>
-              <span>模型</span>
-              <span>状态</span>
-            </div>
-            <div class="table-row">
-              <span>software_engineer</span>
-              <span>工程类角色模板</span>
-              <span>glm-4.7</span>
-              <span>启用</span>
-            </div>
-            <div class="table-row">
-              <span>researcher</span>
-              <span>检索类角色模板</span>
-              <span>glm-4.7</span>
-              <span>启用</span>
-            </div>
-          </div>
-        </section>
-
-        <section v-else-if="currentSectionId === 'models'" id="models" class="config-section">
-          <nav class="settings-breadcrumb" aria-label="当前位置">
-            <button
-              v-for="item in breadcrumbItems"
-              :key="item.key"
-              type="button"
-              class="breadcrumb-link"
-              :class="{ current: item.current }"
-              @click="!item.current && item.action()"
-            >
-              {{ item.label }}
-            </button>
-          </nav>
-          <div class="section-head">
-            <div>
-              <p class="section-eyebrow">Models</p>
-              <h3>大模型服务管理</h3>
-            </div>
-            <span class="section-status">占位区</span>
-          </div>
-          <div class="placeholder-grid">
-            <article class="placeholder-card">
-              <span>默认服务</span>
-              <strong>dashscope / openai-compatible</strong>
-              <p>预留服务选择、鉴权信息、超时和重试等配置。</p>
-            </article>
-            <article class="placeholder-card">
-              <span>调用策略</span>
-              <strong>按场景分配模型</strong>
-              <p>预留聊天、工具调用、摘要等模型路由与配额策略。</p>
-            </article>
-          </div>
-        </section>
-
-        <section v-else id="runtime" class="config-section">
-          <nav class="settings-breadcrumb" aria-label="当前位置">
-            <button
-              v-for="item in breadcrumbItems"
-              :key="item.key"
-              type="button"
-              class="breadcrumb-link"
-              :class="{ current: item.current }"
-              @click="!item.current && item.action()"
-            >
-              {{ item.label }}
-            </button>
-          </nav>
-          <div class="section-head">
-            <div>
-              <p class="section-eyebrow">Runtime</p>
-              <h3>运行与存储</h3>
-            </div>
-            <span class="section-status">占位区</span>
-          </div>
-          <div class="form-grid">
-            <label class="field-card">
-              <span>工作目录</span>
-              <input type="text" placeholder="/path/to/workspace" />
-            </label>
-            <label class="field-card">
-              <span>日志目录</span>
-              <input type="text" placeholder="/path/to/logs" />
-            </label>
-            <label class="field-card field-card-wide">
-              <span>运行说明</span>
-              <textarea rows="5" placeholder="这里预留运行参数、存储策略、备份说明等内容。"></textarea>
-            </label>
-          </div>
-        </section>
+        <RuntimeSettingsSection
+          v-else
+          :breadcrumb-items="breadcrumbItems"
+          @navigate-breadcrumb="handleBreadcrumbNavigate"
+        />
       </main>
     </div>
   </section>
-
-  <Teleport to="body">
-    <div v-if="memberEditorOpen" class="member-editor-overlay" @click.self="closeMemberEditor">
-      <section
-        class="member-editor-dialog panel"
-        :class="{ 'member-editor-dialog--readonly': !memberEditorEditable }"
-      >
-        <div class="member-editor-head">
-          <div>
-            <p class="section-eyebrow">{{ memberEditorEditable ? 'Member Editor' : 'Member Viewer' }}</p>
-            <h3>{{ editingMemberName }}</h3>
-          </div>
-        </div>
-
-        <div class="member-editor-summary">
-          <label class="member-editor-field">
-            <span>成员名称</span>
-            <input :value="editingMemberName" type="text" readonly />
-          </label>
-          <label class="member-editor-field">
-            <span>模型</span>
-            <input :value="currentMemberTemplateOption?.model || '未设置'" type="text" readonly />
-          </label>
-          <label class="member-editor-field">
-            <span>驱动</span>
-            <select v-model="memberEditorDriver" :disabled="!memberEditorEditable">
-              <option v-for="driver in memberDriverOptions" :key="driver.value" :value="driver.value">
-                {{ driver.label }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <section class="member-selected-panel">
-          <div class="member-selected-head">
-            <span class="panel-label">已选角色</span>
-          </div>
-          <div class="member-selected-body">
-            <AgentTemplateCard
-              v-if="memberEditorTemplate"
-              class="member-selected-card"
-              :agent-name="memberEditorTemplate"
-              :selected="false"
-              variant="featured"
-            />
-            <div v-else class="member-template-empty member-selected-empty">
-              当前还没有选中模板
-            </div>
-          </div>
-        </section>
-
-        <section class="member-template-panel">
-          <div class="member-template-head">
-            <span class="panel-label">Agent 模板</span>
-            <label class="member-template-search">
-              <input
-                v-model="memberEditorKeyword"
-                type="text"
-                placeholder="搜索模板"
-                :disabled="!memberEditorEditable"
-              />
-            </label>
-          </div>
-
-          <div class="member-template-grid">
-            <div
-              v-for="item in filteredMemberTemplateOptions"
-              :key="item.name"
-              class="member-template-option"
-            >
-              <AgentTemplateCard
-                :agent-name="item.name"
-                :selected="false"
-              />
-              <button
-                v-if="memberEditorEditable"
-                type="button"
-                class="member-template-use"
-                @click="memberEditorTemplate = item.name"
-              >
-                使用
-              </button>
-            </div>
-
-            <div v-if="!filteredMemberTemplateOptions.length" class="member-template-empty">
-              当前没有可用模板
-            </div>
-          </div>
-        </section>
-
-        <div class="member-editor-actions">
-          <button type="button" class="ghost-button" @click="closeMemberEditor">
-            {{ memberEditorEditable ? '取消' : '关闭' }}
-          </button>
-          <button
-            v-if="memberEditorEditable"
-            type="button"
-            class="secondary-button"
-            :disabled="!memberEditorTemplate"
-            @click="saveMemberEditor"
-          >
-            保存
-          </button>
-        </div>
-      </section>
-    </div>
-  </Teleport>
 </template>
 
 <style scoped>
@@ -1546,260 +939,6 @@ onBeforeUnmount(() => {
   align-items: start;
 }
 
-.team-member-status {
-  margin: -2px 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.member-editor-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: grid;
-  place-items: center;
-  padding: 28px;
-  background: rgba(6, 10, 16, 0.58);
-  backdrop-filter: blur(8px);
-}
-
-.member-editor-dialog {
-  width: min(920px, 100%);
-  max-height: min(840px, calc(100vh - 40px));
-  padding: 16px;
-  display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-  gap: 14px;
-  border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 32%, var(--panel-border) 68%);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel-bg) 94%, transparent) 0%,
-      color-mix(in srgb, var(--surface-soft) 92%, transparent) 100%
-    );
-  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.36);
-}
-
-.member-editor-head,
-.member-template-head,
-.member-editor-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 12px;
-}
-
-.member-template-head {
-  justify-content: space-between;
-}
-
-.member-editor-actions {
-  justify-content: flex-end;
-}
-
-.member-editor-actions > button {
-  min-width: 88px;
-  height: 32px;
-  padding: 0 14px;
-  justify-content: center;
-  font-size: 0.84rem;
-}
-
-.member-editor-head h3 {
-  margin: 2px 0 0;
-  color: var(--text-strong);
-  font-size: 1.32rem;
-}
-
-.member-editor-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.member-editor-field {
-  display: grid;
-  gap: 6px;
-}
-
-.member-editor-field span {
-  color: var(--muted);
-  font-size: 0.74rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.member-editor-field input,
-.member-editor-field select,
-.member-template-search input {
-  width: 100%;
-  height: 36px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
-  color: var(--text-strong);
-  padding: 0 12px;
-  outline: none;
-}
-
-.member-editor-field select {
-  appearance: none;
-  cursor: pointer;
-}
-
-.member-editor-dialog--readonly .member-editor-field select:disabled,
-.member-editor-dialog--readonly .member-template-search input:disabled {
-  opacity: 0.64;
-  cursor: default;
-}
-
-.member-editor-field input[readonly] {
-  cursor: default;
-}
-
-.member-template-panel {
-  min-height: 0;
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-soft) 74%, var(--panel-bg) 26%);
-}
-
-.member-selected-panel {
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 12px;
-}
-
-.member-template-panel {
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
-}
-
-.member-selected-head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-}
-
-.member-selected-head .panel-label {
-  grid-column: 2;
-  justify-self: center;
-}
-
-.member-selected-note {
-  grid-column: 3;
-  justify-self: end;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.member-selected-body {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 126px;
-}
-
-.member-selected-card {
-  pointer-events: none;
-}
-
-.member-selected-empty {
-  width: min(320px, 100%);
-}
-
-.member-template-search {
-  width: 168px;
-}
-
-.member-template-head {
-  min-height: 30px;
-}
-
-.member-template-head .panel-label {
-  font-size: 0.94rem;
-}
-
-.member-template-search input {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 10px;
-  font-size: 0.76rem;
-}
-
-.member-template-grid {
-  min-height: 0;
-  overflow: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 78px);
-  gap: 10px 12px;
-  align-content: start;
-  padding-top: 4px;
-  padding-right: 4px;
-}
-
-.member-template-option {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  justify-content: stretch;
-}
-
-.member-template-option > :deep(.agent-card) {
-  width: 100%;
-}
-
-.member-template-option > :deep(.agent-card:hover) {
-  transform: none;
-}
-
-.member-template-use {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
-  height: 24px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 56%, var(--panel-border) 44%);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--selected) 88%, #fff 12%);
-  color: var(--text-strong);
-  font-size: 0.68rem;
-  cursor: pointer;
-  opacity: 0;
-  transform: translateY(4px);
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease,
-    background 0.16s ease,
-    border-color 0.16s ease;
-}
-
-.member-template-option:hover .member-template-use,
-.member-template-option:focus-within .member-template-use {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.member-template-use:hover {
-  background: color-mix(in srgb, var(--selected) 92%, #fff 8%);
-  border-color: var(--focus-border);
-}
-
-.member-template-empty {
-  min-height: 120px;
-  grid-column: 1 / -1;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-soft) 78%, transparent);
-}
-
 .empty-card p {
   margin: 4px 0 0;
   color: var(--muted);
@@ -1864,11 +1003,6 @@ onBeforeUnmount(() => {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
-
-  .member-editor-summary {
-    grid-template-columns: 1fr;
-  }
-
 }
 
 @media (max-width: 780px) {
