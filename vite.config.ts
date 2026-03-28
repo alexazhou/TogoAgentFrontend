@@ -1,5 +1,35 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type ProxyOptions } from 'vite';
 import vue from '@vitejs/plugin-vue';
+
+const backendTarget = 'http://127.0.0.1:8080';
+
+function createApiProxy(target: string): ProxyOptions {
+  return {
+    target,
+    configure(proxy) {
+      proxy.on('error', (_error, _req, res) => {
+        const response = res as {
+          headersSent?: boolean;
+          writeHead: (statusCode: number, headers: Record<string, string>) => void;
+          end: (body: string) => void;
+        };
+
+        if (response.headersSent) {
+          return;
+        }
+
+        response.writeHead(503, {
+          'Content-Type': 'application/json; charset=utf-8',
+          'X-Proxy-Error': 'backend-unavailable',
+        });
+        response.end(JSON.stringify({
+          error_code: 'BACKEND_UNAVAILABLE',
+          error_desc: '开发代理无法连接后端服务，请确认后端已启动',
+        }));
+      });
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [vue()],
@@ -7,16 +37,16 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
-      '/config/frontend.json': 'http://127.0.0.1:8080',
-      '/role_templates/list.json': 'http://127.0.0.1:8080',
-      '/role_templates/': 'http://127.0.0.1:8080',
-      '/agents/list.json': 'http://127.0.0.1:8080',
-      '/members/list.json': 'http://127.0.0.1:8080',
-      '/rooms/list.json': 'http://127.0.0.1:8080',
-      '/rooms/': 'http://127.0.0.1:8080',
-      '/teams/list.json': 'http://127.0.0.1:8080',
-      '/teams/create.json': 'http://127.0.0.1:8080',
-      '^/teams/.+\\.json$': 'http://127.0.0.1:8080',
+      '/config/frontend.json': createApiProxy(backendTarget),
+      '/role_templates/list.json': createApiProxy(backendTarget),
+      '/role_templates/': createApiProxy(backendTarget),
+      '/agents/list.json': createApiProxy(backendTarget),
+      '/members/list.json': createApiProxy(backendTarget),
+      '/rooms/list.json': createApiProxy(backendTarget),
+      '/rooms/': createApiProxy(backendTarget),
+      '/teams/list.json': createApiProxy(backendTarget),
+      '/teams/create.json': createApiProxy(backendTarget),
+      '^/teams/.+\\.json$': createApiProxy(backendTarget),
       '/ws': {
         target: 'ws://127.0.0.1:8080',
         ws: true,

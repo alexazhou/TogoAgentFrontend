@@ -497,7 +497,20 @@ const currentTemplateModelLabel = computed(() => {
 const graphRootNode = computed<TeamGraphNode | null>(() => {
   const leaderName = teamMembersDraft.value[0] ?? '';
   if (!leaderName) {
-    return null;
+    const rootPendingSlot = pendingSlots.value.find((slot) => !slot.parentName);
+    if (!rootPendingSlot) {
+      return null;
+    }
+
+    return {
+      id: rootPendingSlot.id,
+      kind: 'pending',
+      name: '',
+      departmentName: '',
+      subtitle: '成员',
+      avatarName: '',
+      children: [],
+    };
   }
 
   const nodeMap = new Map<string, TeamGraphNode>();
@@ -780,6 +793,10 @@ async function saveTeamMembers(): Promise<void> {
 function handleMemberPanelAction(actionKey: string): void {
   if (actionKey === 'edit') {
     isReadonly.value = false;
+    if (teamMembersDraft.value.length === 0 && pendingSlots.value.length === 0) {
+      pendingSlots.value = [{ id: createPendingSlotId(), parentName: '' }];
+      teamMemberStatus.value = '';
+    }
     return;
   }
 
@@ -814,6 +831,7 @@ function saveMemberEditor(): void {
   if (editingPendingSlotId.value) {
     const nextMemberName = memberEditorName.value.trim();
     const pendingSlot = pendingSlots.value.find((slot) => slot.id === editingPendingSlotId.value);
+    const nextParentName = pendingSlot?.parentName?.trim() || '';
     if (!nextMemberName) {
       teamMemberStatus.value = '成员名称不能为空';
       return;
@@ -841,10 +859,16 @@ function saveMemberEditor(): void {
       ...teamMemberDriverDrafts.value,
       [nextMemberName]: memberEditorDriver.value || '',
     };
-    teamMemberParentDrafts.value = {
-      ...teamMemberParentDrafts.value,
-      [nextMemberName]: pendingSlot?.parentName || teamMembersDraft.value[0] || '',
-    };
+    if (nextParentName) {
+      teamMemberParentDrafts.value = {
+        ...teamMemberParentDrafts.value,
+        [nextMemberName]: nextParentName,
+      };
+    } else {
+      const nextParentDrafts = { ...teamMemberParentDrafts.value };
+      delete nextParentDrafts[nextMemberName];
+      teamMemberParentDrafts.value = nextParentDrafts;
+    }
     pendingSlots.value = pendingSlots.value.filter((slot) => slot.id !== editingPendingSlotId.value);
     editingPendingSlotId.value = null;
     showGlobalSuccessToast('已经更新到组织树');

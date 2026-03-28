@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import TeamInfoCard from '../TeamInfoCard.vue';
 import TeamTreeEditor from '../TeamTreeEditor.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from './types';
 import type { TeamDetail, TeamSummary } from '../../types';
 
-defineProps<{
+const props = defineProps<{
   breadcrumbItems: SettingsBreadcrumbItem[];
   selectedTeamDetail: TeamDetail | null;
   teamInfoDraft: {
@@ -17,6 +18,7 @@ defineProps<{
   hasTeamInfoChanges: boolean;
   isSavingTeamInfo: boolean;
   teamInfoStatus: string;
+  teamEnabledPending: Record<number, boolean>;
   teamSummaries: Record<number, {
     activeMemberCount: number;
     offBoardMemberCount: number;
@@ -33,6 +35,7 @@ const emit = defineEmits<{
   navigateBreadcrumb: [key: string];
   createTeam: [];
   openTeamDetail: [teamId: number];
+  toggleTeamEnabled: [teamId: number, enabled: boolean];
   clearTeamDetail: [];
   saveTeamInfo: [];
   resetTeamInfoDraft: [];
@@ -42,6 +45,9 @@ const emit = defineEmits<{
   'update:slogan': [value: string];
   'update:rules': [value: string];
 }>();
+
+const enabledTeams = computed(() => props.teams.filter((team) => team.enabled));
+const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled));
 </script>
 
 <template>
@@ -111,35 +117,106 @@ const emit = defineEmits<{
         </div>
         <button type="button" class="secondary-button" @click="emit('createTeam')">新建团队</button>
       </div>
-      <article v-for="team in teams" :key="team.id" class="team-card">
-        <div class="team-card-head">
-          <div class="team-card-title-group">
-            <strong>{{ team.name }}</strong>
-            <span class="team-card-id">#{{ team.id }}</span>
-          </div>
-          <span class="team-card-badge" :class="{ enabled: team.enabled }">
-            {{ team.enabled ? '启用中' : '已停用' }}
-          </span>
+      <section v-if="enabledTeams.length" class="team-group">
+        <div class="team-group-head">
+          <span class="team-group-title">启用中</span>
+          <span class="team-group-count">{{ enabledTeams.length }} 个</span>
         </div>
-        <div class="team-card-summary">
-          <div class="team-summary-row">
-            <span class="team-summary-chip">在职 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
-            <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
-            <span class="team-summary-chip">聊天室 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
-            <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
-            <span class="team-summary-chip">离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}</span>
-          </div>
-          <div class="team-summary-row">
-            <span class="team-summary-chip team-summary-chip-path">工作目录 {{ teamSummaries[team.id]?.workingDirectory || team.working_directory || '未设置' }}</span>
-          </div>
+        <div class="team-group-grid">
+          <article v-for="team in enabledTeams" :key="team.id" class="team-card">
+            <div class="team-card-head">
+              <div class="team-card-title-group">
+                <strong>{{ team.name }}</strong>
+                <span class="team-card-id">#{{ team.id }}</span>
+              </div>
+              <button
+                type="button"
+                class="team-enabled-switch"
+                :class="{ 'is-enabled': team.enabled }"
+                :disabled="teamEnabledPending[team.id]"
+                :aria-pressed="team.enabled"
+                @click="emit('toggleTeamEnabled', team.id, !team.enabled)"
+              >
+                <span class="team-enabled-switch__label">
+                  {{ teamEnabledPending[team.id] ? '切换中' : (team.enabled ? '启用' : '停用') }}
+                </span>
+                <span class="team-enabled-switch__track">
+                  <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': team.enabled }"></span>
+                </span>
+              </button>
+            </div>
+            <div class="team-card-summary">
+              <div class="team-summary-row">
+                <span class="team-summary-chip">在职 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
+                <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
+                <span class="team-summary-chip">聊天室 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
+                <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
+                <span class="team-summary-chip">离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}</span>
+              </div>
+              <div class="team-summary-row">
+                <span class="team-summary-chip team-summary-chip-path">工作目录 {{ teamSummaries[team.id]?.workingDirectory || team.working_directory || '未设置' }}</span>
+              </div>
+            </div>
+            <div class="team-card-footer">
+              <span class="team-last-active">最后活跃 {{ formatDateTime(team.updated_at) }}</span>
+              <div class="team-card-actions">
+                <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">查看详情</button>
+              </div>
+            </div>
+          </article>
         </div>
-        <div class="team-card-footer">
-          <span class="team-last-active">最后活跃 {{ formatDateTime(team.updated_at) }}</span>
-          <div class="team-card-actions">
-            <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">查看详情</button>
-          </div>
+      </section>
+
+      <section v-if="disabledTeams.length" class="team-group">
+        <div class="team-group-head">
+          <span class="team-group-title">已停用</span>
+          <span class="team-group-count">{{ disabledTeams.length }} 个</span>
         </div>
-      </article>
+        <div class="team-group-grid">
+          <article v-for="team in disabledTeams" :key="team.id" class="team-card team-card--disabled">
+            <div class="team-card-head">
+              <div class="team-card-title-group">
+                <strong>{{ team.name }}</strong>
+                <span class="team-card-id">#{{ team.id }}</span>
+              </div>
+              <button
+                type="button"
+                class="team-enabled-switch"
+                :class="{ 'is-enabled': team.enabled }"
+                :disabled="teamEnabledPending[team.id]"
+                :aria-pressed="team.enabled"
+                @click="emit('toggleTeamEnabled', team.id, !team.enabled)"
+              >
+                <span class="team-enabled-switch__label">
+                  {{ teamEnabledPending[team.id] ? '切换中' : (team.enabled ? '启用' : '停用') }}
+                </span>
+                <span class="team-enabled-switch__track">
+                  <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': team.enabled }"></span>
+                </span>
+              </button>
+            </div>
+            <div class="team-card-summary">
+              <div class="team-summary-row">
+                <span class="team-summary-chip">在职 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
+                <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
+                <span class="team-summary-chip">聊天室 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
+                <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
+                <span class="team-summary-chip">离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}</span>
+              </div>
+              <div class="team-summary-row">
+                <span class="team-summary-chip team-summary-chip-path">工作目录 {{ teamSummaries[team.id]?.workingDirectory || team.working_directory || '未设置' }}</span>
+              </div>
+            </div>
+            <div class="team-card-footer">
+              <span class="team-last-active">最后活跃 {{ formatDateTime(team.updated_at) }}</span>
+              <div class="team-card-actions">
+                <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">查看详情</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <article v-if="teams.length === 0" class="empty-card">
         <strong>当前没有团队</strong>
         <p>先创建一个团队，再继续配置成员、角色和模型服务。</p>
@@ -186,6 +263,37 @@ const emit = defineEmits<{
 .teams-list-head {
   grid-column: 1 / -1;
   margin-bottom: 2px;
+}
+
+.team-group {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.team-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 2px 0;
+}
+
+.team-group-title {
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.team-group-count {
+  color: var(--hint-text);
+  font-size: 0.68rem;
+}
+
+.team-group-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .teams-list-title-group h3 {
@@ -258,6 +366,10 @@ const emit = defineEmits<{
     0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
+.team-card--disabled {
+  opacity: 0.88;
+}
+
 .team-card-head,
 .team-card-actions {
   display: flex;
@@ -287,22 +399,73 @@ const emit = defineEmits<{
   white-space: nowrap;
 }
 
-.team-card-badge {
+.team-enabled-switch {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 54px;
-  padding: 2px 7px;
+  gap: 8px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
   border-radius: 999px;
-  background: rgba(248, 81, 73, 0.12);
-  color: var(--danger);
-  font-size: 0.64rem;
-  font-weight: 600;
+  background: color-mix(in srgb, var(--panel-bg) 86%, var(--surface-soft) 14%);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
 }
 
-.team-card-badge.enabled {
-  background: rgba(86, 212, 176, 0.14);
+.team-enabled-switch:hover:not(:disabled) {
+  border-color: var(--focus-border);
+  background: color-mix(in srgb, var(--selected) 40%, var(--panel-bg) 60%);
+}
+
+.team-enabled-switch:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.team-enabled-switch.is-enabled {
   color: var(--good);
+}
+
+.team-enabled-switch__label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.team-enabled-switch__track {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 18%, var(--panel-border) 82%);
+  transition: background 0.18s ease;
+}
+
+.team-enabled-switch.is-enabled .team-enabled-switch__track {
+  background: color-mix(in srgb, var(--good) 24%, var(--panel-border) 76%);
+}
+
+.team-enabled-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.team-enabled-switch__thumb.is-enabled {
+  transform: translateX(16px);
+  background: color-mix(in srgb, var(--panel-bg) 66%, white 34%);
 }
 
 .team-card-summary {
@@ -366,6 +529,10 @@ const emit = defineEmits<{
 
 @media (max-width: 780px) {
   .teams-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .team-group-grid {
     grid-template-columns: 1fr;
   }
 

@@ -1,56 +1,93 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { totalMessageCount } from '../appUiState';
-import { createTeam, getAgents } from '../api';
-import AgentLibraryCard from '../components/AgentLibraryCard.vue';
+import { showGlobalSuccessToast, totalMessageCount } from '../appUiState';
+import { createTeam } from '../api';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
-import TeamMembersCard from '../components/TeamMembersCard.vue';
-import { loadTeams, teams } from '../teamStore';
-import type { AgentInfo } from '../types';
+import SettingsBreadcrumb from '../components/settings/SettingsBreadcrumb.vue';
+import type { SettingsBreadcrumbItem } from '../components/settings/types';
+import { firstTeamId, loadTeams, preferredTeamId, teams } from '../teamStore';
 
 const router = useRouter();
+
+const navItems = [
+  { id: 'general', label: '系统状态', note: '系统概览与基础状态' },
+  { id: 'teams', label: '团队管理', note: '团队信息与组织结构' },
+  { id: 'roles', label: '角色管理', note: '角色模板与职责分配' },
+  { id: 'models', label: '大模型服务管理', note: '模型服务与调用策略' },
+  { id: 'runtime', label: '运行与存储', note: '日志、数据与工作目录' },
+];
 
 const name = ref('');
 const workingDirectory = ref('');
 const slogan = ref('');
 const rules = ref('');
-const availableAgents = ref<string[]>([]);
-const selectedAgents = ref<string[]>([]);
-const keyword = ref('');
 const submitting = ref(false);
 const errorMessage = ref('');
 
-const canSubmit = computed(
-  () => name.value.trim().length > 0 && selectedAgents.value.length > 0 && !submitting.value,
+const breadcrumbItems = computed<SettingsBreadcrumbItem[]>(() => [
+  { key: 'settings', label: '系统设置', current: false },
+  { key: 'teams', label: '团队管理', current: false },
+  { key: 'create', label: '新建团队', current: true },
+]);
+
+const hasDraftChanges = computed(() =>
+  name.value.trim().length > 0
+  || workingDirectory.value.trim().length > 0
+  || slogan.value.trim().length > 0
+  || rules.value.trim().length > 0,
 );
-const filteredAgents = computed(() => {
-  const search = keyword.value.trim().toLowerCase();
-  if (!search) {
-    return availableAgents.value;
-  }
 
-  return availableAgents.value.filter((agentName) => agentName.toLowerCase().includes(search));
-});
+const canSubmit = computed(() => name.value.trim().length > 0 && !submitting.value);
 
-function toggleAgent(agentName: string): void {
-  if (selectedAgents.value.includes(agentName)) {
-    selectedAgents.value = selectedAgents.value.filter((item) => item !== agentName);
-    return;
-  }
-  selectedAgents.value = [...selectedAgents.value, agentName];
+function resetDraft(): void {
+  name.value = '';
+  workingDirectory.value = '';
+  slogan.value = '';
+  rules.value = '';
+  errorMessage.value = '';
 }
 
-async function loadAvailableAgents(): Promise<void> {
-  try {
-    const runtimeAgents = await getAgents();
-    const unique = new Set<string>();
-    runtimeAgents.forEach((agent: AgentInfo) => unique.add(agent.template_name || agent.name));
-    availableAgents.value = Array.from(unique).sort((left, right) => left.localeCompare(right));
-  } catch (error) {
-    availableAgents.value = [];
-    console.error(error);
+function navigateBreadcrumb(key: string): void {
+  if (key === 'create') {
+    return;
   }
+
+  if (key === 'teams' || key === 'settings') {
+    const targetTeamId = preferredTeamId.value ?? firstTeamId.value;
+    if (targetTeamId !== null) {
+      router.push({
+        name: 'settings',
+        params: {
+          teamId: targetTeamId,
+          section: 'teams',
+        },
+      }).catch(console.error);
+      return;
+    }
+  }
+
+  router.push({ name: 'home' }).catch(console.error);
+}
+
+function goBack(): void {
+  navigateBreadcrumb('teams');
+}
+
+function openSection(sectionId: string): void {
+  const targetTeamId = preferredTeamId.value ?? firstTeamId.value;
+  if (targetTeamId !== null) {
+    router.push({
+      name: 'settings',
+      params: {
+        teamId: targetTeamId,
+        section: sectionId,
+      },
+    }).catch(console.error);
+    return;
+  }
+
+  router.push({ name: 'home' }).catch(console.error);
 }
 
 async function handleSubmit(): Promise<void> {
@@ -69,23 +106,23 @@ async function handleSubmit(): Promise<void> {
         slogan: slogan.value.trim(),
         rules: rules.value.trim(),
       },
-      members: selectedAgents.value.map((agentName) => ({
-        name: agentName,
-        role_template: agentName,
-      })),
-      preset_rooms: [
-        {
-          name: '团队群聊',
-          members: selectedAgents.value,
-          initial_topic: '请团队成员先完成自我介绍，并开始围绕共同任务协作。',
-          max_turns: 100,
-        },
-      ],
+      members: [],
+      preset_rooms: [],
     });
     await loadTeams();
     const createdTeam = teams.value.find((team) => team.name === name.value.trim());
     if (createdTeam) {
-      router.push({ name: 'console', params: { teamId: createdTeam.id } }).catch(console.error);
+      showGlobalSuccessToast('团队创建成功，请添加成员');
+      router.push({
+        name: 'settings',
+        params: {
+          teamId: createdTeam.id,
+          section: 'teams',
+        },
+        query: {
+          detailTeamId: String(createdTeam.id),
+        },
+      }).catch(console.error);
     }
   } catch (error) {
     errorMessage.value = '创建团队失败，请检查名称是否重复。';
@@ -97,121 +134,312 @@ async function handleSubmit(): Promise<void> {
 
 onMounted(() => {
   totalMessageCount.value = 0;
-  loadAvailableAgents();
+  loadTeams().catch(console.error);
 });
 </script>
 
 <template>
-  <section class="page panel">
-    <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
+  <section class="settings-shell panel">
+    <header class="settings-head">
+      <div class="settings-head-main">
+        <div class="settings-title-row">
+          <h2>系统设置</h2>
+          <p class="settings-eyebrow">Admin Console</p>
+        </div>
+      </div>
+      <button type="button" class="secondary-button" @click="$router.push({ name: 'home' })">返回主界面</button>
+    </header>
 
-    <form class="form-grid" @submit.prevent="handleSubmit">
-      <TeamInfoCard
-        :name="name"
-        :working-directory="workingDirectory"
-        :slogan="slogan"
-        :rules="rules"
-        @update:name="name = $event"
-        @update:working-directory="workingDirectory = $event"
-        @update:slogan="slogan = $event"
-        @update:rules="rules = $event"
-      />
+    <div class="settings-layout">
+      <aside class="settings-sidebar">
+        <div class="sidebar-card">
+          <div class="sidebar-card-head">
+            <span>导航菜单</span>
+            <small>{{ navItems.length }} 项</small>
+          </div>
+          <nav class="settings-nav" aria-label="设置导航">
+            <button
+              v-for="item in navItems"
+              :key="item.id"
+              type="button"
+              class="nav-link"
+              :class="{ active: item.id === 'teams' }"
+              @click="openSection(item.id)"
+            >
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.note }}</span>
+            </button>
+          </nav>
+        </div>
+      </aside>
 
-      <TeamMembersCard :team-name="name" :selected-agents="selectedAgents" @toggle-agent="toggleAgent" />
+      <main class="settings-main">
+        <section class="config-section">
+          <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
 
-      <AgentLibraryCard
-        :keyword="keyword"
-        :filtered-agents="filteredAgents"
-        :selected-agents="selectedAgents"
-        @update:keyword="keyword = $event"
-        @toggle-agent="toggleAgent"
-      />
-    </form>
+          <div class="create-shell">
+            <SettingsBreadcrumb :items="breadcrumbItems" @navigate="navigateBreadcrumb" />
 
-    <div class="member-actions">
-      <button type="button" class="action-button secondary-button" @click="$router.back()">取消</button>
-      <button class="action-button primary-button" type="button" :disabled="!canSubmit" @click="handleSubmit">
-        {{ submitting ? '创建中…' : '创建' }}
-      </button>
+            <div class="team-detail-head">
+              <div class="team-detail-title-row">
+                <h4>{{ name.trim() || '新建团队' }}</h4>
+                <p class="section-eyebrow">Create Team</p>
+              </div>
+              <div class="team-detail-actions">
+                <button type="button" class="secondary-button" @click="goBack">返回团队列表</button>
+              </div>
+            </div>
+
+            <form class="team-detail-stack" @submit.prevent="handleSubmit">
+              <TeamInfoCard
+                :name="name"
+                :working-directory="workingDirectory"
+                :slogan="slogan"
+                :rules="rules"
+                @update:name="name = $event"
+                @update:working-directory="workingDirectory = $event"
+                @update:slogan="slogan = $event"
+              @update:rules="rules = $event"
+            >
+              <template #actions>
+                <button
+                  v-if="hasDraftChanges"
+                  type="button"
+                    class="secondary-button team-info-action-button team-info-action-button--compact"
+                    :disabled="submitting"
+                    @click="resetDraft"
+                  >
+                    重置
+                  </button>
+                  <button
+                    type="button"
+                    class="secondary-button team-info-action-button"
+                    :disabled="!canSubmit"
+                    @click="handleSubmit"
+                  >
+                  {{ submitting ? '创建中...' : '创建团队' }}
+                </button>
+              </template>
+            </TeamInfoCard>
+          </form>
+        </div>
+      </section>
+      </main>
     </div>
   </section>
 </template>
 
 <style scoped>
-.page {
-  height: 100%;
-  overflow: hidden;
-  padding: 0;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  border-radius: 0;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
-  grid-template-rows: minmax(0, auto) minmax(0, 1fr);
-  gap: 8px;
-  max-width: none;
+.settings-shell {
   height: 100%;
   min-height: 0;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
 }
 
-.member-actions {
+.settings-head {
+  position: relative;
+  z-index: 2;
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--panel-bg);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.settings-head-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+}
+
+.settings-head h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.72rem;
+  line-height: 1.04;
+}
+
+.settings-eyebrow,
+.section-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.68rem;
+  flex: 0 0 auto;
+}
+
+.settings-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 10px;
-  margin-top: 0;
-  flex-shrink: 0;
-  padding: 0 0 2px;
 }
 
-.action-button,
-.agent-tile,
-.secondary-button,
-.primary-button {
+.settings-sidebar,
+.settings-main {
+  min-height: 0;
+}
+
+.settings-sidebar {
+  padding-top: 10px;
+}
+
+.sidebar-card {
+  height: 100%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.sidebar-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar-card-head span {
+  color: var(--muted);
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.nav-link {
+  width: 100%;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  color: inherit;
+  padding: 8px 10px;
+  text-align: left;
   cursor: pointer;
-}
-
-.primary-button,
-.secondary-button {
-  min-width: 78px;
-  height: 30px;
-  padding: 0 14px;
-  font-size: 0.88rem;
   transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
-.primary-button {
-  border-color: color-mix(in srgb, var(--focus-border) 45%, var(--panel-border) 55%);
-  background: var(--selected);
+.nav-link strong {
+  display: block;
+  color: var(--text-strong);
+  font-size: 0.82rem;
 }
 
-.primary-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.nav-link span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.7rem;
 }
 
-.primary-button:not(:disabled):hover {
+.nav-link:hover {
   border-color: var(--focus-border);
-  background: var(--selected);
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--selected) 52%, var(--panel-bg) 48%);
+}
+
+.nav-link.active {
+  border-color: var(--focus-border);
+  background: color-mix(in srgb, var(--selected) 60%, var(--panel-bg) 40%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 40%, transparent);
+}
+
+.settings-main {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 4px 0 0;
+}
+
+.config-section {
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 12px 14px;
+}
+
+.create-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  min-height: 100%;
+}
+
+.team-detail-head {
+  margin-top: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.team-detail-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.team-detail-head h4 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.section-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.68rem;
+}
+
+.team-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+}
+
+.team-detail-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  min-height: 0;
+  align-items: start;
+}
+
+.team-info-action-button {
+  min-width: 132px;
+}
+
+.team-info-action-button--compact {
+  min-width: 88px;
 }
 
 .error-banner {
-  max-width: 1040px;
   margin: 0 0 8px;
   border-radius: 10px;
   padding: 10px 12px;
@@ -220,12 +448,15 @@ onMounted(() => {
 }
 
 @media (max-width: 960px) {
-  .form-grid {
+  .settings-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr);
   }
 
-  .member-actions {
+  .settings-sidebar {
+    padding-top: 10px;
+  }
+
+  .team-detail-head {
     align-items: flex-start;
     flex-direction: column;
   }

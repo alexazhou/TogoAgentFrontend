@@ -56,6 +56,7 @@ const driverModel = computed({
 });
 
 const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配');
+const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.selectedTemplate.trim()));
 </script>
 
 <template>
@@ -199,7 +200,7 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
             v-if="editable"
             type="button"
             class="secondary-button"
-            :disabled="!selectedTemplate"
+            :disabled="!canSaveMember"
             @click="emit('save')"
           >
             保存

@@ -96,7 +96,7 @@ const {
   <div
     ref="graphRef"
     class="member-graph"
-    :class="{ 'is-panning': isPanning, 'is-editing': !props.readonly }"
+    :class="{ 'is-panning': isPanning, 'is-editing': !props.readonly, 'is-empty': !graphRootNode }"
     @pointerdown="startPan"
     @pointermove="movePan"
     @pointerup="endPan"
@@ -104,8 +104,13 @@ const {
     @pointerleave="endPan"
     @wheel.prevent="handleWheelZoom"
   >
-    <div ref="canvasRef" class="member-canvas" :style="canvasStyle">
-      <div v-if="graphRootNode" ref="memberTreeRef">
+    <div v-if="!graphRootNode" class="member-empty-state">
+      <strong>当前还没有成员</strong>
+      <p>{{ props.readonly ? '点击“编辑团队组织”后添加第一个成员。' : '请先添加第一个成员。' }}</p>
+    </div>
+
+    <div v-else ref="canvasRef" class="member-canvas" :style="canvasStyle">
+      <div ref="memberTreeRef">
         <TeamMemberTreeNode
           :node="graphRootNode"
           :readonly="readonly"
@@ -143,6 +148,12 @@ const {
   cursor: grab;
 }
 
+.member-graph.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .member-graph.is-editing {
   background-color: rgba(148, 163, 184, 0.12);
   background-image:
@@ -171,6 +182,31 @@ const {
   will-change: transform;
   transform-origin: center center;
   z-index: 1;
+}
+
+.member-empty-state {
+  min-width: 280px;
+  min-height: 220px;
+  padding: 24px 28px;
+  border: 1px dashed color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel-bg) 72%, var(--surface-soft) 28%);
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.member-empty-state strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.member-empty-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .member-graph.is-panning :deep(.team-root.is-readonly),
