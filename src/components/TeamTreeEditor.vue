@@ -425,7 +425,7 @@ function buildDeptTreePayload(): DeptTreeNode | null {
     const childNames = childrenByParent.get(memberName) ?? [];
     return {
       dept_name: teamMemberDeptNameDrafts.value[memberName] || memberName,
-      dept_responsibility: '',
+      dept_responsibility: teamMemberDeptResponsibilityDrafts.value[memberName] || '',
       manager: memberName,
       members: [memberName],
       children: childNames.map((childName) => buildNode(childName)),
@@ -955,17 +955,20 @@ function addSubordinate(parentName: string): void {
 function openDepartmentEditor(memberName: string): void {
   editingDepartmentMemberName.value = memberName;
   departmentEditorName.value = teamMemberDeptNameDrafts.value[memberName] || memberName;
+  departmentEditorResponsibility.value = teamMemberDeptResponsibilityDrafts.value[memberName] || '';
   teamMemberStatus.value = '';
 }
 
 function closeDepartmentEditor(): void {
   editingDepartmentMemberName.value = '';
   departmentEditorName.value = '';
+  departmentEditorResponsibility.value = '';
 }
 
 function saveDepartmentEditor(): void {
   const memberName = editingDepartmentMemberName.value;
   const nextDepartmentName = departmentEditorName.value.trim();
+  const nextDepartmentResponsibility = departmentEditorResponsibility.value.trim();
   if (!memberName) {
     return;
   }
@@ -976,6 +979,10 @@ function saveDepartmentEditor(): void {
   teamMemberDeptNameDrafts.value = {
     ...teamMemberDeptNameDrafts.value,
     [memberName]: nextDepartmentName,
+  };
+  teamMemberDeptResponsibilityDrafts.value = {
+    ...teamMemberDeptResponsibilityDrafts.value,
+    [memberName]: nextDepartmentResponsibility,
   };
   showGlobalSuccessToast('已经更新到组织树');
   closeDepartmentEditor();
@@ -1114,9 +1121,11 @@ function confirmDangerAction(): void {
       :open="departmentEditorOpen"
       :member-name="editingDepartmentMemberName"
       :department-name="departmentEditorName"
+      :department-responsibility="departmentEditorResponsibility"
       @close="closeDepartmentEditor"
       @save="saveDepartmentEditor"
       @update:department-name="departmentEditorName = $event"
+      @update:department-responsibility="departmentEditorResponsibility = $event"
     />
   </div>
 </template>
