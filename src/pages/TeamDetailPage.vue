@@ -247,15 +247,10 @@ onMounted(() => {
   font-size: 0.72rem;
 }
 
-.secondary-button {
+.team-detail-head .secondary-button {
   min-width: 72px;
   height: 28px;
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
   padding: 0 12px;
-  cursor: pointer;
 }
 
 .loading-card,

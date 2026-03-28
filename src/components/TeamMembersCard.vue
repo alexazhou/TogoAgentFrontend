@@ -42,19 +42,20 @@ const emit = defineEmits<{
       <div class="member-panel-head-segment member-panel-head-segment--label">
         <span class="panel-label">团队成员</span>
       </div>
-      <div v-if="actions.length" class="member-panel-head-segment member-panel-head-segment--action">
+    </div>
+
+    <div v-if="actions.length" class="member-panel-actions">
         <button
           v-for="action in actions"
           :key="action.key"
           type="button"
-          class="member-panel-action"
+          class="secondary-button member-panel-action"
           :class="{ 'member-panel-action--primary': action.primary }"
           :disabled="action.disabled"
           @click="emit('action', action.key)"
         >
           {{ action.label }}
         </button>
-      </div>
     </div>
 
     <TeamMemberGraph
@@ -87,18 +88,16 @@ const emit = defineEmits<{
   min-height: 0;
   overflow: hidden;
   align-self: stretch;
+  padding-bottom: 54px;
 }
 
 .member-panel-head {
   position: absolute;
   top: 10px;
   left: 12px;
-  right: 12px;
   z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
   min-height: 36px;
 }
 
@@ -108,11 +107,6 @@ const emit = defineEmits<{
   min-height: 36px;
   background: #fff;
   padding: 0 8px;
-}
-
-.member-panel-head-segment--action {
-  margin-left: auto;
-  gap: 8px;
 }
 
 .panel-label {
@@ -127,25 +121,23 @@ const emit = defineEmits<{
   letter-spacing: 0.01em;
 }
 
-.member-panel-action {
-  height: 30px;
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-strong);
-  padding: 0 12px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
+.member-panel-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.member-panel-action:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 46%, #fff 54%);
-  color: color-mix(in srgb, var(--text-strong) 88%, var(--focus-border) 12%);
+.member-panel-action {
+  height: 30px;
+  min-width: 108px;
+  padding: 0 12px;
+  font-size: 0.82rem;
 }
 
 .member-panel-action:disabled {

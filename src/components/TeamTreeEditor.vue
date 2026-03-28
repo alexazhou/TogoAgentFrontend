@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, setAgentsByTeamId, setDeptTree } from '../api';
+import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, saveMembersByTeamId, setDeptTree } from '../api';
 import { showGlobalSuccessToast } from '../appUiState';
 import {
   useMemberEditorDialog,
@@ -125,6 +125,10 @@ function buildTeamMemberModelDraft(agents: AgentInfo[]): Record<string, string> 
 
 function buildTeamMemberDriverDraft(agents: AgentInfo[]): Record<string, string> {
   return Object.fromEntries(agents.map((agent) => [agent.name, parseDriverTypeValue(agent.driver || '')]));
+}
+
+function isOnBoardAgent(agent: AgentInfo): boolean {
+  return String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD';
 }
 
 function parseDriverTypeValue(driver: string): string {
@@ -271,42 +275,79 @@ function buildDraftHierarchy(tree: DeptTreeNode | null, members: TeamMember[]): 
   return { orderedMembers, parentMap };
 }
 
-function buildAgentConfigPayload(): Array<{
-  id: number;
+function resolveDraftAgentId(memberName: string, agents: AgentInfo[] = committedAgents.value): number | null {
+  const matched = agents.find((agent) => {
+    if (typeof agent.id !== 'number') {
+      return false;
+    }
+    const draftName = teamMemberNameDraftsById.value[agent.id] || agent.name;
+    return draftName === memberName;
+  });
+
+  return typeof matched?.id === 'number' ? matched.id : null;
+}
+
+function buildMembersSavePayload(agents: AgentInfo[] = committedAgents.value): Array<{
+  id: number | null;
+  name: string;
+  role_template_name: string;
+  model: string;
+  driver: string;
+}> {
+  const payload = teamMembersDraft.value.map((memberName) => {
+    const agentId = resolveDraftAgentId(memberName, agents);
+    const originalAgent = typeof agentId === 'number'
+      ? agents.find((agent) => agent.id === agentId)
+      : null;
+    const originalDriverType = parseDriverTypeValue(originalAgent?.driver || '');
+    const draftDriverType = teamMemberDriverDrafts.value[memberName] || '';
+
+    return {
+      id: agentId,
+      name: memberName,
+      role_template_name:
+        teamMemberRoleDrafts.value[memberName]
+        || originalAgent?.role_template_name
+        || originalAgent?.template_name
+        || memberName,
+      model: teamMemberModelDrafts.value[memberName] || originalAgent?.model || '',
+      driver: draftDriverType || originalDriverType || 'native',
+    };
+  });
+
+  return payload.sort((left, right) => {
+    const leftKey = left.id ?? Number.MAX_SAFE_INTEGER;
+    const rightKey = right.id ?? Number.MAX_SAFE_INTEGER;
+    if (leftKey !== rightKey) {
+      return leftKey - rightKey;
+    }
+    return left.name.localeCompare(right.name);
+  });
+}
+
+function buildCommittedMembersSaveBaseline(): Array<{
+  id: number | null;
   name: string;
   role_template_name: string;
   model: string;
   driver: string;
 }> {
   return committedAgents.value
-    .filter((agent): agent is AgentInfo & { id: number } => typeof agent.id === 'number')
     .map((agent) => ({
-      id: agent.id,
-      name: teamMemberNameDraftsById.value[agent.id] || agent.name,
-      role_template_name:
-        teamMemberRoleDrafts.value[teamMemberNameDraftsById.value[agent.id] || agent.name]
-        || agent.role_template_name
-        || agent.template_name
-        || teamMemberNameDraftsById.value[agent.id]
-        || agent.name,
-      model: teamMemberModelDrafts.value[teamMemberNameDraftsById.value[agent.id] || agent.name] || '',
-      driver: (() => {
-        const currentName = teamMemberNameDraftsById.value[agent.id] || agent.name;
-        const draftDriverType = teamMemberDriverDrafts.value[currentName] || '';
-        const originalDriver = agent.driver || '';
-        const originalDriverType = parseDriverTypeValue(originalDriver);
-
-        if (!draftDriverType) {
-          return originalDriverType || 'native';
-        }
-
-        if (draftDriverType === originalDriverType) {
-          return originalDriverType || 'native';
-        }
-
-        return draftDriverType;
-      })(),
-    }));
+      id: typeof agent.id === 'number' ? agent.id : null,
+      name: agent.name,
+      role_template_name: agent.role_template_name || agent.template_name || agent.name,
+      model: agent.model || '',
+      driver: parseDriverTypeValue(agent.driver || '') || 'native',
+    }))
+    .sort((left, right) => {
+      const leftKey = left.id ?? Number.MAX_SAFE_INTEGER;
+      const rightKey = right.id ?? Number.MAX_SAFE_INTEGER;
+      if (leftKey !== rightKey) {
+        return leftKey - rightKey;
+      }
+      return left.name.localeCompare(right.name);
+    });
 }
 
 function buildDeptTreePayload(): DeptTreeNode | null {
@@ -449,17 +490,7 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
 });
 
 const hasMemberConfigChanges = computed(() =>
-  JSON.stringify(buildAgentConfigPayload()) !== JSON.stringify(
-    committedAgents.value
-      .filter((agent): agent is AgentInfo & { id: number } => typeof agent.id === 'number')
-      .map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        role_template_name: agent.role_template_name || agent.template_name || agent.name,
-        model: agent.model || '',
-        driver: agent.driver || '{}',
-      })),
-  ),
+  JSON.stringify(buildMembersSavePayload()) !== JSON.stringify(buildCommittedMembersSaveBaseline()),
 );
 
 const hasDeptTreeChanges = computed(() =>
@@ -590,7 +621,7 @@ watch(
       modelCatalog.value = buildModelCatalog(nextFrontendConfig);
       driverCatalog.value = buildDriverCatalog(nextFrontendConfig);
       roleTemplateCatalog.value = roleTemplates;
-      const nextMembers = teamAgents.map((agent) => ({
+      const nextMembers = teamAgents.filter(isOnBoardAgent).map((agent) => ({
         ...agent,
       }));
 
@@ -650,37 +681,23 @@ async function saveTeamMembers(): Promise<void> {
   teamMemberStatus.value = '';
 
   try {
-    const nextAgentConfigs = buildAgentConfigPayload();
+    const nextMembers = buildMembersSavePayload();
     const nextDeptTree = buildDeptTreePayload();
 
-    if (hasMemberConfigChanges.value) {
-      await setAgentsByTeamId(props.teamId, nextAgentConfigs);
-    }
+    const savedMembers = await saveMembersByTeamId(props.teamId, nextMembers);
 
     if (nextDeptTree && hasDeptTreeChanges.value) {
       await setDeptTree(props.teamId, nextDeptTree);
     }
 
-    const nextAgents = committedAgents.value.map((agent) => {
-      const nextConfig = nextAgentConfigs.find((item) => item.id === agent.id);
-      if (!nextConfig) {
-        return { ...agent };
-      }
-      return {
-        ...agent,
-        name: nextConfig.name,
-        role_template_name: nextConfig.role_template_name,
-        template_name: nextConfig.role_template_name,
-        model: nextConfig.model,
-        driver: nextConfig.driver,
-      };
-    });
+    const nextAgents = savedMembers.filter(isOnBoardAgent).map((agent) => ({ ...agent }));
 
     syncCommittedState(nextDeptTree, nextAgents);
     pendingSlots.value = [];
     editingPendingSlotId.value = null;
     teamMemberStatus.value = '已保存';
     isReadonly.value = true;
+    showGlobalSuccessToast('团队成员已保存');
     closeMemberEditor();
     emit('saved');
   } catch (error) {
@@ -726,14 +743,30 @@ function saveMemberEditor(): void {
   }
 
   if (editingPendingSlotId.value) {
-    const nextMemberName = memberEditorTemplate.value;
+    const nextMemberName = memberEditorName.value.trim();
     const pendingSlot = pendingSlots.value.find((slot) => slot.id === editingPendingSlotId.value);
+    if (!nextMemberName) {
+      teamMemberStatus.value = '成员名称不能为空';
+      return;
+    }
+    if (teamMembersDraft.value.includes(nextMemberName)) {
+      teamMemberStatus.value = `成员名称“${nextMemberName}”已存在`;
+      return;
+    }
     if (!teamMembersDraft.value.includes(nextMemberName)) {
       teamMembersDraft.value = [...teamMembersDraft.value, nextMemberName];
     }
     teamMemberRoleDrafts.value = {
       ...teamMemberRoleDrafts.value,
-      [nextMemberName]: resolveMemberRoleTemplate(nextMemberName),
+      [nextMemberName]: memberEditorTemplate.value,
+    };
+    teamMemberModelDrafts.value = {
+      ...teamMemberModelDrafts.value,
+      [nextMemberName]: memberEditorModel.value.trim(),
+    };
+    teamMemberDriverDrafts.value = {
+      ...teamMemberDriverDrafts.value,
+      [nextMemberName]: memberEditorDriver.value || '',
     };
     teamMemberParentDrafts.value = {
       ...teamMemberParentDrafts.value,

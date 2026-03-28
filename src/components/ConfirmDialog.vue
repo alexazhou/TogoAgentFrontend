@@ -103,28 +103,11 @@ const emit = defineEmits<{
   gap: 10px;
 }
 
-.ghost-button,
-.secondary-button {
+.confirm-actions > .ghost-button,
+.confirm-actions > .secondary-button {
   min-width: 88px;
   height: 32px;
   padding: 0 14px;
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.ghost-button:hover,
-.secondary-button:hover {
-  border-color: var(--focus-border);
-  background: var(--selected);
-  transform: translateY(-1px);
 }
 
 .secondary-button--danger {

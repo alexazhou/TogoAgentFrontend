@@ -185,10 +185,6 @@ onMounted(() => {
 .secondary-button {
   min-width: 78px;
   height: 30px;
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
   padding: 0 14px;
   font-size: 0.88rem;
   transition:
@@ -208,8 +204,7 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-.primary-button:not(:disabled):hover,
-.secondary-button:hover {
+.primary-button:not(:disabled):hover {
   border-color: var(--focus-border);
   background: var(--selected);
   transform: translateY(-1px);

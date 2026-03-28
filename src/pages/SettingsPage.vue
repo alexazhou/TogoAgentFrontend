@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAgents, getDeptTree, getTeamDetail, updateTeam } from '../api';
-import { connectionState, totalMessageCount } from '../appUiState';
+import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
@@ -26,6 +26,8 @@ const driverStates = [
   { key: 'tps', label: 'TPS', available: false, note: '待接入检测' },
 ];
 const agents = ref<AgentInfo[]>([]);
+const settingsMainRef = ref<HTMLElement | null>(null);
+const settingsScrollbarHovered = ref(false);
 const teamSummaries = ref<Record<number, {
   memberCount: number;
   roomCount: number;
@@ -134,7 +136,12 @@ function handleBreadcrumbNavigate(key: string): void {
   }
 
   if (key.startsWith('section-')) {
-    openSection(key.slice('section-'.length));
+    const sectionId = key.slice('section-'.length);
+    if (sectionId === 'teams') {
+      clearTeamDetail();
+      return;
+    }
+    openSection(sectionId);
   }
 }
 
@@ -159,6 +166,29 @@ function clearTeamDetail(): void {
     name: 'settings',
     params: { teamId: teamId.value, section: 'teams' },
   }).catch(console.error);
+}
+
+function updateSettingsScrollbarHover(event: PointerEvent): void {
+  const element = settingsMainRef.value;
+  if (!element) {
+    settingsScrollbarHovered.value = false;
+    return;
+  }
+
+  const rect = element.getBoundingClientRect();
+  const hoverInset = 18;
+  const hoverVertical = element.scrollHeight > element.clientHeight
+    && event.clientX >= rect.right - hoverInset
+    && event.clientX <= rect.right;
+  const hoverHorizontal = element.scrollWidth > element.clientWidth
+    && event.clientY >= rect.bottom - hoverInset
+    && event.clientY <= rect.bottom;
+
+  settingsScrollbarHovered.value = hoverVertical || hoverHorizontal;
+}
+
+function clearSettingsScrollbarHover(): void {
+  settingsScrollbarHovered.value = false;
 }
 
 async function loadTeamSummaries(): Promise<void> {
@@ -252,6 +282,7 @@ async function saveTeamInfo(): Promise<void> {
       loadTeams(),
     ]);
     teamInfoStatus.value = '已保存';
+    showGlobalSuccessToast('团队信息已保存');
   } catch (error) {
     console.error(error);
     teamInfoStatus.value = '保存失败';
@@ -415,7 +446,13 @@ function handleTeamTreeSaved(): void {
         </div>
       </aside>
 
-      <main class="settings-main">
+      <main
+        ref="settingsMainRef"
+        class="settings-main"
+        :class="{ 'settings-main--scrollbar-hover': settingsScrollbarHovered }"
+        @pointermove="updateSettingsScrollbarHover"
+        @pointerleave="clearSettingsScrollbarHover"
+      >
         <GeneralSettingsSection
           v-if="currentSectionId === 'general'"
           :breadcrumb-items="breadcrumbItems"
@@ -664,6 +701,37 @@ function handleTeamTreeSaved(): void {
   flex-direction: column;
   gap: 10px;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%) transparent;
+}
+
+.settings-main::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.settings-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-main::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 56px;
+}
+
+.settings-main.settings-main--scrollbar-hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--focus-border) 46%, var(--panel-border) 54%);
+}
+
+.settings-main.settings-main--scrollbar-hover {
+  scrollbar-color: color-mix(in srgb, var(--focus-border) 46%, var(--panel-border) 54%) transparent;
+}
+
+.settings-main::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--focus-border) 58%, var(--panel-border) 42%);
 }
 
 .config-section {
@@ -943,17 +1011,6 @@ function handleTeamTreeSaved(): void {
   justify-content: flex-end;
 }
 
-.ghost-button {
-  height: 24px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  padding: 0 7px;
-  cursor: pointer;
-  font-size: 0.68rem;
-}
-
 .team-detail-head {
   margin-top: 4px;
   display: flex;
@@ -1022,23 +1079,6 @@ function handleTeamTreeSaved(): void {
 .table-row-head {
   color: var(--muted);
   background: color-mix(in srgb, var(--panel-bg) 55%, transparent);
-}
-
-.secondary-button {
-  height: 32px;
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-  background: var(--pill-bg);
-  color: var(--text-strong);
-  padding: 0 10px;
-  cursor: pointer;
-  font-size: 0.84rem;
-}
-
-.secondary-button:disabled,
-.ghost-button:disabled {
-  opacity: 0.56;
-  cursor: not-allowed;
 }
 
 @media (max-width: 1100px) {
