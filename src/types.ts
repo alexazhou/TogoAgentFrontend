@@ -109,6 +109,13 @@ export interface FrontendConfig {
   default_model: string | null;
 }
 
+export interface DirectoriesConfig {
+  config_dir: string;
+  workspace_dir: string;
+  data_dir: string;
+  log_dir: string;
+}
+
 export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
   rooms: TeamRoomDetail[];

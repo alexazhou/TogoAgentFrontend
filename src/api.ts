@@ -4,6 +4,7 @@ import type {
   AgentInfo,
   CreateTeamPayload,
   DeptTreeNode,
+  DirectoriesConfig,
   FrontendConfig,
   FrontendDriverType,
   FrontendModelOption,
@@ -300,6 +301,10 @@ export async function getFrontendConfig(): Promise<FrontendConfig> {
       ? data.default_model
       : null,
   };
+}
+
+export async function getDirectories(): Promise<DirectoriesConfig> {
+  return requestJson<DirectoriesConfig>('/config/directories.json');
 }
 
 export async function getTeamDetail(teamId: number): Promise<TeamDetail> {
