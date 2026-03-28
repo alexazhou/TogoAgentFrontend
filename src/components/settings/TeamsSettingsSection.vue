@@ -37,6 +37,7 @@ const emit = defineEmits<{
   openTeamDetail: [teamId: number];
   toggleTeamEnabled: [teamId: number, enabled: boolean];
   clearTeamDetail: [];
+  deleteTeam: [];
   saveTeamInfo: [];
   resetTeamInfoDraft: [];
   treeSaved: [];
@@ -123,6 +124,12 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
           :team-name="selectedTeamDetail.name"
           @saved="emit('treeSaved')"
         />
+
+        <div class="team-detail-danger-actions">
+          <button type="button" class="secondary-button team-delete-button" @click="emit('deleteTeam')">
+            删除团队
+          </button>
+        </div>
       </div>
     </template>
 
@@ -364,12 +371,28 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
   align-items: start;
 }
 
+.team-detail-danger-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .team-info-action-button {
   min-width: 132px;
 }
 
 .team-info-action-button--compact {
   min-width: 88px;
+}
+
+.team-delete-button {
+  min-width: 112px;
+  border-color: color-mix(in srgb, #ef4444 30%, var(--team-create-control-border) 70%);
+  background: color-mix(in srgb, #fee2e2 48%, var(--panel-bg) 52%);
+}
+
+.team-delete-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
+  background: color-mix(in srgb, #fee2e2 78%, #fff 22%);
 }
 
 .team-card,
