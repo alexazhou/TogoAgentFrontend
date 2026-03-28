@@ -222,6 +222,7 @@ const emit = defineEmits<{
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+  padding-top: 6px;
 }
 
 .team-detail-status {

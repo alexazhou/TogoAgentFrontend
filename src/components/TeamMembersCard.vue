@@ -29,6 +29,8 @@ const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
   editAgent: [agentName: string];
+  editDepartment: [agentName: string];
+  viewDepartment: [agentName: string];
   addSubordinate: [agentName: string];
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
@@ -68,6 +70,8 @@ const emit = defineEmits<{
       @toggle-agent="emit('toggleAgent', $event)"
       @view-agent="emit('viewAgent', $event)"
       @edit-agent="emit('editAgent', $event)"
+      @edit-department="emit('editDepartment', $event)"
+      @view-department="emit('viewDepartment', $event)"
       @add-subordinate="emit('addSubordinate', $event)"
       @edit-pending-slot="emit('editPendingSlot', $event)"
       @remove-pending-slot="emit('removePendingSlot', $event)"

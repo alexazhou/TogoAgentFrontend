@@ -521,7 +521,7 @@ function handleTeamTreeSaved(): void {
   padding: 10px 12px;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
+  gap: 0;
 }
 
 .settings-head,
@@ -541,6 +541,9 @@ function handleTeamTreeSaved(): void {
 }
 
 .settings-head {
+  position: relative;
+  z-index: 2;
+  background: var(--panel-bg);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--divider);
 }
@@ -619,6 +622,10 @@ function handleTeamTreeSaved(): void {
 .settings-sidebar,
 .settings-main {
   min-height: 0;
+}
+
+.settings-sidebar {
+  padding-top: 10px;
 }
 
 .sidebar-card,
@@ -700,7 +707,7 @@ function handleTeamTreeSaved(): void {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-right: 4px;
+  padding: 10px 4px 0 0;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%) transparent;
 }

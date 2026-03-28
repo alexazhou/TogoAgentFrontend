@@ -5,6 +5,7 @@ import { getAgentAvatarUrl } from '../avatar';
 const props = withDefaults(defineProps<{
   title: string;
   subtitle: string;
+  overline?: string;
   employeeNumber?: string;
   avatarName?: string;
   selected?: boolean;
@@ -28,6 +29,7 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
 const normalizedEmployeeNumber = computed(() => (
   /^\d+$/.test(props.employeeNumber) ? props.employeeNumber : ''
 ));
+const normalizedOverline = computed(() => props.overline?.trim() || '');
 </script>
 
 <template>
@@ -39,11 +41,15 @@ const normalizedEmployeeNumber = computed(() => (
         selected,
         'is-empty': empty,
         'is-readonly': readonly,
+        'has-overline': !!normalizedOverline,
       },
     ]"
     type="button"
     @click="$emit('click')"
   >
+    <small v-if="normalizedOverline && !empty" class="entity-card__overline">
+      {{ normalizedOverline }}
+    </small>
     <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
       #{{ normalizedEmployeeNumber }}
     </small>
@@ -53,8 +59,10 @@ const normalizedEmployeeNumber = computed(() => (
       :src="getAgentAvatarUrl(avatarName)"
       :alt="avatarAlt"
     />
-    <strong class="entity-card__title">{{ title }}</strong>
-    <small class="entity-card__subtitle">{{ subtitle }}</small>
+    <div class="entity-card__meta">
+      <strong class="entity-card__title">{{ title }}</strong>
+      <small class="entity-card__subtitle">{{ subtitle }}</small>
+    </div>
   </button>
 </template>
 
@@ -62,17 +70,20 @@ const normalizedEmployeeNumber = computed(() => (
 .entity-card {
   width: var(--entity-card-width);
   aspect-ratio: 3 / 4;
+  --entity-card-height: calc(var(--entity-card-width) * 4 / 3);
+  --entity-avatar-size: calc(var(--entity-card-width) * var(--entity-avatar-size-ratio, 0.46));
+  --entity-avatar-top: calc(var(--entity-card-height) * var(--entity-avatar-top-ratio, 0.209));
+  --entity-overline-top: calc(var(--entity-card-height) * var(--entity-overline-top-ratio, 0.094));
+  --entity-meta-top: calc(var(--entity-card-height) * var(--entity-meta-top-ratio, 0.63));
+  --entity-meta-gap: calc(var(--entity-card-width) * var(--entity-meta-gap-ratio, 0.039));
+  --entity-badge-top: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
+  --entity-badge-left: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
   box-sizing: border-box;
   position: relative;
   border: 1px solid var(--team-create-node-border);
   border-radius: var(--entity-card-radius);
   background: var(--surface-soft);
   color: var(--text-strong);
-  display: grid;
-  grid-template-rows: var(--entity-avatar-slot-size) minmax(var(--entity-title-min-height), auto) minmax(var(--entity-subtitle-min-height), auto);
-  align-content: start;
-  justify-items: center;
-  gap: var(--entity-card-gap);
   padding: var(--entity-card-padding-y) var(--entity-card-padding-x);
   text-align: center;
   cursor: pointer;
@@ -117,19 +128,23 @@ const normalizedEmployeeNumber = computed(() => (
 }
 
 .entity-card__avatar {
+  position: absolute;
+  top: var(--entity-avatar-top);
+  left: 50%;
   width: var(--entity-avatar-size);
   aspect-ratio: 1 / 1;
   height: auto;
-  align-self: start;
-  margin-top: var(--entity-avatar-offset-y, 0);
+  transform: translateX(-50%);
   border-radius: var(--entity-avatar-radius);
   display: block;
   object-fit: cover;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
 }
 
+.entity-card__meta,
 .entity-card__title,
-.entity-card__subtitle {
+.entity-card__subtitle,
+.entity-card__overline {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -137,16 +152,41 @@ const normalizedEmployeeNumber = computed(() => (
   word-break: break-word;
 }
 
+.entity-card__meta {
+  position: absolute;
+  top: var(--entity-meta-top);
+  left: 50%;
+  width: calc(100% - (2 * var(--entity-card-padding-x)));
+  transform: translateX(-50%);
+  display: grid;
+  gap: var(--entity-meta-gap);
+}
+
+.entity-card__overline {
+  position: absolute;
+  top: var(--entity-overline-top);
+  left: 50%;
+  width: calc(100% - (2 * var(--entity-card-padding-x)));
+  transform: translateX(-50%);
+  color: color-mix(in srgb, var(--accent) 64%, var(--text-strong) 36%);
+  font-size: var(--entity-overline-size);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .entity-card__title {
   font-size: var(--entity-title-size);
   line-height: 1.2;
   font-weight: 600;
+  min-height: var(--entity-title-block-height);
 }
 
 .entity-card__subtitle {
   color: var(--muted);
   font-size: var(--entity-subtitle-size);
   line-height: 1.2;
+  min-height: var(--entity-subtitle-block-height);
 }
 
 .entity-card__badge {
@@ -178,18 +218,19 @@ const normalizedEmployeeNumber = computed(() => (
   --entity-card-radius: 12px;
   --entity-card-padding-y: 7px;
   --entity-card-padding-x: 5px;
-  --entity-card-gap: 5px;
-  --entity-avatar-size: 32px;
-  --entity-avatar-slot-size: 44px;
-  --entity-avatar-offset-y: 7px;
+  --entity-avatar-size-ratio: 0.41;
+  --entity-avatar-top-ratio: 0.106;
   --entity-avatar-radius: 9px;
+  --entity-overline-size: 0.68rem;
+  --entity-overline-top-ratio: 0.115;
+  --entity-meta-top-ratio: 0.558;
+  --entity-meta-gap-ratio: 0.038;
   --entity-title-size: 0.68rem;
   --entity-subtitle-size: 0.6rem;
-  --entity-title-min-height: 1.7em;
-  --entity-subtitle-min-height: 1.6em;
+  --entity-title-block-height: 1.8em;
+  --entity-subtitle-block-height: 1.6em;
   --entity-badge-size: 0.7rem;
-  --entity-badge-top: 6px;
-  --entity-badge-left: 6px;
+  --entity-badge-offset-ratio: 0.077;
 }
 
 .entity-card--graph {
@@ -197,18 +238,13 @@ const normalizedEmployeeNumber = computed(() => (
   --entity-card-radius: 14px;
   --entity-card-padding-y: 6px;
   --entity-card-padding-x: 7px;
-  --entity-card-gap: 4px;
-  --entity-avatar-size: 46%;
-  --entity-avatar-slot-size: calc(var(--member-card-width, 102px) * 0.68);
-  --entity-avatar-offset-y: calc(var(--member-card-width, 102px) * 0.247);
   --entity-avatar-radius: 24%;
+  --entity-overline-size: 0.8rem;
   --entity-title-size: 0.8rem;
   --entity-subtitle-size: 0.64rem;
-  --entity-title-min-height: 1.2em;
-  --entity-subtitle-min-height: 1.35em;
+  --entity-title-block-height: 2.4em;
+  --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.8rem;
-  --entity-badge-top: 8px;
-  --entity-badge-left: 8px;
 }
 
 .entity-card--leader {
@@ -216,18 +252,13 @@ const normalizedEmployeeNumber = computed(() => (
   --entity-card-radius: 20px;
   --entity-card-padding-y: 8px;
   --entity-card-padding-x: 7px;
-  --entity-card-gap: 4px;
-  --entity-avatar-size: 46%;
-  --entity-avatar-slot-size: calc(132px * 0.68);
-  --entity-avatar-offset-y: calc(132px * 0.247);
   --entity-avatar-radius: 24%;
+  --entity-overline-size: 0.84rem;
   --entity-title-size: 0.84rem;
   --entity-subtitle-size: 0.68rem;
-  --entity-title-min-height: 1.2em;
-  --entity-subtitle-min-height: 1.35em;
+  --entity-title-block-height: 2.4em;
+  --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.84rem;
-  --entity-badge-top: 8px;
-  --entity-badge-left: 8px;
 }
 
 .entity-card--featured {
@@ -235,17 +266,18 @@ const normalizedEmployeeNumber = computed(() => (
   --entity-card-radius: 18px;
   --entity-card-padding-y: 11px;
   --entity-card-padding-x: 9px;
-  --entity-card-gap: 8px;
-  --entity-avatar-size: 48px;
-  --entity-avatar-slot-size: 56px;
-  --entity-avatar-offset-y: 6px;
+  --entity-avatar-size-ratio: 0.41;
+  --entity-avatar-top-ratio: 0.109;
   --entity-avatar-radius: 12px;
+  --entity-overline-size: 0.82rem;
+  --entity-overline-top-ratio: 0.09;
+  --entity-meta-top-ratio: 0.57;
+  --entity-meta-gap-ratio: 0.051;
   --entity-title-size: 0.82rem;
   --entity-subtitle-size: 0.68rem;
-  --entity-title-min-height: 1.85em;
-  --entity-subtitle-min-height: 1.7em;
+  --entity-title-block-height: 2.1em;
+  --entity-subtitle-block-height: 1.7em;
   --entity-badge-size: 0.84rem;
-  --entity-badge-top: 8px;
-  --entity-badge-left: 8px;
+  --entity-badge-offset-ratio: 0.068;
 }
 </style>
