@@ -17,9 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   toggleTheme: [];
   selectTeam: [teamId: number];
-  openCreateTeam: [];
   openSettings: [];
-  openTeamDetail: [];
 }>();
 
 const teamMenuOpen = ref(false);
@@ -212,37 +210,8 @@ function optionLabel(team: TeamSummary): string {
         @click="emit('openSettings')"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 5.5h16"></path>
-          <path d="M4 12h16"></path>
-          <path d="M4 18.5h16"></path>
-          <circle cx="8" cy="5.5" r="2"></circle>
-          <circle cx="15" cy="12" r="2"></circle>
-          <circle cx="11" cy="18.5" r="2"></circle>
-        </svg>
-      </button>
-      <button
-        class="nav-action nav-icon-button"
-        type="button"
-        :disabled="activeTeamId === null"
-        title="团队详情"
-        aria-label="团队详情"
-        @click="emit('openTeamDetail')"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="3.5"></circle>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16.9l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-        </svg>
-      </button>
-      <button
-        class="nav-action nav-action-accent nav-icon-button"
-        type="button"
-        title="创建团队"
-        aria-label="创建团队"
-        @click="emit('openCreateTeam')"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 5v14"></path>
-          <path d="M5 12h14"></path>
         </svg>
       </button>
     </div>

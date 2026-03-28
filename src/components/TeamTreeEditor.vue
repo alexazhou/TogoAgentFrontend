@@ -496,6 +496,7 @@ const currentTemplateModelLabel = computed(() => {
 
 const graphRootNode = computed<TeamGraphNode | null>(() => {
   const leaderName = teamMembersDraft.value[0] ?? '';
+  const buildMemberAvatarSeed = (memberName: string): string => `${props.teamName}::${memberName}`;
   if (!leaderName) {
     const rootPendingSlot = pendingSlots.value.find((slot) => !slot.parentName);
     if (!rootPendingSlot) {
@@ -528,6 +529,7 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
       subtitle: teamMemberRoleDrafts.value[memberName] || memberName,
       employeeNumber: teamMemberEmployeeNumberDrafts.value[memberName] || '',
       avatarName: memberName,
+      avatarSeed: buildMemberAvatarSeed(memberName),
       children: [],
     };
     nodeMap.set(memberName, node);
@@ -1123,6 +1125,7 @@ function confirmDangerAction(): void {
     <MemberEditorDialog
       :open="memberEditorOpen"
       :editable="memberEditorEditable"
+      :team-name="teamName"
       :member-name="memberEditorName"
       :employee-number="currentEditingMemberEmployeeNumber"
       :member-model="memberEditorModel"

@@ -7,5 +7,6 @@ export type TeamGraphNode = {
   subtitle: string;
   employeeNumber?: string;
   avatarName: string;
+  avatarSeed?: string;
   children: TeamGraphNode[];
 };
