@@ -18,7 +18,8 @@ defineProps<{
   isSavingTeamInfo: boolean;
   teamInfoStatus: string;
   teamSummaries: Record<number, {
-    memberCount: number;
+    activeMemberCount: number;
+    offBoardMemberCount: number;
     roomCount: number;
     deptCount: number;
     hierarchyLevelCount: number;
@@ -122,7 +123,8 @@ const emit = defineEmits<{
         </div>
         <div class="team-card-summary">
           <div class="team-summary-row">
-            <span class="team-summary-chip">成员 {{ teamSummaries[team.id]?.memberCount ?? 0 }}</span>
+            <span class="team-summary-chip">在职 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
+            <span class="team-summary-chip">离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}</span>
             <span class="team-summary-chip">房间 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
             <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
             <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
