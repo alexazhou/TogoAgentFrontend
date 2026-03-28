@@ -80,6 +80,8 @@ const currentSectionId = computed(() =>
 const currentNavItem = computed(() =>
   navItems.find((item) => item.id === currentSectionId.value) ?? navItems[0],
 );
+const isTeamDetailView = computed(() => currentSectionId.value === 'teams' && detailTeamId.value !== null);
+const topbarBackLabel = computed(() => isTeamDetailView.value ? '返回团队管理' : '返回主界面');
 const detailTeamId = computed(() => {
   const raw = route.query.detailTeamId;
   if (typeof raw !== 'string') {
@@ -160,6 +162,10 @@ function handleBreadcrumbNavigate(key: string): void {
 }
 
 function goBack(): void {
+  if (isTeamDetailView.value) {
+    clearTeamDetail();
+    return;
+  }
   router.push({ name: 'console', params: { teamId: teamId.value } }).catch(console.error);
 }
 
@@ -501,7 +507,7 @@ function handleTeamTreeSaved(): void {
           <p class="settings-eyebrow">Admin Console</p>
         </div>
       </div>
-      <button type="button" class="secondary-button" @click="goBack">返回主界面</button>
+      <button type="button" class="secondary-button" @click="goBack">{{ topbarBackLabel }}</button>
     </header>
 
     <div class="settings-layout">

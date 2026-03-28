@@ -56,14 +56,31 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 
     <template v-if="selectedTeamDetail">
       <div class="team-detail-head">
-        <div>
-          <div class="team-detail-title-row">
-            <h4>{{ selectedTeamDetail.name }}</h4>
-            <p class="section-eyebrow">Team Detail</p>
-          </div>
+        <div class="team-detail-title-block">
+          <p class="section-eyebrow">Team Detail</p>
+          <h3>{{ selectedTeamDetail.name }}</h3>
         </div>
         <div class="team-detail-actions">
-          <button type="button" class="secondary-button" @click="emit('clearTeamDetail')">返回团队列表</button>
+          <button
+            type="button"
+            class="team-enabled-switch"
+            :class="{ 'is-enabled': selectedTeamDetail.enabled }"
+            :disabled="teamEnabledPending[selectedTeamDetail.id]"
+            :aria-pressed="selectedTeamDetail.enabled"
+            @click="emit('toggleTeamEnabled', selectedTeamDetail.id, !selectedTeamDetail.enabled)"
+          >
+            <span class="team-enabled-switch__label">
+              {{ teamEnabledPending[selectedTeamDetail.id]
+                ? '切换中'
+                : (selectedTeamDetail.enabled ? '启用' : '停用') }}
+            </span>
+            <span class="team-enabled-switch__track">
+              <span
+                class="team-enabled-switch__thumb"
+                :class="{ 'is-enabled': selectedTeamDetail.enabled }"
+              ></span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -309,17 +326,15 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
   gap: 12px;
 }
 
-.team-detail-head h4 {
+.team-detail-title-block {
+  display: grid;
+  gap: 2px;
+}
+
+.team-detail-head h3 {
   margin: 0;
   color: var(--text-strong);
   font-size: 1rem;
-}
-
-.team-detail-title-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .team-detail-head .section-eyebrow {
