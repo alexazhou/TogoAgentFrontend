@@ -953,6 +953,15 @@ function addSubordinate(parentName: string): void {
 }
 
 function openDepartmentEditor(memberName: string): void {
+  departmentEditorEditable.value = true;
+  editingDepartmentMemberName.value = memberName;
+  departmentEditorName.value = teamMemberDeptNameDrafts.value[memberName] || memberName;
+  departmentEditorResponsibility.value = teamMemberDeptResponsibilityDrafts.value[memberName] || '';
+  teamMemberStatus.value = '';
+}
+
+function openDepartmentViewer(memberName: string): void {
+  departmentEditorEditable.value = false;
   editingDepartmentMemberName.value = memberName;
   departmentEditorName.value = teamMemberDeptNameDrafts.value[memberName] || memberName;
   departmentEditorResponsibility.value = teamMemberDeptResponsibilityDrafts.value[memberName] || '';
@@ -960,6 +969,7 @@ function openDepartmentEditor(memberName: string): void {
 }
 
 function closeDepartmentEditor(): void {
+  departmentEditorEditable.value = true;
   editingDepartmentMemberName.value = '';
   departmentEditorName.value = '';
   departmentEditorResponsibility.value = '';
@@ -1080,6 +1090,7 @@ function confirmDangerAction(): void {
       @view-agent="openMemberViewer"
       @edit-agent="openMemberEditor"
       @edit-department="openDepartmentEditor"
+      @view-department="openDepartmentViewer"
       @add-subordinate="addSubordinate"
       @edit-pending-slot="editPendingSlot"
       @remove-pending-slot="removePendingSlot"
@@ -1119,6 +1130,7 @@ function confirmDangerAction(): void {
 
     <DepartmentEditorDialog
       :open="departmentEditorOpen"
+      :editable="departmentEditorEditable"
       :member-name="editingDepartmentMemberName"
       :department-name="departmentEditorName"
       :department-responsibility="departmentEditorResponsibility"

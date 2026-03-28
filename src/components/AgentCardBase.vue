@@ -47,7 +47,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
     type="button"
     @click="$emit('click')"
   >
-    <small v-if="normalizedOverline && !empty" class="entity-card__overline">
+    <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
       {{ normalizedOverline }}
     </small>
     <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
@@ -59,10 +59,8 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
       :src="getAgentAvatarUrl(avatarName)"
       :alt="avatarAlt"
     />
-    <div class="entity-card__meta">
-      <strong class="entity-card__title">{{ title }}</strong>
-      <small class="entity-card__subtitle">{{ subtitle }}</small>
-    </div>
+    <strong class="entity-card__title" :title="title">{{ title }}</strong>
+    <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
   </button>
 </template>
 
@@ -74,8 +72,8 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-avatar-size: calc(var(--entity-card-width) * var(--entity-avatar-size-ratio, 0.46));
   --entity-avatar-top: calc(var(--entity-card-height) * var(--entity-avatar-top-ratio, 0.209));
   --entity-overline-top: calc(var(--entity-card-height) * var(--entity-overline-top-ratio, 0.094));
-  --entity-meta-top: calc(var(--entity-card-height) * var(--entity-meta-top-ratio, 0.565));
-  --entity-meta-gap: calc(var(--entity-card-width) * var(--entity-meta-gap-ratio, 0.039));
+  --entity-title-top: calc(var(--entity-card-height) * var(--entity-title-top-ratio, 0.615));
+  --entity-subtitle-top: calc(var(--entity-card-height) * var(--entity-subtitle-top-ratio, 0.772));
   --entity-badge-top: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
   --entity-badge-left: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
   box-sizing: border-box;
@@ -141,25 +139,15 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
 }
 
-.entity-card__meta,
 .entity-card__title,
 .entity-card__subtitle,
 .entity-card__overline {
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.entity-card__meta {
-  position: absolute;
-  top: var(--entity-meta-top);
-  left: 50%;
-  width: calc(100% - (2 * var(--entity-card-padding-x)));
-  transform: translateX(-50%);
-  display: grid;
-  gap: var(--entity-meta-gap);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .entity-card__overline {
@@ -176,6 +164,11 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
 }
 
 .entity-card__title {
+  position: absolute;
+  top: var(--entity-title-top);
+  left: 50%;
+  width: calc(100% - (2 * var(--entity-card-padding-x)));
+  transform: translateX(-50%);
   font-size: var(--entity-title-size);
   line-height: 1.2;
   font-weight: 600;
@@ -183,6 +176,11 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
 }
 
 .entity-card__subtitle {
+  position: absolute;
+  top: var(--entity-subtitle-top);
+  left: 50%;
+  width: calc(100% - (2 * var(--entity-card-padding-x)));
+  transform: translateX(-50%);
   color: var(--muted);
   font-size: var(--entity-subtitle-size);
   line-height: 1.2;
@@ -223,8 +221,8 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-avatar-radius: 9px;
   --entity-overline-size: 0.68rem;
   --entity-overline-top-ratio: 0.115;
-  --entity-meta-top-ratio: 0.558;
-  --entity-meta-gap-ratio: 0.038;
+  --entity-title-top-ratio: 0.558;
+  --entity-subtitle-top-ratio: 0.765;
   --entity-title-size: 0.68rem;
   --entity-subtitle-size: 0.6rem;
   --entity-title-block-height: 1.8em;
