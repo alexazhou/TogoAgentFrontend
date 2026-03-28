@@ -144,7 +144,7 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
               :employee-number="employeeNumber"
               :avatar-name="selectedTemplate || memberNameModel"
               :selected="false"
-              variant="featured"
+              variant="graph"
             />
             <div v-else class="member-template-empty member-selected-empty">
               当前还没有选中模板
@@ -447,6 +447,7 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
 
 .member-selected-card {
   pointer-events: none;
+  --member-card-width: 102px;
 }
 
 .member-selected-empty {
@@ -481,14 +482,40 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
 }
 
 .member-template-grid {
+  --member-card-width: 102px;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   display: grid;
-  grid-template-columns: repeat(auto-fill, 78px);
+  grid-auto-flow: column;
+  grid-auto-columns: var(--member-card-width);
+  grid-template-rows: minmax(0, 1fr);
   gap: 10px 12px;
   align-content: start;
+  justify-content: start;
+  align-items: start;
   padding-top: 4px;
   padding-right: 4px;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--focus-border) 22%, var(--panel-border) 78%) transparent;
+}
+
+.member-template-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.member-template-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.member-template-grid::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--focus-border) 22%, var(--panel-border) 78%);
+}
+
+.member-template-grid::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--focus-border) 36%, var(--panel-border) 64%);
 }
 
 .member-template-option {
