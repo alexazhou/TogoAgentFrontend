@@ -12,6 +12,7 @@ const props = defineProps<{
   teams: TeamSummary[];
   activeTeamId: number | null;
   activeTeamEnabled: boolean;
+  showConnectionStatus?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -218,7 +219,7 @@ function optionLabel(team: TeamSummary): string {
 
     <div class="status-group">
       <div v-if="!activeTeamEnabled" class="team-disabled-pill">本团队已停用</div>
-      <div class="status-pill" :data-state="connectionState">
+      <div v-if="showConnectionStatus" class="status-pill" :data-state="connectionState">
         <span
           v-if="connectionState === 'waiting_reconnect'"
           class="reconnect-indicator"
@@ -237,7 +238,7 @@ function optionLabel(team: TeamSummary): string {
         ></span>
         {{ statusLabel }}
       </div>
-      <div class="metric-pill">{{ totalMessageCount }} 条消息</div>
+      <div v-if="showConnectionStatus" class="metric-pill">{{ totalMessageCount }} 条消息</div>
       <button
         class="theme-switch"
         type="button"
