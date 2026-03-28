@@ -5,12 +5,14 @@ import { getAgentAvatarUrl } from '../avatar';
 const props = withDefaults(defineProps<{
   title: string;
   subtitle: string;
+  employeeNumber?: string;
   avatarName?: string;
   selected?: boolean;
   empty?: boolean;
   readonly?: boolean;
   variant?: 'template' | 'graph' | 'leader' | 'featured';
 }>(), {
+  employeeNumber: '',
   avatarName: '',
   selected: false,
   empty: false,
@@ -23,6 +25,9 @@ defineEmits<{
 }>();
 
 const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
+const normalizedEmployeeNumber = computed(() => (
+  /^\d+$/.test(props.employeeNumber) ? props.employeeNumber : ''
+));
 </script>
 
 <template>
@@ -39,6 +44,9 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
     type="button"
     @click="$emit('click')"
   >
+    <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
+      #{{ normalizedEmployeeNumber }}
+    </small>
     <img
       v-if="avatarName && !empty"
       class="entity-card__avatar"
@@ -55,6 +63,7 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
   width: var(--entity-card-width);
   aspect-ratio: 3 / 4;
   box-sizing: border-box;
+  position: relative;
   border: 1px solid var(--team-create-node-border);
   border-radius: var(--entity-card-radius);
   background: var(--surface-soft);
@@ -138,6 +147,26 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
   line-height: 1.2;
 }
 
+.entity-card__badge {
+  position: absolute;
+  top: var(--entity-badge-top);
+  left: var(--entity-badge-left);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: calc(100% - (2 * var(--entity-badge-left)));
+  padding: 0;
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+  font-size: var(--entity-badge-size);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .entity-card.is-empty .entity-card__title {
   color: color-mix(in srgb, var(--text-strong) 58%, var(--muted) 42%);
 }
@@ -152,6 +181,9 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
   --entity-avatar-radius: 9px;
   --entity-title-size: 0.68rem;
   --entity-subtitle-size: 0.6rem;
+  --entity-badge-size: 0.7rem;
+  --entity-badge-top: 6px;
+  --entity-badge-left: 6px;
 }
 
 .entity-card--graph {
@@ -164,6 +196,9 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
   --entity-avatar-radius: 24%;
   --entity-title-size: 0.84rem;
   --entity-subtitle-size: 0.68rem;
+  --entity-badge-size: 0.8rem;
+  --entity-badge-top: 8px;
+  --entity-badge-left: 8px;
 }
 
 .entity-card--leader {
@@ -176,6 +211,9 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
   --entity-avatar-radius: 24%;
   --entity-title-size: 0.84rem;
   --entity-subtitle-size: 0.68rem;
+  --entity-badge-size: 0.84rem;
+  --entity-badge-top: 8px;
+  --entity-badge-left: 8px;
 }
 
 .entity-card--featured {
@@ -188,5 +226,8 @@ const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
   --entity-avatar-radius: 12px;
   --entity-title-size: 0.82rem;
   --entity-subtitle-size: 0.68rem;
+  --entity-badge-size: 0.84rem;
+  --entity-badge-top: 8px;
+  --entity-badge-left: 8px;
 }
 </style>

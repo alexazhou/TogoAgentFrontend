@@ -4,6 +4,7 @@ export type RoomType = 'private' | 'group';
 export interface AgentInfo {
   id?: number | null;
   name: string;
+  employee_number?: number | null;
   template_name?: string | null;
   role_template_name?: string | null;
   model: string;
