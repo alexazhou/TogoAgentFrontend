@@ -392,7 +392,9 @@ const currentEditingMemberEmployeeNumber = computed(() => (
 
 const currentTemplateModelLabel = computed(() => {
   const templateModel = currentMemberTemplateOption.value?.model || '';
-  return templateModel || resolveDefaultModelLabel(frontendConfig.value);
+  return (templateModel && templateModel !== '未设置') || templateModel === '自动'
+    ? templateModel
+    : resolveDefaultModelLabel(frontendConfig.value);
 });
 
 const graphRootNode = computed<TeamGraphNode | null>(() => {
@@ -476,7 +478,7 @@ const memberTemplateOptions = computed(() => {
     if (!definitions.has(templateName)) {
       definitions.set(templateName, {
         name: templateName,
-        model: template.model || '未设置',
+        model: template.model || '自动',
       });
     }
   });
@@ -485,7 +487,7 @@ const memberTemplateOptions = computed(() => {
     if (!definitions.has(templateName)) {
       definitions.set(templateName, {
         name: templateName,
-        model: '未设置',
+        model: '自动',
       });
     }
   });
