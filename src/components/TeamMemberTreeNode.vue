@@ -15,10 +15,14 @@ const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
   editAgent: [agentName: string];
+  editDepartment: [agentName: string];
+  viewDepartment: [agentName: string];
   addSubordinate: [agentName: string];
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
 }>();
+
+const showDepartmentAction = computed(() => props.node.kind === 'member' && !!props.node.children.length);
 
 function handlePrimaryAction(): void {
   if (props.node.kind !== 'member' || props.readonly || props.showEditAction) {
@@ -104,6 +108,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
         :empty="node.kind === 'pending'"
         :readonly="readonly"
         :title="node.kind === 'pending' ? '+' : node.name"
+        :overline="node.kind === 'pending' || !showDepartmentAction ? '' : (node.departmentName || '')"
         :subtitle="node.subtitle"
         :employee-number="node.employeeNumber"
         :avatar-name="node.kind === 'pending' ? '' : node.avatarName"
@@ -132,23 +137,42 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
         </template>
 
         <template v-else-if="node.kind === 'member'">
-          <button
-            v-if="readonly"
-            class="member-action-button"
-            type="button"
-            @pointerdown.stop
-            @click.stop="handleViewAction"
-          >
-            查看
-          </button>
+          <template v-if="readonly">
+            <button
+              v-if="showDepartmentAction"
+              class="member-action-button"
+              type="button"
+              @pointerdown.stop
+              @click.stop="emit('viewDepartment', node.name)"
+            >
+              查看部门
+            </button>
+            <button
+              class="member-action-button"
+              type="button"
+              @pointerdown.stop
+              @click.stop="handleViewAction"
+            >
+              查看
+            </button>
+          </template>
           <template v-else-if="showEditAction">
+            <button
+              v-if="showDepartmentAction"
+              class="member-action-button"
+              type="button"
+              @pointerdown.stop
+              @click.stop="emit('editDepartment', node.name)"
+            >
+              编辑部门
+            </button>
             <button
               class="member-action-button"
               type="button"
               @pointerdown.stop
               @click.stop="handleEditAction"
             >
-              编辑
+              编辑成员
             </button>
             <button
               class="member-action-button"
@@ -212,6 +236,8 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
             @toggle-agent="emit('toggleAgent', $event)"
             @view-agent="emit('viewAgent', $event)"
             @edit-agent="emit('editAgent', $event)"
+            @edit-department="emit('editDepartment', $event)"
+            @view-department="emit('viewDepartment', $event)"
             @add-subordinate="emit('addSubordinate', $event)"
             @edit-pending-slot="emit('editPendingSlot', $event)"
             @remove-pending-slot="emit('removePendingSlot', $event)"
@@ -233,7 +259,6 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
 }
 
 .member-card-button {
-  width: var(--member-card-width);
   justify-self: center;
 }
 
@@ -242,15 +267,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
   display: grid;
   justify-items: center;
   align-content: start;
-  width: var(--member-card-width);
-}
-
-.member-card-shell.is-root-node > .member-card-anchor {
-  width: 132px;
-}
-
-.member-card-shell.is-root-node > .member-card-anchor > .member-card-button {
-  width: 132px;
+  width: max-content;
 }
 
 .member-child-tree {

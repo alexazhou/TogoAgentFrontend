@@ -17,6 +17,8 @@ const emit = defineEmits<{
   toggleAgent: [agentName: string];
   viewAgent: [agentName: string];
   editAgent: [agentName: string];
+  editDepartment: [agentName: string];
+  viewDepartment: [agentName: string];
   addSubordinate: [agentName: string];
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
@@ -35,12 +37,16 @@ function buildFallbackRootNode(): TeamGraphNode | null {
     id: leaderName,
     kind: 'member',
     name: leaderName,
+    departmentName: leaderName,
+    hasDepartment: true,
     subtitle: memberTemplates.value[leaderName] || leaderName,
     avatarName: leaderName,
     children: props.selectedAgents.slice(1).map((agentName) => ({
       id: agentName,
       kind: 'member',
       name: agentName,
+      departmentName: agentName,
+      hasDepartment: false,
       subtitle: memberTemplates.value[agentName] || agentName,
       avatarName: agentName,
       children: [],
@@ -108,6 +114,8 @@ const {
           @toggle-agent="emit('toggleAgent', $event)"
           @view-agent="emit('viewAgent', $event)"
           @edit-agent="emit('editAgent', $event)"
+          @edit-department="emit('editDepartment', $event)"
+          @view-department="emit('viewDepartment', $event)"
           @add-subordinate="emit('addSubordinate', $event)"
           @edit-pending-slot="emit('editPendingSlot', $event)"
           @remove-pending-slot="emit('removePendingSlot', $event)"

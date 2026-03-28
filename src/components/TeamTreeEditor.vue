@@ -9,6 +9,7 @@ import {
   type MemberTemplateOption,
 } from '../composables/useMemberEditorDialog';
 import ConfirmDialog from './ConfirmDialog.vue';
+import DepartmentEditorDialog from './DepartmentEditorDialog.vue';
 import TeamMembersCard from './TeamMembersCard.vue';
 import MemberEditorDialog from './MemberEditorDialog.vue';
 import type { DeptTreeNode, FrontendConfig, TeamMember } from '../types';
@@ -40,9 +41,15 @@ const teamMemberNameDraftsById = ref<Record<number, string>>({});
 const teamMemberRoleDrafts = ref<Record<string, string>>({});
 const teamMemberModelDrafts = ref<Record<string, string>>({});
 const teamMemberDriverDrafts = ref<Record<string, string>>({});
+const teamMemberDeptNameDrafts = ref<Record<string, string>>({});
+const teamMemberDeptResponsibilityDrafts = ref<Record<string, string>>({});
 const teamMemberParentDrafts = ref<Record<string, string>>({});
 const pendingSlots = ref<Array<{ id: string; parentName: string }>>([]);
 const editingPendingSlotId = ref<string | null>(null);
+const editingDepartmentMemberName = ref('');
+const departmentEditorName = ref('');
+const departmentEditorResponsibility = ref('');
+const departmentEditorEditable = ref(true);
 const confirmState = ref<{
   title: string;
   message: string;
@@ -125,6 +132,54 @@ function buildTeamMemberModelDraft(agents: AgentInfo[]): Record<string, string> 
 
 function buildTeamMemberDriverDraft(agents: AgentInfo[]): Record<string, string> {
   return Object.fromEntries(agents.map((agent) => [agent.name, parseDriverTypeValue(agent.driver || '')]));
+}
+
+function buildTeamMemberDeptNameDraft(tree: DeptTreeNode | null, members: TeamMember[]): Record<string, string> {
+  const fallbackTree = tree ?? buildFallbackDeptTree(members);
+  const drafts: Record<string, string> = {};
+  if (fallbackTree) {
+    const stack = [fallbackTree];
+    while (stack.length) {
+      const current = stack.pop()!;
+      const memberName = resolveTreeNodeMemberName(current);
+      if (memberName) {
+        drafts[memberName] = current.dept_name?.trim() || memberName;
+      }
+      for (let index = current.children.length - 1; index >= 0; index -= 1) {
+        stack.push(current.children[index]);
+      }
+    }
+  }
+  members.forEach((member) => {
+    if (!drafts[member.name]) {
+      drafts[member.name] = member.name;
+    }
+  });
+  return drafts;
+}
+
+function buildTeamMemberDeptResponsibilityDraft(tree: DeptTreeNode | null, members: TeamMember[]): Record<string, string> {
+  const fallbackTree = tree ?? buildFallbackDeptTree(members);
+  const drafts: Record<string, string> = {};
+  if (fallbackTree) {
+    const stack = [fallbackTree];
+    while (stack.length) {
+      const current = stack.pop()!;
+      const memberName = resolveTreeNodeMemberName(current);
+      if (memberName) {
+        drafts[memberName] = current.dept_responsibility || '';
+      }
+      for (let index = current.children.length - 1; index >= 0; index -= 1) {
+        stack.push(current.children[index]);
+      }
+    }
+  }
+  members.forEach((member) => {
+    if (!(member.name in drafts)) {
+      drafts[member.name] = '';
+    }
+  });
+  return drafts;
 }
 
 function isOnBoardAgent(agent: AgentInfo): boolean {
@@ -369,7 +424,7 @@ function buildDeptTreePayload(): DeptTreeNode | null {
   const buildNode = (memberName: string): DeptTreeNode => {
     const childNames = childrenByParent.get(memberName) ?? [];
     return {
-      dept_name: memberName,
+      dept_name: teamMemberDeptNameDrafts.value[memberName] || memberName,
       dept_responsibility: '',
       manager: memberName,
       members: [memberName],
@@ -391,6 +446,7 @@ function syncDraftFromCommitted(): void {
   teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(committedMembers.value);
   teamMemberModelDrafts.value = buildTeamMemberModelDraft(committedAgents.value);
   teamMemberDriverDrafts.value = buildTeamMemberDriverDraft(committedAgents.value);
+  teamMemberDeptNameDrafts.value = buildTeamMemberDeptNameDraft(committedDeptTree.value, committedMembers.value);
   teamMemberParentDrafts.value = parentMap;
 }
 
@@ -455,6 +511,7 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
       id: memberName,
       kind: 'member',
       name: memberName,
+      departmentName: teamMemberDeptNameDrafts.value[memberName] || memberName,
       subtitle: teamMemberRoleDrafts.value[memberName] || memberName,
       employeeNumber: teamMemberEmployeeNumberDrafts.value[memberName] || '',
       avatarName: memberName,
@@ -480,6 +537,7 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
       id: slot.id,
       kind: 'pending',
       name: '',
+      departmentName: '',
       subtitle: '成员',
       avatarName: '',
       children: [],
@@ -582,6 +640,8 @@ const {
     committedMembers.value.some((member) => member.name === memberName),
 });
 
+const departmentEditorOpen = computed(() => !!editingDepartmentMemberName.value);
+
 const memberPanelActions = computed(() => {
   if (isReadonly.value) {
     return [
@@ -628,6 +688,8 @@ watch(
       syncCommittedState(deptTree, nextMembers);
       pendingSlots.value = [];
       editingPendingSlotId.value = null;
+      editingDepartmentMemberName.value = '';
+      departmentEditorName.value = '';
       teamMemberStatus.value = '';
       isReadonly.value = true;
       resetDialogState();
@@ -648,9 +710,12 @@ watch(
       teamMemberRoleDrafts.value = {};
       teamMemberModelDrafts.value = {};
       teamMemberDriverDrafts.value = {};
+      teamMemberDeptNameDrafts.value = {};
       teamMemberParentDrafts.value = {};
       pendingSlots.value = [];
       editingPendingSlotId.value = null;
+      editingDepartmentMemberName.value = '';
+      departmentEditorName.value = '';
       teamMemberStatus.value = '加载失败';
       isReadonly.value = true;
       resetDialogState();
@@ -667,6 +732,8 @@ function cancelTeamMemberEdit(): void {
   syncDraftFromCommitted();
   pendingSlots.value = [];
   editingPendingSlotId.value = null;
+  editingDepartmentMemberName.value = '';
+  departmentEditorName.value = '';
   teamMemberStatus.value = '';
   isReadonly.value = true;
   closeMemberEditor();
@@ -695,6 +762,8 @@ async function saveTeamMembers(): Promise<void> {
     syncCommittedState(nextDeptTree, nextAgents);
     pendingSlots.value = [];
     editingPendingSlotId.value = null;
+    editingDepartmentMemberName.value = '';
+    departmentEditorName.value = '';
     teamMemberStatus.value = '已保存';
     isReadonly.value = true;
     showGlobalSuccessToast('团队成员已保存');
@@ -760,6 +829,10 @@ function saveMemberEditor(): void {
       ...teamMemberRoleDrafts.value,
       [nextMemberName]: memberEditorTemplate.value,
     };
+    teamMemberDeptNameDrafts.value = {
+      ...teamMemberDeptNameDrafts.value,
+      [nextMemberName]: nextMemberName,
+    };
     teamMemberModelDrafts.value = {
       ...teamMemberModelDrafts.value,
       [nextMemberName]: memberEditorModel.value.trim(),
@@ -823,6 +896,12 @@ function saveMemberEditor(): void {
     nextDriverDrafts[nextMemberName] = memberEditorDriver.value || previousDriver || '';
     teamMemberDriverDrafts.value = nextDriverDrafts;
 
+    const nextDeptNameDrafts = { ...teamMemberDeptNameDrafts.value };
+    const previousDeptName = nextDeptNameDrafts[originalName];
+    delete nextDeptNameDrafts[originalName];
+    nextDeptNameDrafts[nextMemberName] = previousDeptName || nextMemberName;
+    teamMemberDeptNameDrafts.value = nextDeptNameDrafts;
+
     teamMemberParentDrafts.value = Object.fromEntries(
       Object.entries(teamMemberParentDrafts.value).map(([memberName, parentName]) => [
         memberName === originalName ? nextMemberName : memberName,
@@ -873,6 +952,35 @@ function addSubordinate(parentName: string): void {
   teamMemberStatus.value = '';
 }
 
+function openDepartmentEditor(memberName: string): void {
+  editingDepartmentMemberName.value = memberName;
+  departmentEditorName.value = teamMemberDeptNameDrafts.value[memberName] || memberName;
+  teamMemberStatus.value = '';
+}
+
+function closeDepartmentEditor(): void {
+  editingDepartmentMemberName.value = '';
+  departmentEditorName.value = '';
+}
+
+function saveDepartmentEditor(): void {
+  const memberName = editingDepartmentMemberName.value;
+  const nextDepartmentName = departmentEditorName.value.trim();
+  if (!memberName) {
+    return;
+  }
+  if (!nextDepartmentName) {
+    teamMemberStatus.value = '部门名称不能为空';
+    return;
+  }
+  teamMemberDeptNameDrafts.value = {
+    ...teamMemberDeptNameDrafts.value,
+    [memberName]: nextDepartmentName,
+  };
+  showGlobalSuccessToast('已经更新到组织树');
+  closeDepartmentEditor();
+}
+
 function editPendingSlot(slotId: string): void {
   editingPendingSlotId.value = slotId;
   openPendingMemberEditor('');
@@ -918,12 +1026,15 @@ function confirmDangerAction(): void {
   const removedNames = new Set(collectMemberBranch(action.agentName));
   teamMembersDraft.value = teamMembersDraft.value.filter((item) => !removedNames.has(item));
   const nextRoleDrafts = { ...teamMemberRoleDrafts.value };
+  const nextDeptNameDrafts = { ...teamMemberDeptNameDrafts.value };
   const nextParentDrafts = { ...teamMemberParentDrafts.value };
   removedNames.forEach((name) => {
     delete nextRoleDrafts[name];
+    delete nextDeptNameDrafts[name];
     delete nextParentDrafts[name];
   });
   teamMemberRoleDrafts.value = nextRoleDrafts;
+  teamMemberDeptNameDrafts.value = nextDeptNameDrafts;
   teamMemberParentDrafts.value = nextParentDrafts;
   pendingSlots.value = pendingSlots.value.filter((slot) => !removedNames.has(slot.parentName));
   if (editingMemberName.value && removedNames.has(editingMemberName.value)) {
@@ -935,6 +1046,9 @@ function confirmDangerAction(): void {
       editingPendingSlotId.value = null;
       closeMemberEditor();
     }
+  }
+  if (editingDepartmentMemberName.value && removedNames.has(editingDepartmentMemberName.value)) {
+    closeDepartmentEditor();
   }
 
   closeConfirmDialog();
@@ -958,6 +1072,7 @@ function confirmDangerAction(): void {
       @toggle-agent="toggleTeamMember"
       @view-agent="openMemberViewer"
       @edit-agent="openMemberEditor"
+      @edit-department="openDepartmentEditor"
       @add-subordinate="addSubordinate"
       @edit-pending-slot="editPendingSlot"
       @remove-pending-slot="removePendingSlot"
@@ -993,6 +1108,15 @@ function confirmDangerAction(): void {
       :danger="confirmState.danger"
       @close="closeConfirmDialog"
       @confirm="confirmDangerAction"
+    />
+
+    <DepartmentEditorDialog
+      :open="departmentEditorOpen"
+      :member-name="editingDepartmentMemberName"
+      :department-name="departmentEditorName"
+      @close="closeDepartmentEditor"
+      @save="saveDepartmentEditor"
+      @update:department-name="departmentEditorName = $event"
     />
   </div>
 </template>
