@@ -367,7 +367,37 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 }
 
 .team-card--disabled {
-  opacity: 0.88;
+  border-color: color-mix(in srgb, var(--panel-border) 86%, transparent 14%);
+  background: color-mix(in srgb, var(--panel-bg) 90%, var(--surface-soft) 10%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 56%, transparent 44%),
+    0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.team-card--disabled .team-card-head strong,
+.team-card--disabled .team-group-title {
+  color: color-mix(in srgb, var(--text-strong) 72%, var(--muted) 28%);
+}
+
+.team-card--disabled .team-card-id,
+.team-card--disabled .team-last-active {
+  color: color-mix(in srgb, var(--hint-text) 78%, var(--muted) 22%);
+}
+
+.team-card--disabled .team-summary-chip {
+  border-color: color-mix(in srgb, var(--panel-border) 82%, transparent 18%);
+  background: color-mix(in srgb, var(--panel-bg) 92%, var(--surface-soft) 8%);
+  color: color-mix(in srgb, var(--muted) 86%, var(--text-strong) 14%);
+}
+
+.team-card--disabled .ghost-button {
+  border-color: color-mix(in srgb, var(--panel-border) 88%, transparent 12%);
+  color: color-mix(in srgb, var(--muted) 82%, var(--text-strong) 18%);
+  background: color-mix(in srgb, var(--panel-bg) 94%, var(--surface-soft) 6%);
+}
+
+.team-card--disabled .ghost-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--selected) 18%, var(--panel-bg) 82%);
 }
 
 .team-card-head,
