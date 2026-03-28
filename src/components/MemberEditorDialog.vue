@@ -34,7 +34,7 @@ const memberNameModel = computed({
   set: (value: string) => emit('update:memberName', value),
 });
 
-const memberModelValue = computed(() => props.memberModel || props.currentTemplateModel || '未设置');
+const memberModelValue = computed(() => props.memberModel || props.currentTemplateModel || '自动');
 const memberModelModel = computed({
   get: () => props.memberModel,
   set: (value: string) => emit('update:memberModel', value),
