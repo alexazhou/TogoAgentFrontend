@@ -149,6 +149,7 @@ function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
   return names.map((name) => ({
     id: null,
     name,
+    employee_number: null,
     template_name: null,
     role_template_name: '',
     model: '',
@@ -291,6 +292,14 @@ const selectedTeamMemberTemplates = computed<Record<string, string>>(() => {
   return { ...teamMemberRoleDrafts.value };
 });
 
+const teamMemberEmployeeNumberDrafts = computed<Record<string, string>>(() => {
+  return Object.fromEntries(
+    committedAgents.value
+      .filter((agent) => agent.name)
+      .map((agent) => [agent.name, typeof agent.employee_number === 'number' ? String(agent.employee_number) : '']),
+  );
+});
+
 const graphRootNode = computed<TeamGraphNode | null>(() => {
   const leaderName = teamMembersDraft.value[0] ?? '';
   if (!leaderName) {
@@ -309,6 +318,7 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
       kind: 'member',
       name: memberName,
       subtitle: teamMemberRoleDrafts.value[memberName] || memberName,
+      employeeNumber: teamMemberEmployeeNumberDrafts.value[memberName] || '',
       avatarName: memberName,
       children: [],
     };

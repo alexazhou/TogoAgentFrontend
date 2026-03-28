@@ -24,6 +24,7 @@ type RawRoomInfo = Partial<RoomInfo> & {
 };
 
 type RawAgentInfo = Partial<AgentInfo> & {
+  employee_number?: number;
   status?: string;
   role_template_name?: string;
   employ_status?: string;
@@ -31,6 +32,7 @@ type RawAgentInfo = Partial<AgentInfo> & {
 };
 
 type RawAgentDetail = Partial<AgentDetail> & {
+  employee_number?: number;
   status?: string;
   role_template_name?: string;
   employ_status?: string;
@@ -85,9 +87,42 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     });
 
     if (!response.ok) {
-      const message = `请求失败：${response.status} ${path}`;
+      let errorDetail = '';
+
+      try {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const errorBody = await response.json() as {
+            error_desc?: unknown;
+            error_code?: unknown;
+            message?: unknown;
+          };
+          if (typeof errorBody.error_desc === 'string' && errorBody.error_desc.trim()) {
+            errorDetail = errorBody.error_desc.trim();
+          } else if (typeof errorBody.message === 'string' && errorBody.message.trim()) {
+            errorDetail = errorBody.message.trim();
+          } else if (typeof errorBody.error_code === 'string' && errorBody.error_code.trim()) {
+            errorDetail = errorBody.error_code.trim();
+          }
+        } else {
+          const errorText = (await response.text()).trim();
+          if (errorText) {
+            errorDetail = errorText;
+          }
+        }
+      } catch {
+        errorDetail = '';
+      }
+
+      const message = errorDetail
+        ? `请求失败：${response.status} ${path}\n${errorDetail}`
+        : `请求失败：${response.status} ${path}`;
       showGlobalRequestError(message);
-      throw new Error(`Request failed: ${response.status}`);
+      throw new Error(
+        errorDetail
+          ? `Request failed: ${response.status} ${errorDetail}`
+          : `Request failed: ${response.status}`,
+      );
     }
 
     return response.json() as Promise<T>;
@@ -125,6 +160,7 @@ function normalizeAgent(agent: RawAgentInfo): AgentInfo {
   return {
     id: typeof agent.id === 'number' ? agent.id : null,
     name: String(agent.name ?? ''),
+    employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
     template_name: templateName,
     role_template_name: templateName,
     model: String(agent.model ?? ''),
