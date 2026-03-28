@@ -13,10 +13,16 @@ export type MemberDriverOption = {
   label: string;
 };
 
+export type MemberModelOption = {
+  value: string;
+  label: string;
+};
+
 type UseMemberEditorDialogOptions = {
   teamId: Ref<number>;
   templateOptions: ComputedRef<MemberTemplateOption[]>;
   driverCatalog: Ref<MemberDriverOption[]>;
+  modelCatalog: Ref<MemberModelOption[]>;
   resolveName: (memberName: string) => string;
   resolveModel: (memberName: string) => string;
   resolveDriver: (memberName: string) => string;
@@ -40,6 +46,19 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   const currentMemberTemplateOption = computed(
     () => options.templateOptions.value.find((item) => item.name === memberEditorTemplate.value) ?? null,
   );
+  const memberModelOptions = computed(() => {
+    const optionsMap = new Map<string, string>();
+
+    options.modelCatalog.value.forEach((model) => {
+      optionsMap.set(model.value, model.label);
+    });
+
+    if (memberEditorModel.value && !optionsMap.has(memberEditorModel.value)) {
+      optionsMap.set(memberEditorModel.value, memberEditorModel.value);
+    }
+
+    return Array.from(optionsMap.entries()).map(([value, label]) => ({ value, label }));
+  });
   const filteredMemberTemplateOptions = computed(() => {
     const keyword = memberEditorKeyword.value.trim().toLowerCase();
     if (!keyword) {
@@ -155,6 +174,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     memberEditorOpen,
     memberEditorEditable,
     currentMemberTemplateOption,
+    memberModelOptions,
     filteredMemberTemplateOptions,
     memberDriverOptions,
     openMemberEditor,
