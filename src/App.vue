@@ -36,6 +36,7 @@ const activeTeamEnabled = computed(() => {
   const enabled = currentTeam.value?.enabled as boolean | number | undefined;
   return enabled !== false && enabled !== 0;
 });
+const showTeamDisabledPill = computed(() => route.name === 'console' && !activeTeamEnabled.value);
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
 
@@ -138,7 +139,7 @@ onMounted(async () => {
       :total-message-count="totalMessageCount"
       :teams="teams"
       :active-team-id="activeTeamId"
-      :active-team-enabled="activeTeamEnabled"
+      :active-team-enabled="showTeamDisabledPill ? activeTeamEnabled : true"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @open-create-team="openCreateTeam"
