@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, setAgentsByTeamId, setDeptTree } from '../api';
+import { showGlobalSuccessToast } from '../appUiState';
 import {
   useMemberEditorDialog,
   type MemberDriverOption,
@@ -740,6 +741,7 @@ function saveMemberEditor(): void {
     };
     pendingSlots.value = pendingSlots.value.filter((slot) => slot.id !== editingPendingSlotId.value);
     editingPendingSlotId.value = null;
+    showGlobalSuccessToast('已经更新到组织树');
     closeMemberEditor();
     return;
   }
@@ -825,7 +827,7 @@ function saveMemberEditor(): void {
     ...teamMemberDriverDrafts.value,
     [nextMemberName]: memberEditorDriver.value || teamMemberDriverDrafts.value[nextMemberName] || '',
   };
-  teamMemberStatus.value = '';
+  showGlobalSuccessToast('已经更新到组织树');
   closeMemberEditor();
 }
 
