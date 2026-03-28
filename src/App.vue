@@ -37,6 +37,7 @@ const activeTeamEnabled = computed(() => {
   return enabled !== false && enabled !== 0;
 });
 const showTeamDisabledPill = computed(() => route.name === 'console' && !activeTeamEnabled.value);
+const showTopbarConnectionStatus = computed(() => route.name === 'console');
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
 
@@ -125,6 +126,7 @@ onMounted(async () => {
       :teams="teams"
       :active-team-id="activeTeamId"
       :active-team-enabled="showTeamDisabledPill ? activeTeamEnabled : true"
+      :show-connection-status="showTopbarConnectionStatus"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @open-settings="openSettings"
