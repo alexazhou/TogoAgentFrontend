@@ -419,7 +419,11 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
 
 .member-selected-card {
   pointer-events: none;
-  --member-card-width: 102px;
+  --member-card-width: 153px;
+  --entity-overline-size: 0.96rem;
+  --entity-title-size: 1rem;
+  --entity-subtitle-size: 0.88rem;
+  --entity-badge-size: 0.96rem;
 }
 
 .member-selected-empty {

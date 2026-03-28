@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgents, getDeptTree, getTeamDetail, updateTeam } from '../api';
+import { getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
@@ -29,7 +29,8 @@ const agents = ref<AgentInfo[]>([]);
 const settingsMainRef = ref<HTMLElement | null>(null);
 const settingsScrollbarHovered = ref(false);
 const teamSummaries = ref<Record<number, {
-  memberCount: number;
+  activeMemberCount: number;
+  offBoardMemberCount: number;
   roomCount: number;
   deptCount: number;
   hierarchyLevelCount: number;
@@ -195,12 +196,16 @@ async function loadTeamSummaries(): Promise<void> {
   const entries = await Promise.all(
     teams.value.map(async (team) => {
       try {
-        const [detail, deptTree] = await Promise.all([
+        const [detail, deptTree, teamAgents] = await Promise.all([
           getTeamDetail(team.id),
           getDeptTree(team.id),
+          getAgentsByTeamId(team.id),
         ]);
+        const activeMemberCount = teamAgents.filter((agent) => String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD').length;
+        const offBoardMemberCount = teamAgents.filter((agent) => String(agent.employ_status ?? '').toUpperCase() === 'OFF_BOARD').length;
         return [team.id, {
-          memberCount: detail.members.length,
+          activeMemberCount,
+          offBoardMemberCount,
           roomCount: detail.rooms.length,
           deptCount: countDeptNodes(deptTree),
           hierarchyLevelCount: countDeptHierarchyLevels(deptTree),
@@ -209,7 +214,8 @@ async function loadTeamSummaries(): Promise<void> {
       } catch (error) {
         console.error(error);
         return [team.id, {
-          memberCount: 0,
+          activeMemberCount: 0,
+          offBoardMemberCount: 0,
           roomCount: 0,
           deptCount: 0,
           hierarchyLevelCount: 0,

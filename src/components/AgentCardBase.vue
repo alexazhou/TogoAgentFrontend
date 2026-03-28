@@ -74,7 +74,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-avatar-size: calc(var(--entity-card-width) * var(--entity-avatar-size-ratio, 0.46));
   --entity-avatar-top: calc(var(--entity-card-height) * var(--entity-avatar-top-ratio, 0.209));
   --entity-overline-top: calc(var(--entity-card-height) * var(--entity-overline-top-ratio, 0.094));
-  --entity-meta-top: calc(var(--entity-card-height) * var(--entity-meta-top-ratio, 0.63));
+  --entity-meta-top: calc(var(--entity-card-height) * var(--entity-meta-top-ratio, 0.565));
   --entity-meta-gap: calc(var(--entity-card-width) * var(--entity-meta-gap-ratio, 0.039));
   --entity-badge-top: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
   --entity-badge-left: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
@@ -242,7 +242,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-overline-size: 0.8rem;
   --entity-title-size: 0.8rem;
   --entity-subtitle-size: 0.64rem;
-  --entity-title-block-height: 2.4em;
+  --entity-title-block-height: 2.2em;
   --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.8rem;
 }
@@ -256,7 +256,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-overline-size: 0.84rem;
   --entity-title-size: 0.84rem;
   --entity-subtitle-size: 0.68rem;
-  --entity-title-block-height: 2.4em;
+  --entity-title-block-height: 2.2em;
   --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.84rem;
 }
