@@ -5,52 +5,66 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const outputDir = path.resolve(__dirname, '../public/avatars');
-const avatarCount = 100;
-const gridSize = 5;
-const cellSize = 14;
-const padding = 10;
-const canvasSize = padding * 2 + gridSize * cellSize;
+const sourceDir = path.resolve(__dirname, '../../avatars_batch');
 
 function writeDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function createSvg(index) {
-  const hue = (index * 37 + 196) % 360;
-  const background = `hsl(${hue} 42% 84%)`;
-  const foreground = `hsl(${hue} 58% 30%)`;
-  const border = `hsl(${hue} 36% 68%)`;
-  let state = (index + 1) * 2654435761 >>> 0;
-  let rects = '';
+function collectAvatarFiles(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const files = [];
 
-  for (let y = 0; y < gridSize; y += 1) {
-    for (let x = 0; x < Math.ceil(gridSize / 2); x += 1) {
-      state ^= state << 13;
-      state ^= state >>> 17;
-      state ^= state << 5;
-      const filled = (state >>> 0) & 1;
-      if (!filled) {
-        continue;
-      }
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
 
-      const leftX = padding + x * cellSize;
-      const rightX = padding + (gridSize - 1 - x) * cellSize;
-      const yPos = padding + y * cellSize;
-      rects += `<rect x='${leftX}' y='${yPos}' width='${cellSize}' height='${cellSize}' rx='2' fill='${foreground}'/>`;
-      if (rightX !== leftX) {
-        rects += `<rect x='${rightX}' y='${yPos}' width='${cellSize}' height='${cellSize}' rx='2' fill='${foreground}'/>`;
-      }
+    if (entry.isDirectory()) {
+      files.push(...collectAvatarFiles(fullPath));
+      continue;
     }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    if (path.extname(entry.name).toLowerCase() !== '.png') {
+      continue;
+    }
+
+    if (entry.name.startsWith('avatar_strip_')) {
+      continue;
+    }
+
+    files.push(fullPath);
   }
 
-  return `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${canvasSize} ${canvasSize}' width='${canvasSize}' height='${canvasSize}' role='img' aria-label='agent avatar ${index + 1}'><rect width='${canvasSize}' height='${canvasSize}' rx='18' fill='${background}'/><rect x='6' y='6' width='${canvasSize - 12}' height='${canvasSize - 12}' rx='14' fill='none' stroke='${border}'/>${rects}</svg>`;
+  return files.sort((left, right) =>
+    path.relative(sourceDir, left).localeCompare(path.relative(sourceDir, right)),
+  );
 }
 
 writeDir(outputDir);
 
-for (let i = 0; i < avatarCount; i += 1) {
-  const fileName = `${String(i + 1).padStart(3, '0')}.svg`;
-  fs.writeFileSync(path.join(outputDir, fileName), createSvg(i));
+for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
+  if (!entry.isFile()) {
+    continue;
+  }
+
+  const ext = path.extname(entry.name).toLowerCase();
+  if (ext === '.png' || ext === '.svg') {
+    fs.rmSync(path.join(outputDir, entry.name));
+  }
 }
 
-console.log(`generated ${avatarCount} avatars in ${outputDir}`);
+const avatarFiles = collectAvatarFiles(sourceDir);
+
+if (avatarFiles.length === 0) {
+  throw new Error(`No avatar PNGs found in ${sourceDir}`);
+}
+
+for (let index = 0; index < avatarFiles.length; index += 1) {
+  const outputName = `${String(index + 1).padStart(3, '0')}.png`;
+  fs.copyFileSync(avatarFiles[index], path.join(outputDir, outputName));
+}
+
+console.log(`copied ${avatarFiles.length} avatars into ${outputDir}`);
