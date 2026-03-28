@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, ref } from 'vue';
 import type { TeamSummary } from '../types';
 import type { ConnectionState } from '../utils';
 
@@ -10,6 +11,7 @@ const props = defineProps<{
   totalMessageCount: number;
   teams: TeamSummary[];
   activeTeamId: number | null;
+  activeTeamEnabled: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -20,11 +22,104 @@ const emit = defineEmits<{
   openTeamDetail: [];
 }>();
 
-function handleTeamChange(event: Event): void {
-  const value = Number((event.target as HTMLSelectElement).value);
-  if (Number.isFinite(value)) {
-    emit('selectTeam', value);
+const teamMenuOpen = ref(false);
+const activeTeamName = computed(() => (
+  props.teams.find((team) => team.id === props.activeTeamId)?.name ?? '选择团队'
+));
+const enabledTeams = computed(() => props.teams
+  .filter((team) => team.enabled)
+  .slice()
+  .sort((left, right) => left.id - right.id));
+const disabledTeams = computed(() => props.teams
+  .filter((team) => !team.enabled)
+  .slice()
+  .sort((left, right) => left.id - right.id));
+
+function selectTeam(teamId: number): void {
+  teamMenuOpen.value = false;
+  emit('selectTeam', teamId);
+}
+
+function toggleTeamMenu(): void {
+  if (!props.teams.length) {
+    return;
   }
+  teamMenuOpen.value = !teamMenuOpen.value;
+}
+
+function handleWindowPointerDown(event: PointerEvent): void {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  if (!target.closest('.team-switcher')) {
+    teamMenuOpen.value = false;
+  }
+}
+
+function handleWindowKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') {
+    teamMenuOpen.value = false;
+  }
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointerdown', handleWindowPointerDown);
+  window.removeEventListener('keydown', handleWindowKeydown);
+});
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', handleWindowPointerDown);
+  window.addEventListener('keydown', handleWindowKeydown);
+}
+
+function handleTeamButtonKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    toggleTeamMenu();
+    return;
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    teamMenuOpen.value = true;
+  }
+}
+
+function handleTeamOptionKeydown(event: KeyboardEvent, teamId: number): void {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    selectTeam(teamId);
+  }
+}
+
+function isActiveTeam(teamId: number): boolean {
+  return props.activeTeamId === teamId;
+}
+
+function optionTabIndex(teamId: number): number {
+  return isActiveTeam(teamId) ? 0 : -1;
+}
+
+function listboxId(): string {
+  return 'topbar-team-switcher-listbox';
+}
+
+function buttonLabelId(): string {
+  return 'topbar-team-switcher-label';
+}
+
+function optionId(teamId: number): string {
+  return `topbar-team-option-${teamId}`;
+}
+
+function activeOptionId(): string | undefined {
+  return props.activeTeamId !== null ? optionId(props.activeTeamId) : undefined;
+}
+
+function optionLabel(team: TeamSummary): string {
+  return `${team.name} #${team.id}`;
 }
 </script>
 
@@ -35,9 +130,78 @@ function handleTeamChange(event: Event): void {
         <p class="eyebrow">Team Agent Web Console</p>
       </div>
       <div class="team-switcher">
-        <select id="team-switcher" :value="activeTeamId ?? ''" @change="handleTeamChange">
-          <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
-        </select>
+        <button
+          :id="buttonLabelId()"
+          type="button"
+          class="team-switcher-button"
+          :aria-expanded="teamMenuOpen"
+          :aria-controls="listboxId()"
+          aria-haspopup="listbox"
+          @click="toggleTeamMenu"
+          @keydown="handleTeamButtonKeydown"
+        >
+          <span class="team-switcher-button__label">{{ activeTeamName }}</span>
+          <svg class="team-switcher-button__icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m4 6 4 4 4-4" />
+          </svg>
+        </button>
+
+        <div
+          v-if="teamMenuOpen"
+          :id="listboxId()"
+          class="team-switcher-menu"
+          role="listbox"
+          :aria-labelledby="buttonLabelId()"
+          :aria-activedescendant="activeOptionId()"
+        >
+          <section v-if="enabledTeams.length" class="team-switcher-group">
+            <div class="team-switcher-group__head">
+              <span class="team-switcher-group__title">启用中</span>
+              <span class="team-switcher-group__count">{{ enabledTeams.length }} 团队</span>
+            </div>
+            <button
+              v-for="team in enabledTeams"
+              :id="optionId(team.id)"
+              :key="team.id"
+              type="button"
+              class="team-switcher-option"
+              :class="{ 'is-active': isActiveTeam(team.id) }"
+              role="option"
+              :aria-selected="isActiveTeam(team.id)"
+              :aria-label="optionLabel(team)"
+              :tabindex="optionTabIndex(team.id)"
+              @click="selectTeam(team.id)"
+              @keydown="handleTeamOptionKeydown($event, team.id)"
+            >
+              <span class="team-switcher-option__name">{{ team.name }}</span>
+              <span class="team-switcher-option__meta">#{{ team.id }}</span>
+            </button>
+          </section>
+
+          <section v-if="disabledTeams.length" class="team-switcher-group">
+            <div class="team-switcher-group__head">
+              <span class="team-switcher-group__title">已停用</span>
+              <span class="team-switcher-group__count">{{ disabledTeams.length }} 团队</span>
+            </div>
+            <button
+              v-for="team in disabledTeams"
+              :id="optionId(team.id)"
+              :key="team.id"
+              type="button"
+              class="team-switcher-option team-switcher-option--disabled"
+              :class="{ 'is-active': isActiveTeam(team.id) }"
+              role="option"
+              :aria-selected="isActiveTeam(team.id)"
+              :aria-label="optionLabel(team)"
+              :tabindex="optionTabIndex(team.id)"
+              @click="selectTeam(team.id)"
+              @keydown="handleTeamOptionKeydown($event, team.id)"
+            >
+              <span class="team-switcher-option__name">{{ team.name }}</span>
+              <span class="team-switcher-option__meta">#{{ team.id }}</span>
+            </button>
+          </section>
+        </div>
       </div>
       <button
         class="nav-action nav-icon-button"
@@ -84,6 +248,7 @@ function handleTeamChange(event: Event): void {
     </div>
 
     <div class="status-group">
+      <div v-if="!activeTeamEnabled" class="team-disabled-pill">本团队已停用</div>
       <div class="status-pill" :data-state="connectionState">
         <span
           v-if="connectionState === 'waiting_reconnect'"
@@ -147,6 +312,9 @@ function handleTeamChange(event: Event): void {
 
 <style scoped>
 .topbar {
+  position: relative;
+  z-index: 8;
+  isolation: isolate;
   display: flex;
   justify-content: space-between;
   gap: 10px;
@@ -156,6 +324,7 @@ function handleTeamChange(event: Event): void {
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   padding: 4px 10px;
+  overflow: visible;
 }
 
 .brand-group {
@@ -177,24 +346,141 @@ function handleTeamChange(event: Event): void {
 .team-switcher {
   display: flex;
   align-items: center;
+  position: relative;
 }
 
-.team-switcher select {
-  appearance: none;
-  -webkit-appearance: none;
+.team-switcher-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   min-width: 180px;
   height: 28px;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
-  background-color: var(--pill-bg);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236f8298' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
-  background-position: right 9px center;
-  background-repeat: no-repeat;
-  background-size: 12px 12px;
+  background: var(--pill-bg);
   color: var(--text-strong);
-  padding: 0 28px 0 10px;
+  padding: 0 10px;
   outline: none;
   box-shadow: none;
+  cursor: pointer;
+}
+
+.team-switcher-button__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-switcher-button__icon {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.team-switcher-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 24;
+  min-width: 220px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-bg) 96%, var(--surface-soft) 4%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+:root[data-theme='light'] .team-switcher-menu {
+  background: #ffffff;
+}
+
+.team-switcher-group {
+  display: grid;
+  gap: 4px;
+}
+
+.team-switcher-group + .team-switcher-group {
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent 18%);
+}
+
+.team-switcher-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 4px;
+}
+
+.team-switcher-group__title {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.team-switcher-group__count {
+  color: var(--hint-text);
+  font-size: 0.64rem;
+}
+
+.team-switcher-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-strong);
+  cursor: pointer;
+  text-align: left;
+}
+
+.team-switcher-option--disabled {
+  color: color-mix(in srgb, var(--muted) 82%, var(--text-strong) 18%);
+}
+
+.team-switcher-option:hover,
+.team-switcher-option:focus-visible {
+  border-color: color-mix(in srgb, var(--focus-border) 42%, transparent);
+  background: color-mix(in srgb, var(--selected) 56%, var(--panel-bg) 44%);
+  outline: none;
+}
+
+.team-switcher-option.is-active {
+  border-color: color-mix(in srgb, var(--focus-border) 56%, var(--panel-border) 44%);
+  background: color-mix(in srgb, var(--selected) 72%, var(--panel-bg) 28%);
+}
+
+.team-switcher-option__name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-switcher-option__meta {
+  min-width: 42px;
+  text-align: right;
+  color: var(--hint-text);
+  font-size: 0.68rem;
+  flex: 0 0 auto;
 }
 
 .nav-action {
@@ -233,7 +519,7 @@ function handleTeamChange(event: Event): void {
   color: var(--text-strong);
 }
 
-.team-switcher select:focus-visible,
+.team-switcher-button:focus-visible,
 .nav-action:focus-visible,
 .theme-switch:focus-visible {
   border-color: var(--focus-border);
@@ -247,6 +533,7 @@ function handleTeamChange(event: Event): void {
   justify-content: flex-end;
 }
 
+.team-disabled-pill,
 .status-pill,
 .metric-pill {
   display: inline-flex;
@@ -258,6 +545,12 @@ function handleTeamChange(event: Event): void {
   background: var(--pill-bg);
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.team-disabled-pill {
+  border-color: color-mix(in srgb, var(--warn) 28%, var(--panel-border) 72%);
+  background: color-mix(in srgb, var(--warn) 16%, var(--pill-bg) 84%);
+  color: color-mix(in srgb, var(--warn) 82%, var(--text-strong) 18%);
 }
 
 .status-pill[data-state='connected'] {

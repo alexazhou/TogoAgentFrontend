@@ -32,6 +32,10 @@ const teamIdFromRoute = computed<number | null>(() => {
 
 const currentTeam = computed(() => findTeamById(teamIdFromRoute.value));
 const activeTeamId = computed(() => currentTeam.value?.id ?? preferredTeamId.value ?? firstTeamId.value);
+const activeTeamEnabled = computed(() => {
+  const enabled = currentTeam.value?.enabled as boolean | number | undefined;
+  return enabled !== false && enabled !== 0;
+});
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
 
@@ -134,6 +138,7 @@ onMounted(async () => {
       :total-message-count="totalMessageCount"
       :teams="teams"
       :active-team-id="activeTeamId"
+      :active-team-enabled="activeTeamEnabled"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @open-create-team="openCreateTeam"
@@ -181,17 +186,12 @@ onMounted(async () => {
   background: var(--shell-glow-right);
 }
 
-.workspace,
-.topbar {
-  position: relative;
-  z-index: 1;
-}
-
 .workspace {
   min-height: 0;
   height: 100%;
   overflow: hidden;
   position: relative;
+  z-index: 1;
 }
 
 .global-error-toast {

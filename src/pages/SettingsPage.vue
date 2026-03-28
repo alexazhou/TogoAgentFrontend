@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
@@ -44,6 +45,17 @@ const teamInfoDraft = ref({
   rules: '',
 });
 const teamEnabledPending = ref<Record<number, boolean>>({});
+const teamToggleConfirm = ref<{
+  open: boolean;
+  teamId: number | null;
+  teamName: string;
+  enabled: boolean;
+}>({
+  open: false,
+  teamId: null,
+  teamName: '',
+  enabled: false,
+});
 const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
 let uptimeTimer: number | null = null;
@@ -328,6 +340,38 @@ async function updateTeamEnabledState(teamIdToUpdate: number, enabled: boolean):
   }
 }
 
+function requestTeamEnabledToggle(teamIdToUpdate: number, enabled: boolean): void {
+  const team = teams.value.find((item) => item.id === teamIdToUpdate);
+  if (!team) {
+    return;
+  }
+
+  teamToggleConfirm.value = {
+    open: true,
+    teamId: teamIdToUpdate,
+    teamName: team.name,
+    enabled,
+  };
+}
+
+function closeTeamToggleConfirm(): void {
+  teamToggleConfirm.value = {
+    open: false,
+    teamId: null,
+    teamName: '',
+    enabled: false,
+  };
+}
+
+function confirmTeamToggle(): void {
+  const { teamId: targetTeamId, enabled } = teamToggleConfirm.value;
+  closeTeamToggleConfirm();
+  if (targetTeamId === null) {
+    return;
+  }
+  void updateTeamEnabledState(targetTeamId, enabled);
+}
+
 function resetTeamInfoDraft(): void {
   if (!selectedTeamDetail.value) {
     return;
@@ -520,7 +564,7 @@ function handleTeamTreeSaved(): void {
           @navigate-breadcrumb="handleBreadcrumbNavigate"
           @create-team="openCreateTeam"
           @open-team-detail="openTeamDetail"
-          @toggle-team-enabled="updateTeamEnabledState"
+          @toggle-team-enabled="requestTeamEnabledToggle"
           @clear-team-detail="clearTeamDetail"
           @save-team-info="saveTeamInfo"
           @reset-team-info-draft="resetTeamInfoDraft"
@@ -550,6 +594,17 @@ function handleTeamTreeSaved(): void {
         />
       </main>
     </div>
+
+    <ConfirmDialog
+      :open="teamToggleConfirm.open"
+      :title="teamToggleConfirm.enabled ? '启用团队' : '停用团队'"
+      :message="teamToggleConfirm.enabled
+        ? `确认启用团队“${teamToggleConfirm.teamName}”？`
+        : `确认停用团队“${teamToggleConfirm.teamName}”？`"
+      :confirm-label="teamToggleConfirm.enabled ? '启用' : '停用'"
+      @close="closeTeamToggleConfirm"
+      @confirm="confirmTeamToggle"
+    />
   </section>
 </template>
 
