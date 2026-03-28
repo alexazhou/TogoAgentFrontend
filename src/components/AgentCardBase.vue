@@ -8,6 +8,7 @@ const props = withDefaults(defineProps<{
   overline?: string;
   employeeNumber?: string;
   avatarName?: string;
+  avatarSeed?: string;
   selected?: boolean;
   empty?: boolean;
   readonly?: boolean;
@@ -15,6 +16,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   employeeNumber: '',
   avatarName: '',
+  avatarSeed: '',
   selected: false,
   empty: false,
   readonly: false,
@@ -26,6 +28,7 @@ defineEmits<{
 }>();
 
 const avatarAlt = computed(() => `${props.avatarName || props.title} avatar`);
+const avatarLookupKey = computed(() => props.avatarSeed || props.avatarName || props.title);
 const normalizedEmployeeNumber = computed(() => (
   /^\d+$/.test(props.employeeNumber) ? props.employeeNumber : ''
 ));
@@ -56,7 +59,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
     <img
       v-if="avatarName && !empty"
       class="entity-card__avatar"
-      :src="getAgentAvatarUrl(avatarName)"
+      :src="getAgentAvatarUrl(avatarLookupKey)"
       :alt="avatarAlt"
     />
     <strong class="entity-card__title" :title="title">{{ title }}</strong>

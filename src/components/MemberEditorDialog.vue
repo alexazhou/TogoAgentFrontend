@@ -7,6 +7,7 @@ import type { MemberDriverOption, MemberModelOption, MemberTemplateOption } from
 const props = defineProps<{
   open: boolean;
   editable: boolean;
+  teamName: string;
   memberName: string;
   employeeNumber: string;
   memberModel: string;
@@ -57,6 +58,11 @@ const driverModel = computed({
 
 const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配');
 const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.selectedTemplate.trim()));
+const selectedMemberAvatarSeed = computed(() => (
+  props.teamName && props.memberName.trim()
+    ? `${props.teamName}::${props.memberName.trim()}`
+    : props.memberName.trim()
+));
 </script>
 
 <template>
@@ -143,7 +149,8 @@ const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.se
               :title="memberNameModel"
               :subtitle="selectedTemplate"
               :employee-number="employeeNumber"
-              :avatar-name="selectedTemplate || memberNameModel"
+              :avatar-name="memberNameModel"
+              :avatar-seed="selectedMemberAvatarSeed"
               :selected="false"
               variant="graph"
             />
