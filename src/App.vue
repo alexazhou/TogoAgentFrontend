@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
-import { clearGlobalRequestError, connectionState, globalRequestError, reconnectProgress, totalMessageCount } from './appUiState';
+import {
+  clearGlobalRequestError,
+  connectionState,
+  globalRequestError,
+  globalSuccessToast,
+  reconnectProgress,
+  totalMessageCount,
+} from './appUiState';
 import TopBar from './components/TopBar.vue';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
 import { formatConnectionState } from './utils';
@@ -139,6 +146,9 @@ onMounted(async () => {
         <span>{{ globalRequestError }}</span>
         <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError">×</button>
       </div>
+      <div v-if="globalSuccessToast" class="global-success-toast" role="status" aria-live="polite">
+        <span>{{ globalSuccessToast }}</span>
+      </div>
       <RouterView />
     </main>
   </div>
@@ -217,5 +227,45 @@ onMounted(async () => {
   padding: 0;
   line-height: 1;
   font-size: 1.2rem;
+}
+
+.global-success-toast {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(360px, calc(100% - 40px));
+  min-height: 64px;
+  padding: 16px 20px;
+  border: 1px solid color-mix(in srgb, #6dc7a3 42%, var(--panel-border) 58%);
+  border-radius: 18px;
+  background: color-mix(in srgb, #6dc7a3 18%, var(--panel-bg) 82%);
+  color: color-mix(in srgb, #1c7f5f 78%, var(--text-strong) 22%);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+  font-size: 0.96rem;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+  animation: success-toast-drop 0.22s ease-out;
+}
+
+.global-success-toast span {
+  flex: 1;
+}
+
+@keyframes success-toast-drop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 </style>

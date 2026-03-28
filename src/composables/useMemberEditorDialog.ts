@@ -31,6 +31,7 @@ type UseMemberEditorDialogOptions = {
 };
 
 export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
+  const memberEditorOpen = ref(false);
   const editingMemberName = ref('');
   const memberEditorName = ref('');
   const memberEditorKeyword = ref('');
@@ -41,7 +42,6 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   const memberDriverCache = new Map<string, string>();
   let memberEditorRequestId = 0;
 
-  const memberEditorOpen = computed(() => editingMemberName.value.length > 0);
   const memberEditorEditable = computed(() => memberEditorMode.value === 'edit');
   const currentMemberTemplateOption = computed(
     () => options.templateOptions.value.find((item) => item.name === memberEditorTemplate.value) ?? null,
@@ -83,6 +83,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
 
   function resetDialogState(): void {
     memberEditorRequestId += 1;
+    memberEditorOpen.value = false;
     editingMemberName.value = '';
     memberEditorName.value = '';
     memberEditorKeyword.value = '';
@@ -124,6 +125,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   }
 
   function openMemberEditor(agentName: string): void {
+    memberEditorOpen.value = true;
     memberEditorMode.value = 'edit';
     editingMemberName.value = agentName;
     memberEditorName.value = options.resolveName(agentName);
@@ -135,6 +137,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   }
 
   function openMemberViewer(agentName: string): void {
+    memberEditorOpen.value = true;
     memberEditorMode.value = 'view';
     editingMemberName.value = agentName;
     memberEditorName.value = options.resolveName(agentName);
@@ -146,6 +149,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   }
 
   function openPendingMemberEditor(displayName = '新成员'): void {
+    memberEditorOpen.value = true;
     memberEditorMode.value = 'edit';
     editingMemberName.value = displayName;
     memberEditorName.value = displayName;
