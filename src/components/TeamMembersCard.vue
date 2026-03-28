@@ -88,7 +88,7 @@ const emit = defineEmits<{
   min-height: 0;
   overflow: hidden;
   align-self: stretch;
-  padding-bottom: 54px;
+  padding-bottom: 10px;
 }
 
 .member-panel-head {
@@ -124,13 +124,16 @@ const emit = defineEmits<{
 .member-panel-actions {
   position: absolute;
   right: 12px;
-  bottom: 12px;
+  bottom: 10px;
   z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 8px;
+  min-height: 40px;
+  background: #fff;
+  padding: 4px 10px 0;
 }
 
 .member-panel-action {
