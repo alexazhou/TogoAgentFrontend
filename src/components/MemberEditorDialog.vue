@@ -90,6 +90,7 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
               class="member-editor-input"
               :class="editable ? 'member-editor-input--editable' : 'member-editor-input--readonly'"
               type="text"
+              placeholder="请输入名称"
               :readonly="!editable"
             />
             <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
