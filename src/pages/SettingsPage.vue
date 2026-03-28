@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
+import { deleteTeam, getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
@@ -55,6 +55,15 @@ const teamToggleConfirm = ref<{
   teamId: null,
   teamName: '',
   enabled: false,
+});
+const teamDeleteConfirm = ref<{
+  open: boolean;
+  teamId: number | null;
+  teamName: string;
+}>({
+  open: false,
+  teamId: null,
+  teamName: '',
 });
 const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
@@ -378,6 +387,52 @@ function confirmTeamToggle(): void {
   void updateTeamEnabledState(targetTeamId, enabled);
 }
 
+function requestDeleteSelectedTeam(): void {
+  if (!selectedTeamDetail.value) {
+    return;
+  }
+
+  teamDeleteConfirm.value = {
+    open: true,
+    teamId: selectedTeamDetail.value.id,
+    teamName: selectedTeamDetail.value.name,
+  };
+}
+
+function closeTeamDeleteConfirm(): void {
+  teamDeleteConfirm.value = {
+    open: false,
+    teamId: null,
+    teamName: '',
+  };
+}
+
+async function confirmDeleteTeam(): Promise<void> {
+  const { teamId: targetTeamId } = teamDeleteConfirm.value;
+  closeTeamDeleteConfirm();
+  if (targetTeamId === null) {
+    return;
+  }
+
+  try {
+    await deleteTeam(targetTeamId);
+    await Promise.all([
+      loadTeams(),
+      loadTeamSummaries(),
+    ]);
+    selectedTeamDetail.value = null;
+    teamInfoStatus.value = '';
+    const nextTeamId = teams.value[0]?.id ?? teamId.value;
+    router.push({
+      name: 'settings',
+      params: { teamId: nextTeamId, section: 'teams' },
+    }).catch(console.error);
+    showGlobalSuccessToast('团队已删除');
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function resetTeamInfoDraft(): void {
   if (!selectedTeamDetail.value) {
     return;
@@ -572,6 +627,7 @@ function handleTeamTreeSaved(): void {
           @open-team-detail="openTeamDetail"
           @toggle-team-enabled="requestTeamEnabledToggle"
           @clear-team-detail="clearTeamDetail"
+          @delete-team="requestDeleteSelectedTeam"
           @save-team-info="saveTeamInfo"
           @reset-team-info-draft="resetTeamInfoDraft"
           @tree-saved="handleTeamTreeSaved"
@@ -610,6 +666,16 @@ function handleTeamTreeSaved(): void {
       :confirm-label="teamToggleConfirm.enabled ? '启用' : '停用'"
       @close="closeTeamToggleConfirm"
       @confirm="confirmTeamToggle"
+    />
+
+    <ConfirmDialog
+      :open="teamDeleteConfirm.open"
+      title="删除团队"
+      :message="`确认删除团队“${teamDeleteConfirm.teamName}”？删除后无法恢复。`"
+      confirm-label="删除"
+      danger
+      @close="closeTeamDeleteConfirm"
+      @confirm="confirmDeleteTeam"
     />
   </section>
 </template>

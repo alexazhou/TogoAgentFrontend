@@ -349,6 +349,12 @@ export async function setTeamEnabled(teamId: number, enabled: boolean): Promise<
   });
 }
 
+export async function deleteTeam(teamId: number): Promise<{ status: string; name: string }> {
+  return requestJson(`/teams/${teamId}/delete.json`, {
+    method: 'POST',
+  });
+}
+
 export async function createTeam(payload: CreateTeamPayload): Promise<{ status: string; name: string }> {
   return requestJson('/teams/create.json', {
     method: 'POST',
