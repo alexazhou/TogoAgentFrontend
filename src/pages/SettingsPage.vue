@@ -232,7 +232,8 @@ function countDeptNodes(node: DeptTreeNode | null): number {
     return 0;
   }
 
-  return 1 + node.children.reduce((total, child) => total + countDeptNodes(child), 0);
+  const current = node.children.length > 0 ? 1 : 0;
+  return current + node.children.reduce((total, child) => total + countDeptNodes(child), 0);
 }
 
 function countDeptHierarchyLevels(node: DeptTreeNode | null): number {
