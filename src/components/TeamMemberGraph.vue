@@ -35,7 +35,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
     id: leaderName,
     kind: 'member',
     name: leaderName,
-    subtitle: 'Leader',
+    subtitle: memberTemplates.value[leaderName] || leaderName,
     avatarName: leaderName,
     children: props.selectedAgents.slice(1).map((agentName) => ({
       id: agentName,

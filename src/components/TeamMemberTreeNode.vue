@@ -104,7 +104,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
         :empty="node.kind === 'pending'"
         :readonly="readonly"
         :title="node.kind === 'pending' ? '+' : node.name"
-        :subtitle="root ? 'Leader' : node.subtitle"
+        :subtitle="node.subtitle"
         :avatar-name="node.kind === 'pending' ? '' : node.avatarName"
         :variant="root ? 'leader' : 'graph'"
         @click="handlePrimaryAction"
