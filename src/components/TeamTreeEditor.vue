@@ -137,12 +137,10 @@ function parseDriverTypeValue(driver: string): string {
 
 function resolveDefaultModelLabel(config: FrontendConfig | null): string {
   if (!config?.default_model) {
-    return '跟随系统默认';
+    return '自动';
   }
 
-  const defaultOption = config.models.find((item) => item.name === config.default_model);
-  const defaultModelName = defaultOption?.model || config.default_model;
-  return `跟随系统默认（${defaultModelName}）`;
+  return '自动';
 }
 
 function buildModelCatalog(config: FrontendConfig | null): MemberModelOption[] {
@@ -155,14 +153,14 @@ function buildModelCatalog(config: FrontendConfig | null): MemberModelOption[] {
     },
     ...enabledModels.map((item) => ({
       value: item.model,
-      label: item.name && item.name !== item.model ? `${item.model} · ${item.name}` : item.model,
+      label: item.name && item.name !== item.model ? `${item.model}@${item.name}` : item.model,
     })),
   ];
 }
 
 function buildDriverCatalog(config: FrontendConfig | null): MemberDriverOption[] {
   return [
-    { value: '', label: '跟随模板默认' },
+    { value: '', label: '自动' },
     ...((config?.driver_types ?? []).map((item) => ({
       value: item.name,
       label: item.description ? `${item.name} · ${item.description}` : item.name,

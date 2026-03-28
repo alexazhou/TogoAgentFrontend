@@ -249,6 +249,10 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
   width: 132px;
 }
 
+.member-card-shell.is-root-node > .member-card-anchor > .member-card-button {
+  width: 132px;
+}
+
 .member-child-tree {
   --member-child-offset: 18px;
   position: relative;
