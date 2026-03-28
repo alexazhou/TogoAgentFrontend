@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, updateTeam } from '../api';
+import { getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
@@ -43,6 +43,7 @@ const teamInfoDraft = ref({
   slogan: '',
   rules: '',
 });
+const teamEnabledPending = ref<Record<number, boolean>>({});
 const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
 let uptimeTimer: number | null = null;
@@ -298,6 +299,35 @@ async function saveTeamInfo(): Promise<void> {
   }
 }
 
+async function updateTeamEnabledState(teamIdToUpdate: number, enabled: boolean): Promise<void> {
+  if (teamEnabledPending.value[teamIdToUpdate]) {
+    return;
+  }
+
+  teamEnabledPending.value = {
+    ...teamEnabledPending.value,
+    [teamIdToUpdate]: true,
+  };
+
+  try {
+    await setTeamEnabled(teamIdToUpdate, enabled);
+    await Promise.all([
+      loadTeams(),
+      loadTeamSummaries(),
+      selectedTeamDetail.value?.id === teamIdToUpdate
+        ? loadSelectedTeamDetail(teamIdToUpdate)
+        : Promise.resolve(),
+    ]);
+    showGlobalSuccessToast(enabled ? '团队已启用' : '团队已停用');
+  } catch (error) {
+    console.error(error);
+  } finally {
+    const nextPending = { ...teamEnabledPending.value };
+    delete nextPending[teamIdToUpdate];
+    teamEnabledPending.value = nextPending;
+  }
+}
+
 function resetTeamInfoDraft(): void {
   if (!selectedTeamDetail.value) {
     return;
@@ -484,11 +514,13 @@ function handleTeamTreeSaved(): void {
           :is-saving-team-info="isSavingTeamInfo"
           :team-info-status="teamInfoStatus"
           :team-summaries="teamSummaries"
+          :team-enabled-pending="teamEnabledPending"
           :teams="teams"
           :format-date-time="formatDateTime"
           @navigate-breadcrumb="handleBreadcrumbNavigate"
           @create-team="openCreateTeam"
           @open-team-detail="openTeamDetail"
+          @toggle-team-enabled="updateTeamEnabledState"
           @clear-team-detail="clearTeamDetail"
           @save-team-info="saveTeamInfo"
           @reset-team-info-draft="resetTeamInfoDraft"

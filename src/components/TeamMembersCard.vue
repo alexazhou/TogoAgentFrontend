@@ -148,12 +148,21 @@ const emit = defineEmits<{
 }
 
 .member-panel-action:disabled {
-  opacity: 0.5;
+  opacity: 1;
   cursor: not-allowed;
+  color: var(--hint-text);
+  border-color: color-mix(in srgb, var(--panel-border) 76%, transparent 24%);
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
+  box-shadow: none;
 }
 
 .member-panel-action--primary {
   border-color: color-mix(in srgb, var(--focus-border) 45%, var(--team-create-control-border) 55%);
   background: color-mix(in srgb, var(--selected) 22%, #fff 78%);
+}
+
+.member-panel-action--primary:disabled {
+  border-color: color-mix(in srgb, var(--panel-border) 76%, transparent 24%);
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
 }
 </style>

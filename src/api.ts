@@ -98,9 +98,11 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
     if (!response.ok) {
       let errorDetail = '';
+      let contentType = '';
+      let errorCode = '';
 
       try {
-        const contentType = response.headers.get('content-type') || '';
+        contentType = response.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const errorBody = await response.json() as {
             error_desc?: unknown;
@@ -114,6 +116,9 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
           } else if (typeof errorBody.error_code === 'string' && errorBody.error_code.trim()) {
             errorDetail = errorBody.error_code.trim();
           }
+          if (typeof errorBody.error_code === 'string' && errorBody.error_code.trim()) {
+            errorCode = errorBody.error_code.trim();
+          }
         } else {
           const errorText = (await response.text()).trim();
           if (errorText) {
@@ -122,6 +127,14 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
         }
       } catch {
         errorDetail = '';
+      }
+
+      const isProxyConnectionFailure = errorCode === 'BACKEND_UNAVAILABLE'
+        || response.headers.get('x-proxy-error') === 'backend-unavailable';
+
+      if (isProxyConnectionFailure) {
+        showGlobalRequestError(`无法连接后端：${path}`);
+        throw new Error('Backend unavailable');
       }
 
       const message = errorDetail
@@ -326,6 +339,13 @@ export async function updateTeam(
   return requestJson(`/teams/${teamId}/modify.json`, {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function setTeamEnabled(teamId: number, enabled: boolean): Promise<{ status: string; enabled: boolean }> {
+  return requestJson(`/teams/${teamId}/set_enabled.json`, {
+    method: 'POST',
+    body: JSON.stringify({ enabled }),
   });
 }
 
