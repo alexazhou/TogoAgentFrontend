@@ -98,6 +98,10 @@ function displayValue(value: string, fallback = '未设置'): string {
         </label>
       </div>
     </template>
+
+    <div v-if="$slots.actions" class="panel-actions">
+      <slot name="actions"></slot>
+    </div>
   </section>
 </template>
 
@@ -111,6 +115,21 @@ function displayValue(value: string, fallback = '未设置'): string {
   box-shadow: var(--panel-shadow);
   padding: 10px 12px;
   align-content: start;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panel-actions :deep(.ghost-button),
+.panel-actions :deep(.secondary-button) {
+  height: 34px;
+  padding: 0 16px;
+  justify-content: center;
 }
 
 .panel-head {

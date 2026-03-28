@@ -56,24 +56,6 @@ const emit = defineEmits<{
           </div>
         </div>
         <div class="team-detail-actions">
-          <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
-          <button
-            v-if="hasTeamInfoChanges"
-            type="button"
-            class="ghost-button"
-            :disabled="isSavingTeamInfo"
-            @click="emit('resetTeamInfoDraft')"
-          >
-            重置
-          </button>
-          <button
-            type="button"
-            class="secondary-button"
-            :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
-            @click="emit('saveTeamInfo')"
-          >
-            {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
-          </button>
           <button type="button" class="secondary-button" @click="emit('clearTeamDetail')">返回团队列表</button>
         </div>
       </div>
@@ -89,7 +71,28 @@ const emit = defineEmits<{
           @update:working-directory="emit('update:workingDirectory', $event)"
           @update:slogan="emit('update:slogan', $event)"
           @update:rules="emit('update:rules', $event)"
-        />
+        >
+          <template #actions>
+            <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
+            <button
+              v-if="hasTeamInfoChanges"
+              type="button"
+              class="secondary-button team-info-action-button team-info-action-button--compact"
+              :disabled="isSavingTeamInfo"
+              @click="emit('resetTeamInfoDraft')"
+            >
+              重置
+            </button>
+            <button
+              type="button"
+              class="secondary-button team-info-action-button"
+              :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
+              @click="emit('saveTeamInfo')"
+            >
+              {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
+            </button>
+          </template>
+        </TeamInfoCard>
 
         <TeamTreeEditor
           :team-id="selectedTeamDetail.id"
@@ -101,7 +104,10 @@ const emit = defineEmits<{
 
     <div v-else class="teams-grid">
       <div class="section-head teams-list-head">
-        <div></div>
+        <div class="teams-list-title-group">
+          <p class="section-eyebrow">Teams</p>
+          <h3>所有团队</h3>
+        </div>
         <button type="button" class="secondary-button" @click="emit('createTeam')">新建团队</button>
       </div>
       <article v-for="team in teams" :key="team.id" class="team-card">
@@ -172,12 +178,17 @@ const emit = defineEmits<{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .teams-list-head {
   grid-column: 1 / -1;
   margin-bottom: 2px;
+}
+
+.teams-list-title-group h3 {
+  margin: 0;
+  color: var(--text-strong);
 }
 
 .team-detail-head {
@@ -225,6 +236,14 @@ const emit = defineEmits<{
   margin-top: 10px;
   min-height: 0;
   align-items: start;
+}
+
+.team-info-action-button {
+  min-width: 132px;
+}
+
+.team-info-action-button--compact {
+  min-width: 88px;
 }
 
 .team-card,
@@ -333,48 +352,6 @@ const emit = defineEmits<{
 .team-card-actions {
   margin-top: 0;
   justify-content: flex-end;
-}
-
-.ghost-button {
-  height: 24px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  padding: 0 7px;
-  cursor: pointer;
-  font-size: 0.68rem;
-}
-
-.secondary-button {
-  min-width: 78px;
-  height: 30px;
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  padding: 0 14px;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.secondary-button:hover:not(:disabled),
-.ghost-button:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: var(--selected);
-  transform: translateY(-1px);
-}
-
-.secondary-button:disabled,
-.ghost-button:disabled {
-  opacity: 0.56;
-  cursor: not-allowed;
-  transform: none;
 }
 
 .empty-card p {

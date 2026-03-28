@@ -165,14 +165,9 @@ onMounted(() => {
   line-height: 1.45;
 }
 
-.secondary-button {
+.page-head .secondary-button {
   height: 40px;
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-  background: var(--pill-bg);
-  color: var(--text-strong);
   padding: 0 14px;
-  cursor: pointer;
 }
 
 .loading-card,

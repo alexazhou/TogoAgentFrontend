@@ -270,34 +270,6 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
   font-size: 0.84rem;
 }
 
-.ghost-button,
-.secondary-button {
-  border: 1px solid var(--team-create-control-border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.ghost-button:hover:not(:disabled),
-.secondary-button:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: var(--selected);
-  transform: translateY(-1px);
-}
-
-.ghost-button:disabled,
-.secondary-button:disabled {
-  opacity: 0.56;
-  cursor: not-allowed;
-  transform: none;
-}
-
 .member-editor-title-row {
   display: flex;
   align-items: baseline;

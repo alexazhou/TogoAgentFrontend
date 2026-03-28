@@ -234,6 +234,23 @@ export async function setAgentsByTeamId(
   });
 }
 
+export async function saveMembersByTeamId(
+  teamId: number,
+  payload: Array<{
+    id: number | null;
+    name: string;
+    role_template_name: string;
+    model: string;
+    driver: string;
+  }>,
+): Promise<AgentInfo[]> {
+  const data = await requestJson<{ members: RawAgentInfo[] }>(`/teams/${teamId}/members/save.json`, {
+    method: 'PUT',
+    body: JSON.stringify({ members: payload }),
+  });
+  return data.members.map(normalizeAgent);
+}
+
 export async function getRooms(teamId?: number): Promise<RoomInfo[]> {
   const data = await requestJson<{ rooms: RawRoomInfo[] }>(
     withSearch('/rooms/list.json', { team_id: teamId }),
