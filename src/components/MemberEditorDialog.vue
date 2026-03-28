@@ -463,19 +463,16 @@ const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.se
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: var(--member-card-width);
-  grid-template-rows: minmax(0, 1fr);
-  gap: 10px 12px;
-  align-content: start;
-  justify-content: start;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
   align-items: start;
   padding-top: 4px;
   padding-right: 4px;
   padding-bottom: 6px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--focus-border) 22%, var(--panel-border) 78%) transparent;
+  contain: layout paint;
 }
 
 .member-template-grid::-webkit-scrollbar {
@@ -500,14 +497,25 @@ const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.se
   display: flex;
   align-items: stretch;
   justify-content: stretch;
+  flex: 0 0 var(--member-card-width);
+  width: var(--member-card-width);
 }
 
 .member-template-option > :deep(.agent-card) {
   width: 100%;
 }
 
-.member-template-option > :deep(.agent-card:hover) {
-  transform: none;
+.member-template-option > :deep(.entity-card) {
+  box-shadow: none;
+}
+
+.member-template-option > :deep(.entity-card:hover),
+.member-template-option > :deep(.entity-card.selected) {
+  box-shadow: none;
+}
+
+.member-template-option > :deep(.entity-card__avatar) {
+  box-shadow: none;
 }
 
 .member-template-use {
@@ -531,8 +539,7 @@ const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.se
     border-color 0.16s ease;
 }
 
-.member-template-option:hover .member-template-use,
-.member-template-option:focus-within .member-template-use {
+.member-template-option:hover .member-template-use {
   opacity: 1;
   transform: translateY(0);
 }
@@ -544,7 +551,7 @@ const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.se
 
 .member-template-empty {
   min-height: 120px;
-  grid-column: 1 / -1;
+  flex: 0 0 100%;
   display: grid;
   place-items: center;
   color: var(--muted);
