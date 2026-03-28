@@ -92,6 +92,23 @@ export interface RoleTemplateSummary {
   model: string;
 }
 
+export interface FrontendModelOption {
+  name: string;
+  model: string;
+  enabled: boolean;
+}
+
+export interface FrontendDriverType {
+  name: string;
+  description: string;
+}
+
+export interface FrontendConfig {
+  models: FrontendModelOption[];
+  driver_types: FrontendDriverType[];
+  default_model: string | null;
+}
+
 export interface TeamDetail extends TeamSummary {
   members: TeamMember[];
   rooms: TeamRoomDetail[];

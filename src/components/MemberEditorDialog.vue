@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import AgentCardBase from './AgentCardBase.vue';
 import AgentTemplateCard from './AgentTemplateCard.vue';
-import type { MemberDriverOption, MemberTemplateOption } from '../composables/useMemberEditorDialog';
+import type { MemberDriverOption, MemberModelOption, MemberTemplateOption } from '../composables/useMemberEditorDialog';
 
 const props = defineProps<{
   open: boolean;
@@ -13,6 +13,7 @@ const props = defineProps<{
   keyword: string;
   selectedTemplate: string;
   currentTemplateModel: string;
+  modelOptions: MemberModelOption[];
   driver: string;
   driverOptions: MemberDriverOption[];
   templateOptions: MemberTemplateOption[];
@@ -95,13 +96,15 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
           </label>
           <label class="member-editor-field">
             <span>模型</span>
-            <input
+            <select
               v-if="editable"
               v-model="memberModelModel"
               class="member-editor-input member-editor-input--editable"
-              type="text"
-              :placeholder="currentTemplateModel || '未设置'"
-            />
+            >
+              <option v-for="modelOption in modelOptions" :key="modelOption.value" :value="modelOption.value">
+                {{ modelOption.label }}
+              </option>
+            </select>
             <input
               v-else
               :value="memberModelValue"

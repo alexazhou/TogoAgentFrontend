@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { getAgentsByTeamId, getDeptTree, getRoleTemplates, setAgentsByTeamId, setDeptTree } from '../api';
+import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, setAgentsByTeamId, setDeptTree } from '../api';
 import {
   useMemberEditorDialog,
   type MemberDriverOption,
+  type MemberModelOption,
   type MemberTemplateOption,
 } from '../composables/useMemberEditorDialog';
 import ConfirmDialog from './ConfirmDialog.vue';
 import TeamMembersCard from './TeamMembersCard.vue';
 import MemberEditorDialog from './MemberEditorDialog.vue';
-import type { DeptTreeNode, TeamMember } from '../types';
+import type { DeptTreeNode, FrontendConfig, TeamMember } from '../types';
 import type { AgentInfo } from '../types';
 import type { TeamGraphNode } from './teamGraphTypes';
 
@@ -23,7 +24,9 @@ const emit = defineEmits<{
 }>();
 
 const driverCatalog = ref<MemberDriverOption[]>([]);
+const modelCatalog = ref<MemberModelOption[]>([]);
 const roleTemplateCatalog = ref<MemberTemplateOption[]>([]);
+const frontendConfig = ref<FrontendConfig | null>(null);
 const isLoading = ref(false);
 const isSavingTeamMembers = ref(false);
 const isReadonly = ref(true);
@@ -120,7 +123,64 @@ function buildTeamMemberModelDraft(agents: AgentInfo[]): Record<string, string> 
 }
 
 function buildTeamMemberDriverDraft(agents: AgentInfo[]): Record<string, string> {
-  return Object.fromEntries(agents.map((agent) => [agent.name, agent.driver || '{}']));
+  return Object.fromEntries(agents.map((agent) => [agent.name, parseDriverTypeValue(agent.driver || '{}')]));
+}
+
+function parseDriverTypeValue(driver: string): string {
+  if (!driver || driver === '{}') {
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(driver) as { type?: unknown };
+    return typeof parsed.type === 'string' ? parsed.type : '';
+  } catch {
+    return '';
+  }
+}
+
+function serializeDriverDraft(driverType: string): string {
+  const normalized = driverType.trim();
+  if (!normalized) {
+    return '{}';
+  }
+
+  return JSON.stringify({ type: normalized });
+}
+
+function resolveDefaultModelLabel(config: FrontendConfig | null): string {
+  if (!config?.default_model) {
+    return '跟随系统默认';
+  }
+
+  const defaultOption = config.models.find((item) => item.name === config.default_model);
+  const defaultModelName = defaultOption?.model || config.default_model;
+  return `跟随系统默认（${defaultModelName}）`;
+}
+
+function buildModelCatalog(config: FrontendConfig | null): MemberModelOption[] {
+  const enabledModels = (config?.models ?? []).filter((item) => item.enabled && item.model);
+
+  return [
+    {
+      value: '',
+      label: resolveDefaultModelLabel(config),
+    },
+    ...enabledModels.map((item) => ({
+      value: item.model,
+      label: item.name && item.name !== item.model ? `${item.model} · ${item.name}` : item.model,
+    })),
+  ];
+}
+
+function buildDriverCatalog(config: FrontendConfig | null): MemberDriverOption[] {
+  return [
+    { value: '', label: '跟随模板默认' },
+    ...((config?.driver_types ?? []).map((item) => ({
+      value: item.name,
+      label: item.description ? `${item.name} · ${item.description}` : item.name,
+    }))),
+  ];
 }
 
 function resolveTreeNodeMemberName(node: DeptTreeNode): string {
@@ -245,7 +305,22 @@ function buildAgentConfigPayload(): Array<{
         || teamMemberNameDraftsById.value[agent.id]
         || agent.name,
       model: teamMemberModelDrafts.value[teamMemberNameDraftsById.value[agent.id] || agent.name] || '',
-      driver: teamMemberDriverDrafts.value[teamMemberNameDraftsById.value[agent.id] || agent.name] || agent.driver || '{}',
+      driver: (() => {
+        const currentName = teamMemberNameDraftsById.value[agent.id] || agent.name;
+        const draftDriverType = teamMemberDriverDrafts.value[currentName] || '';
+        const originalDriver = agent.driver || '{}';
+        const originalDriverType = parseDriverTypeValue(originalDriver);
+
+        if (!draftDriverType) {
+          return '{}';
+        }
+
+        if (draftDriverType === originalDriverType) {
+          return originalDriver;
+        }
+
+        return serializeDriverDraft(draftDriverType);
+      })(),
     }));
 }
 
@@ -329,6 +404,11 @@ const teamMemberEmployeeNumberDrafts = computed<Record<string, string>>(() => {
 const currentEditingMemberEmployeeNumber = computed(() => (
   teamMemberEmployeeNumberDrafts.value[editingMemberName.value] || ''
 ));
+
+const currentTemplateModelLabel = computed(() => {
+  const templateModel = currentMemberTemplateOption.value?.model || '';
+  return templateModel || resolveDefaultModelLabel(frontendConfig.value);
+});
 
 const graphRootNode = computed<TeamGraphNode | null>(() => {
   const leaderName = teamMembersDraft.value[0] ?? '';
@@ -462,6 +542,7 @@ const {
   memberEditorOpen,
   memberEditorEditable,
   currentMemberTemplateOption,
+  memberModelOptions,
   filteredMemberTemplateOptions,
   memberDriverOptions,
   openMemberEditor,
@@ -474,6 +555,7 @@ const {
   teamId: computed(() => props.teamId),
   templateOptions: memberTemplateOptions,
   driverCatalog,
+  modelCatalog,
   resolveName: (memberName: string) => memberName,
   resolveModel: (memberName: string) => teamMemberModelDrafts.value[memberName] || '',
   resolveDriver: (memberName: string) => teamMemberDriverDrafts.value[memberName] || '',
@@ -507,15 +589,19 @@ watch(
     isLoading.value = true;
     teamMemberStatus.value = '';
     try {
-      const [deptTree, teamAgents, roleTemplates] = await Promise.all([
+      const [deptTree, teamAgents, roleTemplates, nextFrontendConfig] = await Promise.all([
         getDeptTree(requestTeamId),
         getAgentsByTeamId(requestTeamId),
         getRoleTemplates(),
+        getFrontendConfig(),
       ]);
       if (requestTeamId !== props.teamId) {
         return;
       }
 
+      frontendConfig.value = nextFrontendConfig;
+      modelCatalog.value = buildModelCatalog(nextFrontendConfig);
+      driverCatalog.value = buildDriverCatalog(nextFrontendConfig);
       roleTemplateCatalog.value = roleTemplates;
       const nextMembers = teamAgents.map((agent) => ({
         ...agent,
@@ -532,6 +618,9 @@ watch(
       if (requestTeamId !== props.teamId) {
         return;
       }
+      frontendConfig.value = null;
+      modelCatalog.value = [];
+      driverCatalog.value = [];
       roleTemplateCatalog.value = [];
       committedAgents.value = [];
       committedDeptTree.value = null;
@@ -861,7 +950,8 @@ function confirmDangerAction(): void {
       :member-model="memberEditorModel"
       :keyword="memberEditorKeyword"
       :selected-template="memberEditorTemplate"
-      :current-template-model="currentMemberTemplateOption?.model || '未设置'"
+      :current-template-model="currentTemplateModelLabel"
+      :model-options="memberModelOptions"
       :driver="memberEditorDriver"
       :driver-options="memberDriverOptions"
       :template-options="filteredMemberTemplateOptions"

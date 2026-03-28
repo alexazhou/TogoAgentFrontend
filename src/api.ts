@@ -4,6 +4,9 @@ import type {
   AgentInfo,
   CreateTeamPayload,
   DeptTreeNode,
+  FrontendConfig,
+  FrontendDriverType,
+  FrontendModelOption,
   MessageInfo,
   RoleTemplateSummary,
   RoomInfo,
@@ -44,6 +47,13 @@ type RawDeptTreeResponse = {
 };
 
 type RawRoleTemplateSummary = Partial<RoleTemplateSummary>;
+type RawFrontendModelOption = Partial<FrontendModelOption>;
+type RawFrontendDriverType = Partial<FrontendDriverType>;
+type RawFrontendConfig = {
+  models?: RawFrontendModelOption[];
+  driver_types?: RawFrontendDriverType[];
+  default_model?: string | null;
+};
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
@@ -243,6 +253,24 @@ export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
     name: String(template.name ?? ''),
     model: String(template.model ?? ''),
   }));
+}
+
+export async function getFrontendConfig(): Promise<FrontendConfig> {
+  const data = await requestJson<RawFrontendConfig>('/config/frontend.json');
+  return {
+    models: (data.models ?? []).map((item) => ({
+      name: String(item.name ?? ''),
+      model: String(item.model ?? ''),
+      enabled: item.enabled !== false,
+    })),
+    driver_types: (data.driver_types ?? []).map((item) => ({
+      name: String(item.name ?? ''),
+      description: String(item.description ?? ''),
+    })),
+    default_model: typeof data.default_model === 'string' && data.default_model.trim()
+      ? data.default_model
+      : null,
+  };
 }
 
 export async function getTeamDetail(teamId: number): Promise<TeamDetail> {
