@@ -6,6 +6,7 @@ const props = defineProps<{
   node: TeamGraphNode;
   readonly: boolean;
   showEditAction: boolean;
+  root?: boolean;
   topLevel?: boolean;
 }>();
 
@@ -52,69 +53,85 @@ function handleEditAction(): void {
 <template>
   <div
     class="member-card-shell member-node-shell"
-    :class="{ 'has-action': node.kind === 'pending' || !!node.name, 'has-children': !!node.children.length }"
+    :class="{
+      'has-action': node.kind === 'pending' || !!node.name,
+      'has-children': !!node.children.length,
+      'is-root-node': root,
+    }"
   >
-    <AgentCardBase
-      class="member-node member-card-button"
-      :class="{ 'top-level-node': topLevel }"
-      :empty="node.kind === 'pending'"
-      :readonly="readonly"
-      :title="node.kind === 'pending' ? '+' : node.name"
-      :subtitle="node.subtitle"
-      :avatar-name="node.kind === 'pending' ? '' : node.avatarName"
-      variant="graph"
-      @click="handlePrimaryAction"
-    />
+    <div class="member-card-anchor">
+      <AgentCardBase
+        class="member-node member-card-button"
+        :class="{ 'top-level-node': topLevel, 'team-root': root }"
+        :empty="node.kind === 'pending'"
+        :readonly="readonly"
+        :title="node.kind === 'pending' ? '+' : node.name"
+        :subtitle="root ? 'Leader' : node.subtitle"
+        :avatar-name="node.kind === 'pending' ? '' : node.avatarName"
+        :variant="root ? 'leader' : 'graph'"
+        @click="handlePrimaryAction"
+      />
 
-    <div class="member-action-group">
-      <template v-if="node.kind === 'pending' && !readonly && showEditAction">
-        <button
-          class="member-action-button"
-          type="button"
-          @pointerdown.stop
-          @click.stop="emit('editPendingSlot', node.id)"
-        >
-          编辑
-        </button>
-        <button
-          class="member-action-button member-action-button--danger"
-          type="button"
-          @pointerdown.stop
-          @click.stop="emit('removePendingSlot', node.id)"
-        >
-          删除
-        </button>
-      </template>
-
-      <template v-else-if="node.kind === 'member'">
-        <button
-          v-if="readonly"
-          class="member-action-button"
-          type="button"
-          @pointerdown.stop
-          @click.stop="handleViewAction"
-        >
-          查看
-        </button>
-        <template v-else-if="showEditAction">
+      <div class="member-action-group">
+        <template v-if="node.kind === 'pending' && !readonly && showEditAction">
           <button
             class="member-action-button"
             type="button"
             @pointerdown.stop
-            @click.stop="handleEditAction"
+            @click.stop="emit('editPendingSlot', node.id)"
           >
             编辑
           </button>
           <button
+            class="member-action-button member-action-button--danger"
+            type="button"
+            @pointerdown.stop
+            @click.stop="emit('removePendingSlot', node.id)"
+          >
+            删除
+          </button>
+        </template>
+
+        <template v-else-if="node.kind === 'member'">
+          <button
+            v-if="readonly"
             class="member-action-button"
             type="button"
             @pointerdown.stop
-            @click.stop="emit('addSubordinate', node.name)"
+            @click.stop="handleViewAction"
           >
-            添加下属
+            查看
           </button>
+          <template v-else-if="showEditAction">
+            <button
+              class="member-action-button"
+              type="button"
+              @pointerdown.stop
+              @click.stop="handleEditAction"
+            >
+              编辑
+            </button>
+            <button
+              class="member-action-button"
+              type="button"
+              @pointerdown.stop
+              @click.stop="emit('addSubordinate', node.name)"
+            >
+              添加下属
+            </button>
+            <button
+              v-if="!root"
+              class="member-action-button member-action-button--danger"
+              type="button"
+              @pointerdown.stop
+              @click.stop="emit('toggleAgent', node.name)"
+            >
+              移除
+            </button>
+          </template>
           <button
-            class="member-action-button member-action-button--danger"
+            v-else
+            class="member-action-button"
             type="button"
             @pointerdown.stop
             @click.stop="emit('toggleAgent', node.name)"
@@ -122,16 +139,7 @@ function handleEditAction(): void {
             移除
           </button>
         </template>
-        <button
-          v-else
-          class="member-action-button"
-          type="button"
-          @pointerdown.stop
-          @click.stop="emit('toggleAgent', node.name)"
-        >
-          移除
-        </button>
-      </template>
+      </div>
     </div>
 
     <div
@@ -159,6 +167,7 @@ function handleEditAction(): void {
             :node="child"
             :readonly="readonly"
             :show-edit-action="showEditAction"
+            :top-level="root"
             @toggle-agent="emit('toggleAgent', $event)"
             @view-agent="emit('viewAgent', $event)"
             @edit-agent="emit('editAgent', $event)"
@@ -185,6 +194,18 @@ function handleEditAction(): void {
 .member-card-button {
   width: var(--member-card-width);
   justify-self: center;
+}
+
+.member-card-anchor {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  width: var(--member-card-width);
+}
+
+.member-card-shell.is-root-node > .member-card-anchor {
+  width: 132px;
 }
 
 .member-child-tree {
@@ -238,5 +259,47 @@ function handleEditAction(): void {
   height: var(--member-child-offset);
   transform: translateX(-50%);
   background: var(--member-connector-line);
+}
+
+.member-action-group {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: max-content;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  opacity: 0;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  z-index: 3;
+}
+
+.member-card-shell.has-action > .member-card-anchor > .member-card-button:hover + .member-action-group,
+.member-card-shell.has-action > .member-card-anchor > .member-card-button:focus-visible + .member-action-group,
+.member-card-shell.has-action > .member-card-anchor > .member-action-group:hover,
+.member-card-shell.has-action > .member-card-anchor > .member-action-group:focus-within {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 960px) {
+  .member-card-shell.is-root-node > .member-child-tree > .member-child-list {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .member-card-shell.is-root-node > .member-child-tree {
+    width: 100%;
+    padding-top: 0;
+  }
+
+  .member-card-shell.is-root-node > .member-child-tree > .member-child-list {
+    grid-template-columns: 1fr !important;
+  }
 }
 </style>
