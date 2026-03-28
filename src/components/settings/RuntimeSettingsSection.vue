@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from './types';
+import type { DirectoriesConfig } from '../../types';
 
 defineProps<{
   breadcrumbItems: SettingsBreadcrumbItem[];
+  directories: DirectoriesConfig;
 }>();
 
 const emit = defineEmits<{
@@ -20,29 +22,31 @@ const emit = defineEmits<{
         <p class="section-eyebrow">Runtime</p>
         <h3>运行与存储</h3>
       </div>
-      <span class="section-status">占位区</span>
     </div>
 
     <div class="form-grid">
       <label class="field-card">
+        <span>配置目录</span>
+        <input :value="directories.config_dir" type="text" readonly />
+      </label>
+      <label class="field-card">
         <span>工作目录</span>
-        <input type="text" placeholder="/path/to/workspace" />
+        <input :value="directories.workspace_dir" type="text" readonly />
+      </label>
+      <label class="field-card">
+        <span>数据目录</span>
+        <input :value="directories.data_dir" type="text" readonly />
       </label>
       <label class="field-card">
         <span>日志目录</span>
-        <input type="text" placeholder="/path/to/logs" />
-      </label>
-      <label class="field-card field-card-wide">
-        <span>运行说明</span>
-        <textarea rows="5" placeholder="这里预留运行参数、存储策略、备份说明等内容。"></textarea>
+        <input :value="directories.log_dir" type="text" readonly />
       </label>
     </div>
   </section>
 </template>
 
 <style scoped>
-.config-section,
-.field-card {
+.config-section {
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   background: var(--surface-soft);
@@ -79,7 +83,7 @@ const emit = defineEmits<{
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 10px;
 }
@@ -88,11 +92,10 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px;
-}
-
-.field-card-wide {
-  grid-column: 1 / -1;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .field-card input,
@@ -110,6 +113,11 @@ const emit = defineEmits<{
 .field-card textarea:focus {
   border-color: var(--focus-border);
   box-shadow: 0 0 0 2px var(--focus-glow);
+}
+
+.field-card input[readonly] {
+  color: var(--muted);
+  cursor: default;
 }
 
 @media (max-width: 780px) {

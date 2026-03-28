@@ -19,6 +19,7 @@ const props = defineProps<{
   isSavingTeamInfo: boolean;
   teamInfoStatus: string;
   teamEnabledPending: Record<number, boolean>;
+  teamListLoadFailed: boolean;
   teamSummaries: Record<number, {
     activeMemberCount: number;
     offBoardMemberCount: number;
@@ -246,7 +247,12 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
         </div>
       </section>
 
-      <article v-if="teams.length === 0" class="empty-card">
+      <article v-if="teamListLoadFailed" class="empty-card">
+        <strong>团队列表加载失败</strong>
+        <p>请检查后端服务或网络连接后重试。</p>
+      </article>
+
+      <article v-else-if="teams.length === 0" class="empty-card">
         <strong>当前没有团队</strong>
         <p>先创建一个团队，再继续配置成员、角色和模型服务。</p>
       </article>

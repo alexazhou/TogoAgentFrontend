@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { deleteTeam, getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
+import { deleteTeam, getAgents, getAgentsByTeamId, getDeptTree, getDirectories, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
@@ -9,8 +9,8 @@ import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
 import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
 import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
-import { loadTeams, teams } from '../teamStore';
-import type { AgentInfo, DeptTreeNode, TeamDetail } from '../types';
+import { loadTeams, teams, teamsLoadFailed } from '../teamStore';
+import type { AgentInfo, DeptTreeNode, DirectoriesConfig, TeamDetail } from '../types';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
 
 const route = useRoute();
@@ -37,6 +37,12 @@ const teamSummaries = ref<Record<number, {
   hierarchyLevelCount: number;
   workingDirectory: string;
 }>>({});
+const runtimeDirectories = ref<DirectoriesConfig>({
+  config_dir: '',
+  workspace_dir: '',
+  data_dir: '',
+  log_dir: '',
+});
 const selectedTeamDetail = ref<TeamDetail | null>(null);
 const teamInfoDraft = ref({
   name: '',
@@ -524,6 +530,13 @@ watch(
 onMounted(() => {
   updateUptime();
   uptimeTimer = window.setInterval(updateUptime, 1000);
+  getDirectories()
+    .then((result) => {
+      runtimeDirectories.value = result;
+    })
+    .catch((error) => {
+      console.error(error);
+    });
   getAgents()
     .then((result) => {
       agents.value = result;
@@ -570,7 +583,6 @@ function handleTeamTreeSaved(): void {
         <div class="sidebar-card">
           <div class="sidebar-card-head">
             <span>导航菜单</span>
-            <small>{{ navItems.length }} 项</small>
           </div>
           <nav class="settings-nav" aria-label="设置导航">
             <button
@@ -621,6 +633,7 @@ function handleTeamTreeSaved(): void {
           :team-summaries="teamSummaries"
           :team-enabled-pending="teamEnabledPending"
           :teams="teams"
+          :team-list-load-failed="teamsLoadFailed"
           :format-date-time="formatDateTime"
           @navigate-breadcrumb="handleBreadcrumbNavigate"
           @create-team="openCreateTeam"
@@ -652,6 +665,7 @@ function handleTeamTreeSaved(): void {
         <RuntimeSettingsSection
           v-else
           :breadcrumb-items="breadcrumbItems"
+          :directories="runtimeDirectories"
           @navigate-breadcrumb="handleBreadcrumbNavigate"
         />
       </main>

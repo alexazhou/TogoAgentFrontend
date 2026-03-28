@@ -38,6 +38,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/config/frontend.json': createApiProxy(backendTarget),
+      '/config/directories.json': createApiProxy(backendTarget),
       '/role_templates/list.json': createApiProxy(backendTarget),
       '/role_templates/': createApiProxy(backendTarget),
       '/agents/list.json': createApiProxy(backendTarget),

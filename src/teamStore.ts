@@ -6,6 +6,7 @@ const preferredTeamStorageKey = 'preferred-team-id';
 
 export const teams = ref<TeamSummary[]>([]);
 export const teamsLoaded = ref(false);
+export const teamsLoadFailed = ref(false);
 export const preferredTeamId = ref<number | null>(readPreferredTeamId());
 
 function readPreferredTeamId(): number | null {
@@ -28,8 +29,14 @@ export function setPreferredTeamId(teamId: number | null): void {
 }
 
 export async function loadTeams(): Promise<void> {
-  teams.value = await getTeams();
-  teamsLoaded.value = true;
+  try {
+    teams.value = await getTeams();
+    teamsLoaded.value = true;
+    teamsLoadFailed.value = false;
+  } catch (error) {
+    teamsLoadFailed.value = true;
+    throw error;
+  }
 }
 
 export function findTeamById(teamId: number | null): TeamSummary | null {
