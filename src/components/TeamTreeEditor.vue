@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { updateTeam } from '../api';
-import { useMemberEditorDialog, type MemberDriverOption } from '../composables/useMemberEditorDialog';
+import { getAgentsByTeamId, getDeptTree, getRoleTemplates, setAgentsByTeamId, setDeptTree } from '../api';
+import {
+  useMemberEditorDialog,
+  type MemberDriverOption,
+  type MemberTemplateOption,
+} from '../composables/useMemberEditorDialog';
 import ConfirmDialog from './ConfirmDialog.vue';
 import TeamMembersCard from './TeamMembersCard.vue';
 import MemberEditorDialog from './MemberEditorDialog.vue';
-import type { AgentInfo, TeamMember } from '../types';
+import type { DeptTreeNode, TeamMember } from '../types';
+import type { AgentInfo } from '../types';
 import type { TeamGraphNode } from './teamGraphTypes';
 
 const props = defineProps<{
   teamId: number;
   teamName: string;
-  members: TeamMember[];
-  agents: AgentInfo[];
 }>();
 
 const emit = defineEmits<{
@@ -20,12 +23,17 @@ const emit = defineEmits<{
 }>();
 
 const driverCatalog = ref<MemberDriverOption[]>([]);
+const roleTemplateCatalog = ref<MemberTemplateOption[]>([]);
+const isLoading = ref(false);
 const isSavingTeamMembers = ref(false);
 const isReadonly = ref(true);
 const teamMemberStatus = ref('');
+const committedAgents = ref<AgentInfo[]>([]);
+const committedDeptTree = ref<DeptTreeNode | null>(null);
 const committedMembers = ref<TeamMember[]>([]);
 const teamMembersDraft = ref<string[]>([]);
 const teamMemberRoleDrafts = ref<Record<string, string>>({});
+const teamMemberDriverDrafts = ref<Record<string, string>>({});
 const teamMemberParentDrafts = ref<Record<string, string>>({});
 const pendingSlots = ref<Array<{ id: string; parentName: string }>>([]);
 const editingPendingSlotId = ref<string | null>(null);
@@ -43,26 +51,18 @@ const confirmState = ref<{
   action: null,
 });
 
-function buildTeamMemberDraft(members: TeamMember[]): string[] {
-  return members.map((member) => member.name);
-}
+function cloneDeptTree(node: DeptTreeNode | null): DeptTreeNode | null {
+  if (!node) {
+    return null;
+  }
 
-function buildTeamMemberRoleDraft(members: TeamMember[]): Record<string, string> {
-  return Object.fromEntries(members.map((member) => [member.name, member.role_template]));
-}
-
-function buildTeamMemberParentDraft(members: TeamMember[]): Record<string, string> {
-  const leaderName = members[0]?.name || '';
-  return Object.fromEntries(
-    members.slice(1).map((member) => [member.name, leaderName]),
-  );
-}
-
-function buildTeamMemberPayload(): TeamMember[] {
-  return teamMembersDraft.value.map((memberName) => ({
-    name: memberName,
-    role_template: teamMemberRoleDrafts.value[memberName] || memberName,
-  }));
+  return {
+    dept_name: node.dept_name,
+    dept_responsibility: node.dept_responsibility,
+    manager: node.manager,
+    members: [...node.members],
+    children: node.children.map((child) => cloneDeptTree(child)!),
+  };
 }
 
 function cloneMembers(members: TeamMember[]): TeamMember[] {
@@ -72,14 +72,215 @@ function cloneMembers(members: TeamMember[]): TeamMember[] {
   }));
 }
 
+function normalizeTeamMembers(members: TeamMember[]): TeamMember[] {
+  return cloneMembers(members).sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function buildFallbackDeptTree(members: TeamMember[]): DeptTreeNode | null {
+  const leaderName = members[0]?.name ?? '';
+  if (!leaderName) {
+    return null;
+  }
+
+  return {
+    dept_name: leaderName,
+    dept_responsibility: '',
+    manager: leaderName,
+    members: [leaderName],
+    children: members.slice(1).map((member) => ({
+      dept_name: member.name,
+      dept_responsibility: '',
+      manager: member.name,
+      members: [member.name],
+      children: [],
+    })),
+  };
+}
+
+function buildCommittedTreeBaseline(): DeptTreeNode | null {
+  return cloneDeptTree(committedDeptTree.value) ?? buildFallbackDeptTree(committedMembers.value);
+}
+
+function buildTeamMemberRoleDraft(members: TeamMember[]): Record<string, string> {
+  return Object.fromEntries(members.map((member) => [member.name, member.role_template]));
+}
+
+function buildTeamMemberDriverDraft(agents: AgentInfo[]): Record<string, string> {
+  return Object.fromEntries(agents.map((agent) => [agent.name, agent.driver || '{}']));
+}
+
+function resolveTreeNodeMemberName(node: DeptTreeNode): string {
+  const managerName = node.manager.trim();
+  if (managerName) {
+    return managerName;
+  }
+
+  if (node.members.length === 1) {
+    return node.members[0]?.trim() || '';
+  }
+
+  if (node.members.length === 0) {
+    return node.dept_name.trim();
+  }
+
+  return '';
+}
+
+function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
+  if (!tree) {
+    return [];
+  }
+
+  const names: string[] = [];
+  const stack = [tree];
+
+  while (stack.length) {
+    const current = stack.pop()!;
+    const memberName = resolveTreeNodeMemberName(current);
+    if (memberName && !names.includes(memberName)) {
+      names.push(memberName);
+    }
+
+    for (let index = current.children.length - 1; index >= 0; index -= 1) {
+      stack.push(current.children[index]);
+    }
+  }
+
+  return names.map((name) => ({
+    id: null,
+    name,
+    template_name: null,
+    role_template_name: '',
+    model: '',
+    team_name: props.teamName,
+    status: 'idle',
+    employ_status: null,
+    driver: '{}',
+  }));
+}
+
+function buildDraftHierarchy(tree: DeptTreeNode | null, members: TeamMember[]): {
+  orderedMembers: string[];
+  parentMap: Record<string, string>;
+} {
+  const fallbackTree = tree ?? buildFallbackDeptTree(members);
+  if (!fallbackTree) {
+    return { orderedMembers: [], parentMap: {} };
+  }
+
+  const orderedMembers: string[] = [];
+  const parentMap: Record<string, string> = {};
+
+  const visitNode = (node: DeptTreeNode, parentName = ''): void => {
+    const managerName = resolveTreeNodeMemberName(node);
+    if (managerName && !orderedMembers.includes(managerName)) {
+      orderedMembers.push(managerName);
+      if (parentName) {
+        parentMap[managerName] = parentName;
+      }
+    }
+
+    const childManagerNames = new Set(
+      node.children
+        .map((child) => resolveTreeNodeMemberName(child))
+        .filter(Boolean),
+    );
+
+    const nodeMembers = node.members.length ? node.members : (managerName ? [managerName] : []);
+
+    nodeMembers.forEach((memberName) => {
+      const normalizedName = memberName.trim();
+      if (
+        !normalizedName
+        || normalizedName === managerName
+        || childManagerNames.has(normalizedName)
+        || orderedMembers.includes(normalizedName)
+      ) {
+        return;
+      }
+      orderedMembers.push(normalizedName);
+      if (managerName) {
+        parentMap[normalizedName] = managerName;
+      }
+    });
+
+    node.children.forEach((child) => visitNode(child, managerName));
+  };
+
+  visitNode(fallbackTree);
+  return { orderedMembers, parentMap };
+}
+
+function buildAgentConfigPayload(): Array<{
+  id: number;
+  name: string;
+  role_template_name: string;
+  model: string;
+  driver: string;
+}> {
+  return committedAgents.value
+    .filter((agent): agent is AgentInfo & { id: number } => typeof agent.id === 'number')
+    .map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      role_template_name: teamMemberRoleDrafts.value[agent.name] || agent.role_template_name || agent.template_name || agent.name,
+      model: agent.model || '',
+      driver: teamMemberDriverDrafts.value[agent.name] || agent.driver || '{}',
+    }));
+}
+
+function buildDeptTreePayload(): DeptTreeNode | null {
+  const leaderName = teamMembersDraft.value[0] ?? '';
+  if (!leaderName) {
+    return null;
+  }
+
+  const childrenByParent = new Map<string, string[]>();
+  Object.entries(teamMemberParentDrafts.value).forEach(([memberName, parentName]) => {
+    if (!parentName) {
+      return;
+    }
+    const siblings = childrenByParent.get(parentName) ?? [];
+    siblings.push(memberName);
+    childrenByParent.set(parentName, siblings);
+  });
+
+  const buildNode = (memberName: string): DeptTreeNode => {
+    const childNames = childrenByParent.get(memberName) ?? [];
+    return {
+      dept_name: memberName,
+      dept_responsibility: '',
+      manager: memberName,
+      members: [memberName],
+      children: childNames.map((childName) => buildNode(childName)),
+    };
+  };
+
+  return buildNode(leaderName);
+}
+
 function syncCommittedMembers(members: TeamMember[]): void {
-  committedMembers.value = cloneMembers(members);
+  committedMembers.value = normalizeTeamMembers(members);
 }
 
 function syncDraftFromCommitted(): void {
-  teamMembersDraft.value = buildTeamMemberDraft(committedMembers.value);
+  const { orderedMembers, parentMap } = buildDraftHierarchy(committedDeptTree.value, committedMembers.value);
+  teamMembersDraft.value = orderedMembers;
   teamMemberRoleDrafts.value = buildTeamMemberRoleDraft(committedMembers.value);
-  teamMemberParentDrafts.value = buildTeamMemberParentDraft(committedMembers.value);
+  teamMemberParentDrafts.value = parentMap;
+}
+
+function syncCommittedState(tree: DeptTreeNode | null, agents: AgentInfo[]): void {
+  const nextAgents = agents.length ? agents : buildFallbackAgentsFromTree(tree);
+  committedDeptTree.value = cloneDeptTree(tree);
+  committedAgents.value = nextAgents.map((agent) => ({ ...agent }));
+  teamMemberDriverDrafts.value = buildTeamMemberDriverDraft(nextAgents);
+  const members = nextAgents.map((agent) => ({
+    name: agent.name,
+    role_template: agent.role_template_name || agent.template_name || agent.name,
+  }));
+  syncCommittedMembers(members);
+  syncDraftFromCommitted();
 }
 
 const selectedTeamMembers = computed(() => (
@@ -140,19 +341,37 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
   return leaderNode;
 });
 
+const hasMemberConfigChanges = computed(() =>
+  JSON.stringify(buildAgentConfigPayload()) !== JSON.stringify(
+    committedAgents.value
+      .filter((agent): agent is AgentInfo & { id: number } => typeof agent.id === 'number')
+      .map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+        role_template_name: agent.role_template_name || agent.template_name || agent.name,
+        model: agent.model || '',
+        driver: agent.driver || '{}',
+      })),
+  ),
+);
+
+const hasDeptTreeChanges = computed(() =>
+  JSON.stringify(buildDeptTreePayload()) !== JSON.stringify(buildCommittedTreeBaseline()),
+);
+
 const hasTeamMemberChanges = computed(() =>
-  JSON.stringify(buildTeamMemberPayload()) !== JSON.stringify(committedMembers.value),
+  hasMemberConfigChanges.value || hasDeptTreeChanges.value,
 );
 
 const memberTemplateOptions = computed(() => {
   const definitions = new Map<string, { name: string; model: string }>();
 
-  props.agents.forEach((agent) => {
-    const templateName = agent.template_name || agent.name;
+  roleTemplateCatalog.value.forEach((template) => {
+    const templateName = template.name;
     if (!definitions.has(templateName)) {
       definitions.set(templateName, {
         name: templateName,
-        model: agent.model || '未设置',
+        model: template.model || '未设置',
       });
     }
   });
@@ -167,24 +386,6 @@ const memberTemplateOptions = computed(() => {
   });
 
   return Array.from(definitions.values()).sort((left, right) => left.name.localeCompare(right.name));
-});
-
-const availableMemberCandidates = computed(() => {
-  const candidates: string[] = [];
-  const seen = new Set<string>();
-
-  props.agents.forEach((agent) => {
-    const candidateName = agent.template_name || agent.name;
-    if (!candidateName || seen.has(candidateName)) {
-      return;
-    }
-    seen.add(candidateName);
-    if (!teamMembersDraft.value.includes(candidateName)) {
-      candidates.push(candidateName);
-    }
-  });
-
-  return candidates;
 });
 
 function resolveMemberRoleTemplate(memberName: string): string {
@@ -239,7 +440,7 @@ const {
 const memberPanelActions = computed(() => {
   if (isReadonly.value) {
     return [
-      { key: 'edit', label: '编辑团队成员', primary: true },
+      { key: 'edit', label: '编辑团队组织', primary: true, disabled: isLoading.value },
     ];
   }
 
@@ -255,17 +456,54 @@ const memberPanelActions = computed(() => {
 });
 
 watch(
-  [() => props.teamId, () => JSON.stringify(props.members)] as const,
-  ([teamId], [previousTeamId]) => {
-    const teamChanged = previousTeamId === undefined || teamId !== previousTeamId;
-    syncCommittedMembers(props.members);
-    if (teamChanged || !pendingSlots.value.length) {
-      syncDraftFromCommitted();
+  () => props.teamId,
+  async () => {
+    const requestTeamId = props.teamId;
+    isLoading.value = true;
+    teamMemberStatus.value = '';
+    try {
+      const [deptTree, teamAgents, roleTemplates] = await Promise.all([
+        getDeptTree(requestTeamId),
+        getAgentsByTeamId(requestTeamId),
+        getRoleTemplates(),
+      ]);
+      if (requestTeamId !== props.teamId) {
+        return;
+      }
+
+      roleTemplateCatalog.value = roleTemplates;
+      const nextMembers = teamAgents.map((agent) => ({
+        ...agent,
+      }));
+
+      syncCommittedState(deptTree, nextMembers);
       pendingSlots.value = [];
       editingPendingSlotId.value = null;
       teamMemberStatus.value = '';
       isReadonly.value = true;
       resetDialogState();
+    } catch (error) {
+      console.error(error);
+      if (requestTeamId !== props.teamId) {
+        return;
+      }
+      roleTemplateCatalog.value = [];
+      committedAgents.value = [];
+      committedDeptTree.value = null;
+      committedMembers.value = [];
+      teamMembersDraft.value = [];
+      teamMemberRoleDrafts.value = {};
+      teamMemberDriverDrafts.value = {};
+      teamMemberParentDrafts.value = {};
+      pendingSlots.value = [];
+      editingPendingSlotId.value = null;
+      teamMemberStatus.value = '加载失败';
+      isReadonly.value = true;
+      resetDialogState();
+    } finally {
+      if (requestTeamId === props.teamId) {
+        isLoading.value = false;
+      }
     }
   },
   { immediate: true },
@@ -289,11 +527,32 @@ async function saveTeamMembers(): Promise<void> {
   teamMemberStatus.value = '';
 
   try {
-    const nextMembers = buildTeamMemberPayload();
-    await updateTeam(props.teamId, {
-      members: nextMembers,
+    const nextAgentConfigs = buildAgentConfigPayload();
+    const nextDeptTree = buildDeptTreePayload();
+
+    if (hasMemberConfigChanges.value) {
+      await setAgentsByTeamId(props.teamId, nextAgentConfigs);
+    }
+
+    if (nextDeptTree && hasDeptTreeChanges.value) {
+      await setDeptTree(props.teamId, nextDeptTree);
+    }
+
+    const nextAgents = committedAgents.value.map((agent) => {
+      const nextConfig = nextAgentConfigs.find((item) => item.id === agent.id);
+      if (!nextConfig) {
+        return { ...agent };
+      }
+      return {
+        ...agent,
+        role_template_name: nextConfig.role_template_name,
+        template_name: nextConfig.role_template_name,
+        model: nextConfig.model,
+        driver: nextConfig.driver,
+      };
     });
-    syncCommittedMembers(nextMembers);
+
+    syncCommittedState(nextDeptTree, nextAgents);
     pendingSlots.value = [];
     editingPendingSlotId.value = null;
     teamMemberStatus.value = '已保存';
@@ -350,7 +609,7 @@ function saveMemberEditor(): void {
     }
     teamMemberRoleDrafts.value = {
       ...teamMemberRoleDrafts.value,
-      [nextMemberName]: memberEditorTemplate.value,
+      [nextMemberName]: resolveMemberRoleTemplate(nextMemberName),
     };
     teamMemberParentDrafts.value = {
       ...teamMemberParentDrafts.value,
@@ -370,6 +629,10 @@ function saveMemberEditor(): void {
     ...teamMemberRoleDrafts.value,
     [editingMemberName.value]: memberEditorTemplate.value,
   };
+  teamMemberDriverDrafts.value = {
+    ...teamMemberDriverDrafts.value,
+    [editingMemberName.value]: memberEditorDriver.value || teamMemberDriverDrafts.value[editingMemberName.value] || '{}',
+  };
   closeMemberEditor();
 }
 
@@ -378,18 +641,13 @@ function createPendingSlotId(): string {
 }
 
 function addSubordinate(parentName: string): void {
-  if (!availableMemberCandidates.value.length) {
-    teamMemberStatus.value = '没有可添加成员';
-    return;
-  }
-
   pendingSlots.value = [...pendingSlots.value, { id: createPendingSlotId(), parentName }];
   teamMemberStatus.value = '';
 }
 
 function editPendingSlot(slotId: string): void {
   editingPendingSlotId.value = slotId;
-  openPendingMemberEditor();
+  openPendingMemberEditor('选择成员');
 }
 
 function removePendingSlot(slotId: string): void {
@@ -457,6 +715,7 @@ function confirmDangerAction(): void {
 
 <template>
   <div class="team-tree-editor">
+    <p v-if="isLoading" class="team-member-status">正在加载组织结构...</p>
     <p v-if="teamMemberStatus" class="team-member-status">{{ teamMemberStatus }}</p>
 
     <TeamMembersCard

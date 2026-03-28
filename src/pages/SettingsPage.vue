@@ -386,7 +386,6 @@ function handleTeamTreeSaved(): void {
           :team-info-status="teamInfoStatus"
           :team-summaries="teamSummaries"
           :teams="teams"
-          :agents="agents"
           :format-date-time="formatDateTime"
           @navigate-breadcrumb="handleBreadcrumbNavigate"
           @create-team="openCreateTeam"

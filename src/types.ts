@@ -2,11 +2,15 @@ export type AgentStatus = 'active' | 'idle';
 export type RoomType = 'private' | 'group';
 
 export interface AgentInfo {
+  id?: number | null;
   name: string;
   template_name?: string | null;
+  role_template_name?: string | null;
   model: string;
   team_name: string;
   status: AgentStatus;
+  employ_status?: string | null;
+  driver?: string;
 }
 
 export interface AgentDetail extends AgentInfo {
@@ -72,6 +76,19 @@ export interface TeamRoomDetail {
   initial_topic: string | null;
   max_turns: number;
   members: string[];
+}
+
+export interface DeptTreeNode {
+  dept_name: string;
+  dept_responsibility: string;
+  manager: string;
+  members: string[];
+  children: DeptTreeNode[];
+}
+
+export interface RoleTemplateSummary {
+  name: string;
+  model: string;
 }
 
 export interface TeamDetail extends TeamSummary {

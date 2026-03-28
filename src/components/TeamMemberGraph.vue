@@ -462,10 +462,14 @@ function handleEditAction(agentName: string): void {
     background 0.16s ease;
 }
 
-.member-card-shell.has-action:hover :deep(.member-action-group),
-.member-card-shell.has-action:focus-within :deep(.member-action-group),
-:deep(.member-card-shell.has-action:hover .member-action-group),
-:deep(.member-card-shell.has-action:focus-within .member-action-group) {
+.member-card-shell.has-action > :deep(.member-card-button:hover + .member-action-group),
+.member-card-shell.has-action > :deep(.member-card-button:focus-visible + .member-action-group),
+.member-card-shell.has-action > :deep(.member-action-group:hover),
+.member-card-shell.has-action > :deep(.member-action-group:focus-within),
+:deep(.member-card-shell.has-action > .member-card-button:hover + .member-action-group),
+:deep(.member-card-shell.has-action > .member-card-button:focus-visible + .member-action-group),
+:deep(.member-card-shell.has-action > .member-action-group:hover),
+:deep(.member-card-shell.has-action > .member-action-group:focus-within) {
   opacity: 1;
   transform: translateY(0);
 }
