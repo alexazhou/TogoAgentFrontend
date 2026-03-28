@@ -123,29 +123,15 @@ function buildTeamMemberModelDraft(agents: AgentInfo[]): Record<string, string> 
 }
 
 function buildTeamMemberDriverDraft(agents: AgentInfo[]): Record<string, string> {
-  return Object.fromEntries(agents.map((agent) => [agent.name, parseDriverTypeValue(agent.driver || '{}')]));
+  return Object.fromEntries(agents.map((agent) => [agent.name, parseDriverTypeValue(agent.driver || '')]));
 }
 
 function parseDriverTypeValue(driver: string): string {
-  if (!driver || driver === '{}') {
-    return '';
+  const normalized = driver.trim().toLowerCase();
+  if (normalized === 'native' || normalized === 'claude_sdk' || normalized === 'tsp') {
+    return normalized;
   }
-
-  try {
-    const parsed = JSON.parse(driver) as { type?: unknown };
-    return typeof parsed.type === 'string' ? parsed.type : '';
-  } catch {
-    return '';
-  }
-}
-
-function serializeDriverDraft(driverType: string): string {
-  const normalized = driverType.trim();
-  if (!normalized) {
-    return '{}';
-  }
-
-  return JSON.stringify({ type: normalized });
+  return '';
 }
 
 function resolveDefaultModelLabel(config: FrontendConfig | null): string {
@@ -230,7 +216,7 @@ function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
     team_name: props.teamName,
     status: 'idle',
     employ_status: null,
-    driver: '{}',
+    driver: '',
   }));
 }
 
@@ -308,18 +294,18 @@ function buildAgentConfigPayload(): Array<{
       driver: (() => {
         const currentName = teamMemberNameDraftsById.value[agent.id] || agent.name;
         const draftDriverType = teamMemberDriverDrafts.value[currentName] || '';
-        const originalDriver = agent.driver || '{}';
+        const originalDriver = agent.driver || '';
         const originalDriverType = parseDriverTypeValue(originalDriver);
 
         if (!draftDriverType) {
-          return '{}';
+          return originalDriverType || 'native';
         }
 
         if (draftDriverType === originalDriverType) {
-          return originalDriver;
+          return originalDriverType || 'native';
         }
 
-        return serializeDriverDraft(draftDriverType);
+        return draftDriverType;
       })(),
     }));
 }
@@ -799,7 +785,7 @@ function saveMemberEditor(): void {
     const nextDriverDrafts = { ...teamMemberDriverDrafts.value };
     const previousDriver = nextDriverDrafts[originalName];
     delete nextDriverDrafts[originalName];
-    nextDriverDrafts[nextMemberName] = memberEditorDriver.value || previousDriver || '{}';
+    nextDriverDrafts[nextMemberName] = memberEditorDriver.value || previousDriver || '';
     teamMemberDriverDrafts.value = nextDriverDrafts;
 
     teamMemberParentDrafts.value = Object.fromEntries(
@@ -837,7 +823,7 @@ function saveMemberEditor(): void {
   };
   teamMemberDriverDrafts.value = {
     ...teamMemberDriverDrafts.value,
-    [nextMemberName]: memberEditorDriver.value || teamMemberDriverDrafts.value[nextMemberName] || '{}',
+    [nextMemberName]: memberEditorDriver.value || teamMemberDriverDrafts.value[nextMemberName] || '',
   };
   teamMemberStatus.value = '';
   closeMemberEditor();
@@ -854,7 +840,7 @@ function addSubordinate(parentName: string): void {
 
 function editPendingSlot(slotId: string): void {
   editingPendingSlotId.value = slotId;
-  openPendingMemberEditor('选择成员');
+  openPendingMemberEditor('');
 }
 
 function removePendingSlot(slotId: string): void {

@@ -87,6 +87,7 @@ const hasTeamInfoChanges = computed(() => {
   }
 
   return (
+    teamInfoDraft.value.name !== selectedTeamDetail.value.name ||
     teamInfoDraft.value.workingDirectory !== (selectedTeamDetail.value.working_directory || '') ||
     teamInfoDraft.value.slogan !== String(selectedTeamDetail.value.config?.slogan || '') ||
     teamInfoDraft.value.rules !== String(selectedTeamDetail.value.config?.rules || '')
@@ -237,6 +238,7 @@ async function saveTeamInfo(): Promise<void> {
 
   try {
     await updateTeam(selectedTeamDetail.value.id, {
+      name: teamInfoDraft.value.name.trim(),
       working_directory: teamInfoDraft.value.workingDirectory,
       config: {
         ...(selectedTeamDetail.value.config || {}),
@@ -447,6 +449,7 @@ function handleTeamTreeSaved(): void {
           @save-team-info="saveTeamInfo"
           @reset-team-info-draft="resetTeamInfoDraft"
           @tree-saved="handleTeamTreeSaved"
+          @update:name="teamInfoDraft.name = $event"
           @update:working-directory="teamInfoDraft.workingDirectory = $event"
           @update:slogan="teamInfoDraft.slogan = $event"
           @update:rules="teamInfoDraft.rules = $event"

@@ -36,6 +36,7 @@ const emit = defineEmits<{
   saveTeamInfo: [];
   resetTeamInfoDraft: [];
   treeSaved: [];
+  'update:name': [value: string];
   'update:workingDirectory': [value: string];
   'update:slogan': [value: string];
   'update:rules': [value: string];
@@ -83,7 +84,8 @@ const emit = defineEmits<{
           :working-directory="teamInfoDraft.workingDirectory"
           :slogan="teamInfoDraft.slogan"
           :rules="teamInfoDraft.rules"
-          :editable-name="false"
+          :editable-name="true"
+          @update:name="emit('update:name', $event)"
           @update:working-directory="emit('update:workingDirectory', $event)"
           @update:slogan="emit('update:slogan', $event)"
           @update:rules="emit('update:rules', $event)"

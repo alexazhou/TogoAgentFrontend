@@ -165,6 +165,14 @@ function normalizeAgentStatus(status?: string): AgentStatus {
   return status?.toLowerCase() === 'active' ? 'active' : 'idle';
 }
 
+function normalizeDriverTypeValue(value?: string | null): string {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'native' || normalized === 'claude_sdk' || normalized === 'tsp') {
+    return normalized;
+  }
+  return '';
+}
+
 function normalizeAgent(agent: RawAgentInfo): AgentInfo {
   const templateName = agent.role_template_name ?? agent.template_name ?? null;
   return {
@@ -177,25 +185,16 @@ function normalizeAgent(agent: RawAgentInfo): AgentInfo {
     team_name: String(agent.team_name ?? ''),
     status: normalizeAgentStatus(agent.status),
     employ_status: agent.employ_status ?? null,
-    driver: typeof agent.driver === 'string' ? agent.driver : '',
+    driver: normalizeDriverTypeValue(typeof agent.driver === 'string' ? agent.driver : ''),
   };
 }
 
 function parseDriverType(detail: RawAgentDetail): string {
   if (detail.driver_type) {
-    return String(detail.driver_type);
+    return normalizeDriverTypeValue(String(detail.driver_type));
   }
 
-  if (typeof detail.driver !== 'string' || !detail.driver.trim()) {
-    return '';
-  }
-
-  try {
-    const parsed = JSON.parse(detail.driver) as { type?: unknown };
-    return typeof parsed.type === 'string' ? parsed.type : '';
-  } catch {
-    return '';
-  }
+  return normalizeDriverTypeValue(typeof detail.driver === 'string' ? detail.driver : '');
 }
 
 function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
@@ -292,6 +291,7 @@ export async function setDeptTree(teamId: number, deptTree: DeptTreeNode): Promi
 export async function updateTeam(
   teamId: number,
   payload: {
+    name?: string;
     working_directory?: string;
     config?: Record<string, unknown>;
     members?: Array<{
