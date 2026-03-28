@@ -17,14 +17,19 @@ type UseMemberEditorDialogOptions = {
   teamId: Ref<number>;
   templateOptions: ComputedRef<MemberTemplateOption[]>;
   driverCatalog: Ref<MemberDriverOption[]>;
+  resolveName: (memberName: string) => string;
+  resolveModel: (memberName: string) => string;
+  resolveDriver: (memberName: string) => string;
   resolveTemplate: (memberName: string) => string;
   canLoadMemberDetail?: (memberName: string) => boolean;
 };
 
 export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   const editingMemberName = ref('');
+  const memberEditorName = ref('');
   const memberEditorKeyword = ref('');
   const memberEditorTemplate = ref('');
+  const memberEditorModel = ref('');
   const memberEditorDriver = ref('');
   const memberEditorMode = ref<MemberEditorMode>('view');
   const memberDriverCache = new Map<string, string>();
@@ -60,8 +65,10 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   function resetDialogState(): void {
     memberEditorRequestId += 1;
     editingMemberName.value = '';
+    memberEditorName.value = '';
     memberEditorKeyword.value = '';
     memberEditorTemplate.value = '';
+    memberEditorModel.value = '';
     memberEditorDriver.value = '';
     memberEditorMode.value = 'view';
   }
@@ -70,7 +77,6 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     const requestId = ++memberEditorRequestId;
 
     if (options.canLoadMemberDetail && !options.canLoadMemberDetail(agentName)) {
-      memberEditorDriver.value = '';
       return;
     }
 
@@ -101,26 +107,32 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   function openMemberEditor(agentName: string): void {
     memberEditorMode.value = 'edit';
     editingMemberName.value = agentName;
+    memberEditorName.value = options.resolveName(agentName);
     memberEditorKeyword.value = '';
     memberEditorTemplate.value = options.resolveTemplate(agentName);
-    memberEditorDriver.value = '';
+    memberEditorModel.value = options.resolveModel(agentName);
+    memberEditorDriver.value = options.resolveDriver(agentName);
     void loadMemberDriver(agentName);
   }
 
   function openMemberViewer(agentName: string): void {
     memberEditorMode.value = 'view';
     editingMemberName.value = agentName;
+    memberEditorName.value = options.resolveName(agentName);
     memberEditorKeyword.value = '';
     memberEditorTemplate.value = options.resolveTemplate(agentName);
-    memberEditorDriver.value = '';
+    memberEditorModel.value = options.resolveModel(agentName);
+    memberEditorDriver.value = options.resolveDriver(agentName);
     void loadMemberDriver(agentName);
   }
 
   function openPendingMemberEditor(displayName = '新成员'): void {
     memberEditorMode.value = 'edit';
     editingMemberName.value = displayName;
+    memberEditorName.value = displayName;
     memberEditorKeyword.value = '';
     memberEditorTemplate.value = '';
+    memberEditorModel.value = '';
     memberEditorDriver.value = '';
   }
 
@@ -134,8 +146,10 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
 
   return {
     editingMemberName,
+    memberEditorName,
     memberEditorKeyword,
     memberEditorTemplate,
+    memberEditorModel,
     memberEditorDriver,
     memberEditorMode,
     memberEditorOpen,

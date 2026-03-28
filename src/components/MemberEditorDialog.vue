@@ -8,6 +8,8 @@ const props = defineProps<{
   open: boolean;
   editable: boolean;
   memberName: string;
+  employeeNumber: string;
+  memberModel: string;
   keyword: string;
   selectedTemplate: string;
   currentTemplateModel: string;
@@ -19,10 +21,23 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
   save: [];
+  'update:memberName': [value: string];
+  'update:memberModel': [value: string];
   'update:keyword': [value: string];
   'update:selectedTemplate': [value: string];
   'update:driver': [value: string];
 }>();
+
+const memberNameModel = computed({
+  get: () => props.memberName,
+  set: (value: string) => emit('update:memberName', value),
+});
+
+const memberModelValue = computed(() => props.memberModel || props.currentTemplateModel || '未设置');
+const memberModelModel = computed({
+  get: () => props.memberModel,
+  set: (value: string) => emit('update:memberModel', value),
+});
 
 const keywordModel = computed({
   get: () => props.keyword,
@@ -38,6 +53,8 @@ const driverModel = computed({
   get: () => props.driver,
   set: (value: string) => emit('update:driver', value),
 });
+
+const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配');
 </script>
 
 <template>
@@ -56,20 +73,57 @@ const driverModel = computed({
 
         <div class="member-editor-summary">
           <label class="member-editor-field">
+            <span>工号</span>
+            <input
+              :value="employeeNumberDisplay"
+              class="member-editor-input member-editor-input--readonly"
+              type="text"
+              readonly
+            />
+            <small class="member-editor-field-note">工号入职时自动生成，不支持修改</small>
+          </label>
+          <label class="member-editor-field">
             <span>成员名称</span>
-            <input :value="memberName" type="text" readonly />
+            <input
+              v-model="memberNameModel"
+              class="member-editor-input"
+              :class="editable ? 'member-editor-input--editable' : 'member-editor-input--readonly'"
+              type="text"
+              :readonly="!editable"
+            />
+            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
           </label>
           <label class="member-editor-field">
             <span>模型</span>
-            <input :value="currentTemplateModel || '未设置'" type="text" readonly />
+            <input
+              v-if="editable"
+              v-model="memberModelModel"
+              class="member-editor-input member-editor-input--editable"
+              type="text"
+              :placeholder="currentTemplateModel || '未设置'"
+            />
+            <input
+              v-else
+              :value="memberModelValue"
+              class="member-editor-input member-editor-input--readonly"
+              type="text"
+              readonly
+            />
+            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
           </label>
           <label class="member-editor-field">
             <span>驱动</span>
-            <select v-model="driverModel" :disabled="!editable">
+            <select
+              v-model="driverModel"
+              class="member-editor-input"
+              :class="editable ? 'member-editor-input--editable' : 'member-editor-input--readonly'"
+              :disabled="!editable"
+            >
               <option v-for="driverOption in driverOptions" :key="driverOption.value" :value="driverOption.value">
                 {{ driverOption.label }}
               </option>
             </select>
+            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
           </label>
         </div>
 
@@ -81,9 +135,10 @@ const driverModel = computed({
             <AgentCardBase
               v-if="selectedTemplate"
               class="member-selected-card"
-              :title="memberName"
+              :title="memberNameModel"
               :subtitle="selectedTemplate"
-              :avatar-name="selectedTemplate || memberName"
+              :employee-number="employeeNumber"
+              :avatar-name="selectedTemplate || memberNameModel"
               :selected="false"
               variant="featured"
             />
@@ -264,13 +319,15 @@ const driverModel = computed({
 
 .member-editor-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
 .member-editor-field {
   display: grid;
+  grid-template-rows: auto 36px auto;
   gap: 6px;
+  align-content: start;
 }
 
 .member-editor-field span {
@@ -280,17 +337,49 @@ const driverModel = computed({
   text-transform: uppercase;
 }
 
-.member-editor-field input,
-.member-editor-field select,
+.member-editor-field-note {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+  font-size: 0.66rem;
+  line-height: 1.25;
+  max-width: 28ch;
+  margin-top: 2px;
+}
+
+.member-editor-field-note--placeholder {
+  visibility: hidden;
+}
+
+.member-editor-input,
 .member-template-search input {
   width: 100%;
   height: 36px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
   color: var(--text-strong);
   padding: 0 12px;
   outline: none;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.member-editor-input--readonly {
+  border: 1px dashed color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
+  background: color-mix(in srgb, var(--surface-soft) 92%, var(--panel-bg) 8%);
+  color: color-mix(in srgb, var(--text-strong) 88%, var(--muted) 12%);
+}
+
+.member-editor-input--editable {
+  border: 1px solid color-mix(in srgb, var(--focus-border) 34%, var(--panel-border) 66%);
+  background: color-mix(in srgb, #fff 88%, var(--surface-soft) 12%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--selected) 34%, transparent);
+}
+
+.member-editor-input--editable:focus {
+  border-color: var(--focus-border);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 38%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--focus-border) 14%, transparent);
 }
 
 .member-editor-field select {
@@ -304,7 +393,7 @@ const driverModel = computed({
   cursor: default;
 }
 
-.member-editor-field input[readonly] {
+.member-editor-input[readonly] {
   cursor: default;
 }
 
@@ -367,8 +456,16 @@ const driverModel = computed({
 .member-template-search input {
   height: 30px;
   padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
   border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
   font-size: 0.76rem;
+  box-shadow: none;
+}
+
+.member-template-search input:focus {
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-border) 14%, transparent);
 }
 
 .member-template-grid {
