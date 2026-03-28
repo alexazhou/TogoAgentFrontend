@@ -6,9 +6,11 @@ const props = withDefaults(defineProps<{
   rules: string;
   readonly?: boolean;
   editableName?: boolean;
+  showWorkingDirectory?: boolean;
 }>(), {
   readonly: false,
   editableName: true,
+  showWorkingDirectory: true,
 });
 
 const emit = defineEmits<{
@@ -37,7 +39,7 @@ function displayValue(value: string, fallback = '未设置'): string {
           <div class="info-value">{{ displayValue(name) }}</div>
         </div>
 
-        <div class="info-row">
+        <div v-if="props.showWorkingDirectory" class="info-row">
           <span class="info-key">工作目录</span>
           <div class="info-value info-value-path">{{ displayValue(workingDirectory) }}</div>
         </div>
@@ -67,7 +69,7 @@ function displayValue(value: string, fallback = '未设置'): string {
           />
         </label>
 
-        <label class="edit-field">
+        <label v-if="props.showWorkingDirectory" class="edit-field">
           <span class="field-label">工作目录</span>
           <input
             :value="workingDirectory"
