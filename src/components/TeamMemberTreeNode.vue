@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import AgentCardBase from './AgentCardBase.vue';
 import type { TeamGraphNode } from './teamGraphTypes';
 
@@ -47,6 +48,43 @@ function handleEditAction(): void {
   }
 
   emit('editAgent', props.node.name);
+}
+
+function getNodeSpan(node: TeamGraphNode): number {
+  if (!node.children.length) {
+    return 1;
+  }
+
+  return node.children.reduce((total, child) => total + getNodeSpan(child), 0);
+}
+
+function formatSpanWidth(span: number): string {
+  const gapCount = Math.max(span - 1, 0);
+  return `calc(${span} * var(--member-card-width) + ${gapCount} * var(--member-gap))`;
+}
+
+function formatHalfSpanWidth(span: number): string {
+  return `calc((${formatSpanWidth(span)}) / 2)`;
+}
+
+const childSpans = computed(() => props.node.children.map((child) => getNodeSpan(child)));
+const totalChildSpan = computed(() => childSpans.value.reduce((total, span) => total + span, 0));
+const firstChildSpan = computed(() => childSpans.value[0] ?? 1);
+const lastChildSpan = computed(() => childSpans.value[childSpans.value.length - 1] ?? 1);
+
+const childTreeStyle = computed<Record<string, string>>(() => ({
+  '--child-rail-left': formatHalfSpanWidth(firstChildSpan.value),
+  '--child-rail-right': formatHalfSpanWidth(lastChildSpan.value),
+}));
+
+const childListStyle = computed<Record<string, string>>(() => ({
+  gridTemplateColumns: `repeat(${Math.max(totalChildSpan.value, 1)}, var(--member-card-width))`,
+}));
+
+function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
+  return {
+    gridColumn: `span ${getNodeSpan(child)}`,
+  };
 }
 </script>
 
@@ -146,6 +184,7 @@ function handleEditAction(): void {
       v-if="node.children.length"
       class="member-child-tree"
       :class="{ 'is-single-child': node.children.length === 1 }"
+      :style="childTreeStyle"
     >
       <div
         v-if="node.children.length > 1"
@@ -155,12 +194,13 @@ function handleEditAction(): void {
 
       <div
         class="member-child-list"
-        :style="{ gridTemplateColumns: `repeat(${node.children.length}, var(--member-card-width))` }"
+        :style="childListStyle"
       >
         <div
           v-for="child in node.children"
           :key="child.id"
           class="member-child-shell"
+          :style="buildChildShellStyle(child)"
         >
           <span class="member-child-link" aria-hidden="true"></span>
           <TeamMemberTreeNode
@@ -245,8 +285,8 @@ function handleEditAction(): void {
 .member-child-rail {
   position: absolute;
   top: 0;
-  left: calc(var(--member-card-width) / 2);
-  right: calc(var(--member-card-width) / 2);
+  left: var(--child-rail-left, calc(var(--member-card-width) / 2));
+  right: var(--child-rail-right, calc(var(--member-card-width) / 2));
   height: var(--member-child-offset);
   border-top: 1px solid var(--member-connector-line);
 }
@@ -283,6 +323,10 @@ function handleEditAction(): void {
 .member-card-shell.has-action > .member-card-anchor > .member-action-group:focus-within {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.member-child-shell {
+  width: 100%;
 }
 
 @media (max-width: 960px) {
