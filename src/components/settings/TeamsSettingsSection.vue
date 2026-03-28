@@ -3,7 +3,7 @@ import TeamInfoCard from '../TeamInfoCard.vue';
 import TeamTreeEditor from '../TeamTreeEditor.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from './types';
-import type { AgentInfo, TeamDetail, TeamSummary } from '../../types';
+import type { TeamDetail, TeamSummary } from '../../types';
 
 defineProps<{
   breadcrumbItems: SettingsBreadcrumbItem[];
@@ -19,7 +19,6 @@ defineProps<{
   teamInfoStatus: string;
   teamSummaries: Record<number, { memberCount: number; roomCount: number }>;
   teams: TeamSummary[];
-  agents: AgentInfo[];
   formatDateTime: (value: string) => string;
 }>();
 
@@ -85,8 +84,6 @@ const emit = defineEmits<{
         <TeamTreeEditor
           :team-id="selectedTeamDetail.id"
           :team-name="selectedTeamDetail.name"
-          :members="selectedTeamDetail.members"
-          :agents="agents"
           @saved="emit('treeSaved')"
         />
       </div>

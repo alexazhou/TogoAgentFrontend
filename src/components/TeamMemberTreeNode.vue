@@ -171,3 +171,72 @@ function handleEditAction(): void {
     </div>
   </div>
 </template>
+
+<style scoped>
+.member-card-shell,
+.member-node-shell,
+.member-child-shell {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+}
+
+.member-card-button {
+  width: var(--member-card-width);
+  justify-self: center;
+}
+
+.member-child-tree {
+  --member-child-offset: 18px;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  justify-self: center;
+  width: max-content;
+  margin-top: 18px;
+  padding-top: var(--member-child-offset);
+}
+
+.member-child-tree::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--member-child-offset));
+  left: 50%;
+  width: 1px;
+  height: var(--member-child-offset);
+  transform: translateX(-50%);
+  background: var(--member-connector-line);
+}
+
+.member-child-tree.is-single-child::before {
+  height: calc(var(--member-child-offset) * 2);
+}
+
+.member-child-list {
+  position: relative;
+  display: grid;
+  gap: var(--member-gap);
+  justify-items: center;
+  width: max-content;
+}
+
+.member-child-rail {
+  position: absolute;
+  top: 0;
+  left: calc(var(--member-card-width) / 2);
+  right: calc(var(--member-card-width) / 2);
+  height: var(--member-child-offset);
+  border-top: 1px solid var(--member-connector-line);
+}
+
+.member-child-link {
+  position: absolute;
+  top: calc(-1 * var(--member-child-offset));
+  left: 50%;
+  width: 1px;
+  height: var(--member-child-offset);
+  transform: translateX(-50%);
+  background: var(--member-connector-line);
+}
+</style>

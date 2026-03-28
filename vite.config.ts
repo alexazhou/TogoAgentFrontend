@@ -7,6 +7,8 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     proxy: {
+      '/role_templates/list.json': 'http://127.0.0.1:8080',
+      '/role_templates/': 'http://127.0.0.1:8080',
       '/agents/list.json': 'http://127.0.0.1:8080',
       '/members/list.json': 'http://127.0.0.1:8080',
       '/rooms/list.json': 'http://127.0.0.1:8080',

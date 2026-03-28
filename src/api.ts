@@ -3,7 +3,9 @@ import type {
   AgentDetail,
   AgentInfo,
   CreateTeamPayload,
+  DeptTreeNode,
   MessageInfo,
+  RoleTemplateSummary,
   RoomInfo,
   TeamDetail,
   TeamSummary,
@@ -23,11 +25,23 @@ type RawRoomInfo = Partial<RoomInfo> & {
 
 type RawAgentInfo = Partial<AgentInfo> & {
   status?: string;
+  role_template_name?: string;
+  employ_status?: string;
+  driver?: string;
 };
 
 type RawAgentDetail = Partial<AgentDetail> & {
   status?: string;
+  role_template_name?: string;
+  employ_status?: string;
+  driver?: string;
 };
+
+type RawDeptTreeResponse = {
+  dept_tree?: DeptTreeNode | null;
+};
+
+type RawRoleTemplateSummary = Partial<RoleTemplateSummary>;
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
@@ -107,20 +121,42 @@ function normalizeAgentStatus(status?: string): AgentStatus {
 }
 
 function normalizeAgent(agent: RawAgentInfo): AgentInfo {
+  const templateName = agent.role_template_name ?? agent.template_name ?? null;
   return {
+    id: typeof agent.id === 'number' ? agent.id : null,
     name: String(agent.name ?? ''),
-    template_name: agent.template_name ?? null,
+    template_name: templateName,
+    role_template_name: templateName,
     model: String(agent.model ?? ''),
     team_name: String(agent.team_name ?? ''),
     status: normalizeAgentStatus(agent.status),
+    employ_status: agent.employ_status ?? null,
+    driver: typeof agent.driver === 'string' ? agent.driver : '',
   };
+}
+
+function parseDriverType(detail: RawAgentDetail): string {
+  if (detail.driver_type) {
+    return String(detail.driver_type);
+  }
+
+  if (typeof detail.driver !== 'string' || !detail.driver.trim()) {
+    return '';
+  }
+
+  try {
+    const parsed = JSON.parse(detail.driver) as { type?: unknown };
+    return typeof parsed.type === 'string' ? parsed.type : '';
+  } catch {
+    return '';
+  }
 }
 
 function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
   return {
     ...normalizeAgent(agent),
-    agent_name: String(agent.agent_name ?? agent.template_name ?? agent.name ?? ''),
-    driver_type: String(agent.driver_type ?? ''),
+    agent_name: String(agent.agent_name ?? agent.role_template_name ?? agent.template_name ?? agent.name ?? ''),
+    driver_type: parseDriverType(agent),
     prompt: String(agent.prompt ?? ''),
   };
 }
@@ -137,6 +173,22 @@ export async function getAgentsByTeamId(teamId: number): Promise<AgentInfo[]> {
   return data.agents.map(normalizeAgent);
 }
 
+export async function setAgentsByTeamId(
+  teamId: number,
+  payload: Array<{
+    id: number;
+    name: string;
+    role_template_name: string;
+    model: string;
+    driver: string;
+  }>,
+): Promise<{ status: string }> {
+  return requestJson(`/teams/${teamId}/agents/batch_update.json`, {
+    method: 'PUT',
+    body: JSON.stringify({ agents: payload }),
+  });
+}
+
 export async function getRooms(teamId?: number): Promise<RoomInfo[]> {
   const data = await requestJson<{ rooms: RawRoomInfo[] }>(
     withSearch('/rooms/list.json', { team_id: teamId }),
@@ -149,8 +201,28 @@ export async function getTeams(): Promise<TeamSummary[]> {
   return data.teams;
 }
 
+export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
+  const data = await requestJson<{ role_templates: RawRoleTemplateSummary[] }>('/role_templates/list.json');
+  return data.role_templates.map((template) => ({
+    name: String(template.name ?? ''),
+    model: String(template.model ?? ''),
+  }));
+}
+
 export async function getTeamDetail(teamId: number): Promise<TeamDetail> {
   return requestJson<TeamDetail>(`/teams/${teamId}.json`);
+}
+
+export async function getDeptTree(teamId: number): Promise<DeptTreeNode | null> {
+  const data = await requestJson<RawDeptTreeResponse>(`/teams/${teamId}/dept_tree.json`);
+  return data.dept_tree ?? null;
+}
+
+export async function setDeptTree(teamId: number, deptTree: DeptTreeNode): Promise<{ status: string }> {
+  return requestJson(`/teams/${teamId}/dept_tree.json`, {
+    method: 'PUT',
+    body: JSON.stringify({ dept_tree: deptTree }),
+  });
 }
 
 export async function updateTeam(
