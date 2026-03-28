@@ -124,13 +124,13 @@ const emit = defineEmits<{
         <div class="team-card-summary">
           <div class="team-summary-row">
             <span class="team-summary-chip">在职 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
-            <span class="team-summary-chip">离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}</span>
-            <span class="team-summary-chip">房间 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
             <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
+            <span class="team-summary-chip">聊天室 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
             <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
+            <span class="team-summary-chip">离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}</span>
           </div>
           <div class="team-summary-row">
-            <span class="team-summary-chip team-summary-chip-path">目录 {{ teamSummaries[team.id]?.workingDirectory || team.working_directory || '未设置' }}</span>
+            <span class="team-summary-chip team-summary-chip-path">工作目录 {{ teamSummaries[team.id]?.workingDirectory || team.working_directory || '未设置' }}</span>
           </div>
         </div>
         <div class="team-card-footer">
