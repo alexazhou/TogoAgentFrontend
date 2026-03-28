@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgents, getTeamDetail, updateTeam } from '../api';
+import { getAgents, getDeptTree, getTeamDetail, updateTeam } from '../api';
 import { connectionState, totalMessageCount } from '../appUiState';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
@@ -9,7 +9,7 @@ import RolesSettingsSection from '../components/settings/RolesSettingsSection.vu
 import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
 import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
 import { loadTeams, teams } from '../teamStore';
-import type { AgentInfo, TeamDetail } from '../types';
+import type { AgentInfo, DeptTreeNode, TeamDetail } from '../types';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
 
 const route = useRoute();
@@ -26,7 +26,13 @@ const driverStates = [
   { key: 'tps', label: 'TPS', available: false, note: '待接入检测' },
 ];
 const agents = ref<AgentInfo[]>([]);
-const teamSummaries = ref<Record<number, { memberCount: number; roomCount: number }>>({});
+const teamSummaries = ref<Record<number, {
+  memberCount: number;
+  roomCount: number;
+  deptCount: number;
+  hierarchyLevelCount: number;
+  workingDirectory: string;
+}>>({});
 const selectedTeamDetail = ref<TeamDetail | null>(null);
 const teamInfoDraft = ref({
   name: '',
@@ -158,15 +164,50 @@ async function loadTeamSummaries(): Promise<void> {
   const entries = await Promise.all(
     teams.value.map(async (team) => {
       try {
-        const detail = await getTeamDetail(team.id);
-        return [team.id, { memberCount: detail.members.length, roomCount: detail.rooms.length }] as const;
+        const [detail, deptTree] = await Promise.all([
+          getTeamDetail(team.id),
+          getDeptTree(team.id),
+        ]);
+        return [team.id, {
+          memberCount: detail.members.length,
+          roomCount: detail.rooms.length,
+          deptCount: countDeptNodes(deptTree),
+          hierarchyLevelCount: countDeptHierarchyLevels(deptTree),
+          workingDirectory: detail.working_directory || team.working_directory || '',
+        }] as const;
       } catch (error) {
         console.error(error);
-        return [team.id, { memberCount: 0, roomCount: 0 }] as const;
+        return [team.id, {
+          memberCount: 0,
+          roomCount: 0,
+          deptCount: 0,
+          hierarchyLevelCount: 0,
+          workingDirectory: team.working_directory || '',
+        }] as const;
       }
     }),
   );
   teamSummaries.value = Object.fromEntries(entries);
+}
+
+function countDeptNodes(node: DeptTreeNode | null): number {
+  if (!node) {
+    return 0;
+  }
+
+  return 1 + node.children.reduce((total, child) => total + countDeptNodes(child), 0);
+}
+
+function countDeptHierarchyLevels(node: DeptTreeNode | null): number {
+  if (!node) {
+    return 0;
+  }
+
+  if (!node.children.length) {
+    return 1;
+  }
+
+  return 1 + Math.max(...node.children.map((child) => countDeptHierarchyLevels(child)));
 }
 
 async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
@@ -271,6 +312,19 @@ const memberCount = computed(() => agents.value.length);
 const agentCount = computed(() => agents.value.length);
 
 watch(
+  () => teams.value.map((team) => team.id),
+  (teamIds) => {
+    if (!teamIds.length) {
+      teamSummaries.value = {};
+      return;
+    }
+
+    loadTeamSummaries().catch(console.error);
+  },
+  { immediate: true },
+);
+
+watch(
   () => route.params.section,
   (section) => {
     if (typeof section !== 'string' || !validSectionIds.has(section)) {
@@ -302,7 +356,6 @@ onMounted(() => {
     .catch((error) => {
       console.error(error);
     });
-  loadTeamSummaries().catch(console.error);
 });
 
 onBeforeUnmount(() => {

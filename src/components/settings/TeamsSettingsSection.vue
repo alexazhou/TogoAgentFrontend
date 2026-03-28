@@ -17,7 +17,13 @@ defineProps<{
   hasTeamInfoChanges: boolean;
   isSavingTeamInfo: boolean;
   teamInfoStatus: string;
-  teamSummaries: Record<number, { memberCount: number; roomCount: number }>;
+  teamSummaries: Record<number, {
+    memberCount: number;
+    roomCount: number;
+    deptCount: number;
+    hierarchyLevelCount: number;
+    workingDirectory: string;
+  }>;
   teams: TeamSummary[];
   formatDateTime: (value: string) => string;
 }>();
@@ -43,8 +49,10 @@ const emit = defineEmits<{
     <template v-if="selectedTeamDetail">
       <div class="team-detail-head">
         <div>
-          <p class="section-eyebrow">Team Detail</p>
-          <h4>{{ selectedTeamDetail.name }}</h4>
+          <div class="team-detail-title-row">
+            <h4>{{ selectedTeamDetail.name }}</h4>
+            <p class="section-eyebrow">Team Detail</p>
+          </div>
         </div>
         <div class="team-detail-actions">
           <span v-if="teamInfoStatus" class="team-detail-status">{{ teamInfoStatus }}</span>
@@ -108,9 +116,11 @@ const emit = defineEmits<{
           <div class="team-summary-row">
             <span class="team-summary-chip">成员 {{ teamSummaries[team.id]?.memberCount ?? 0 }}</span>
             <span class="team-summary-chip">房间 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
+            <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
+            <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
           </div>
           <div class="team-summary-row">
-            <span class="team-summary-chip team-summary-chip-path">目录 {{ team.working_directory || '未设置' }}</span>
+            <span class="team-summary-chip team-summary-chip-path">目录 {{ teamSummaries[team.id]?.workingDirectory || team.working_directory || '未设置' }}</span>
           </div>
         </div>
         <div class="team-card-footer">
@@ -182,8 +192,15 @@ const emit = defineEmits<{
   font-size: 1rem;
 }
 
+.team-detail-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .team-detail-head .section-eyebrow {
-  margin-bottom: 2px;
+  margin: 0;
 }
 
 .team-detail-actions {
