@@ -1,4 +1,4 @@
-const AVATAR_COUNT = 100;
+const AVATAR_COUNT = 77;
 
 function hashString(value: string): number {
   let hash = 2166136261;
@@ -20,5 +20,5 @@ export function getAgentAvatarIndex(agentName: string): number {
 }
 
 export function getAgentAvatarUrl(agentName: string): string {
-  return `/avatars/${String(getAgentAvatarIndex(agentName)).padStart(3, '0')}.svg`;
+  return `/avatars/${String(getAgentAvatarIndex(agentName)).padStart(3, '0')}.png`;
 }
