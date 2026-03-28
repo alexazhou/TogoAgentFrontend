@@ -21,6 +21,7 @@ const emit = defineEmits<{
 
 const driverCatalog = ref<MemberDriverOption[]>([]);
 const isSavingTeamMembers = ref(false);
+const isReadonly = ref(true);
 const teamMemberStatus = ref('');
 const committedMembers = ref<TeamMember[]>([]);
 const teamMembersDraft = ref<string[]>([]);
@@ -236,6 +237,12 @@ const {
 });
 
 const memberPanelActions = computed(() => {
+  if (isReadonly.value) {
+    return [
+      { key: 'edit', label: '编辑团队成员', primary: true },
+    ];
+  }
+
   return [
     { key: 'cancel', label: '取消', disabled: isSavingTeamMembers.value },
     {
@@ -257,6 +264,7 @@ watch(
       pendingSlots.value = [];
       editingPendingSlotId.value = null;
       teamMemberStatus.value = '';
+      isReadonly.value = true;
       resetDialogState();
     }
   },
@@ -268,6 +276,7 @@ function cancelTeamMemberEdit(): void {
   pendingSlots.value = [];
   editingPendingSlotId.value = null;
   teamMemberStatus.value = '';
+  isReadonly.value = true;
   closeMemberEditor();
 }
 
@@ -288,6 +297,7 @@ async function saveTeamMembers(): Promise<void> {
     pendingSlots.value = [];
     editingPendingSlotId.value = null;
     teamMemberStatus.value = '已保存';
+    isReadonly.value = true;
     closeMemberEditor();
     emit('saved');
   } catch (error) {
@@ -299,6 +309,11 @@ async function saveTeamMembers(): Promise<void> {
 }
 
 function handleMemberPanelAction(actionKey: string): void {
+  if (actionKey === 'edit') {
+    isReadonly.value = false;
+    return;
+  }
+
   if (actionKey === 'cancel') {
     cancelTeamMemberEdit();
     return;
@@ -449,9 +464,9 @@ function confirmDangerAction(): void {
       :selected-agents="selectedTeamMembers"
       :member-templates="selectedTeamMemberTemplates"
       :root-node="graphRootNode"
-      :readonly="false"
+      :readonly="isReadonly"
       :actions="memberPanelActions"
-      :show-edit-action="true"
+      :show-edit-action="!isReadonly"
       @action="handleMemberPanelAction"
       @toggle-agent="toggleTeamMember"
       @view-agent="openMemberViewer"
