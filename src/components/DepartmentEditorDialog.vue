@@ -3,12 +3,14 @@ defineProps<{
   open: boolean;
   memberName: string;
   departmentName: string;
+  departmentResponsibility: string;
 }>();
 
 const emit = defineEmits<{
   close: [];
   save: [];
   'update:departmentName': [value: string];
+  'update:departmentResponsibility': [value: string];
 }>();
 </script>
 
@@ -21,7 +23,7 @@ const emit = defineEmits<{
             <h2 class="department-editor-title">编辑部门</h2>
             <p class="section-eyebrow">Department</p>
           </div>
-          <p class="department-editor-meta">成员：{{ memberName }}</p>
+          <p class="department-editor-meta">主管：{{ memberName }}</p>
         </div>
 
         <label class="department-editor-field">
@@ -33,6 +35,17 @@ const emit = defineEmits<{
             placeholder="请输入部门名称"
             @input="emit('update:departmentName', ($event.target as HTMLInputElement).value)"
           />
+        </label>
+
+        <label class="department-editor-field">
+          <span>部门责任</span>
+          <textarea
+            :value="departmentResponsibility"
+            class="department-editor-input department-editor-textarea"
+            rows="4"
+            placeholder="请输入部门责任"
+            @input="emit('update:departmentResponsibility', ($event.target as HTMLTextAreaElement).value)"
+          ></textarea>
         </label>
 
         <div class="department-editor-actions">
@@ -123,6 +136,13 @@ const emit = defineEmits<{
   box-shadow: 0 0 0 2px var(--focus-glow);
 }
 
+.department-editor-textarea {
+  min-height: 112px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
 .department-editor-actions {
   display: flex;
   justify-content: flex-end;
@@ -130,6 +150,10 @@ const emit = defineEmits<{
 }
 
 .department-editor-actions > button {
-  min-width: 88px;
+  width: 112px;
+  min-width: 112px;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 0.84rem;
 }
 </style>
