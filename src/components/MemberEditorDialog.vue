@@ -367,9 +367,11 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
 }
 
 .member-editor-input--readonly {
-  border: 1px dashed color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
-  background: color-mix(in srgb, var(--surface-soft) 92%, var(--panel-bg) 8%);
-  color: color-mix(in srgb, var(--text-strong) 88%, var(--muted) 12%);
+  border: 1px dashed color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
+  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
+  color: color-mix(in srgb, var(--muted) 84%, var(--text-strong) 16%);
+  -webkit-text-fill-color: color-mix(in srgb, var(--muted) 84%, var(--text-strong) 16%);
+  box-shadow: none;
 }
 
 .member-editor-input--editable {
@@ -392,8 +394,14 @@ const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配'
 
 .member-editor-dialog--readonly .member-editor-field select:disabled,
 .member-editor-dialog--readonly .member-template-search input:disabled {
-  opacity: 0.64;
+  opacity: 1;
   cursor: default;
+}
+
+.member-editor-dialog--readonly .member-editor-field select:disabled {
+  border-style: dashed;
+  color: color-mix(in srgb, var(--muted) 84%, var(--text-strong) 16%);
+  -webkit-text-fill-color: color-mix(in srgb, var(--muted) 84%, var(--text-strong) 16%);
 }
 
 .member-editor-input[readonly] {
