@@ -9,6 +9,7 @@ const props = defineProps<{
   editable: boolean;
   teamName: string;
   memberName: string;
+  status: string;
   employeeNumber: string;
   memberModel: string;
   keyword: string;
@@ -78,6 +79,7 @@ const selectedMemberAvatarSeed = computed(() => (
             <h2 class="member-editor-title">团队成员</h2>
             <p class="section-eyebrow">Team Member</p>
           </div>
+          <p v-if="status" class="member-editor-status">{{ status }}</p>
         </div>
 
         <div class="member-editor-summary">
@@ -261,6 +263,13 @@ const selectedMemberAvatarSeed = computed(() => (
 .member-editor-head {
   display: grid;
   gap: 8px;
+}
+
+.member-editor-status {
+  margin: 0;
+  color: #b5523b;
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .member-template-head {

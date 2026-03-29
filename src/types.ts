@@ -27,6 +27,7 @@ export interface RoomInfo {
   room_type: RoomType;
   state: string;
   members: string[];
+  tags?: string[];
 }
 
 export interface MessageInfo {
@@ -87,6 +88,7 @@ export interface TeamRoomDetail {
 }
 
 export interface DeptTreeNode {
+  dept_id?: number | null;
   dept_name: string;
   dept_responsibility: string;
   manager: string;

@@ -20,6 +20,7 @@ type DraftOrgNode = {
   id: string;
   kind: 'member' | 'pending';
   agentId: number | null;
+  deptId: number | null;
   memberName: string;
   roleTemplateId: number | null;
   model: string;
@@ -52,6 +53,7 @@ const committedOrgTree = ref<DraftOrgNode | null>(null);
 const draftOrgTree = ref<DraftOrgNode | null>(null);
 const editingPendingSlotId = ref<string | null>(null);
 const editingDepartmentMemberName = ref('');
+const memberEditorStatus = ref('');
 const departmentEditorName = ref('');
 const departmentEditorResponsibility = ref('');
 const departmentEditorEditable = ref(true);
@@ -89,6 +91,7 @@ function createPendingNode(): DraftOrgNode {
     id: createDraftNodeId('pending'),
     kind: 'pending',
     agentId: null,
+    deptId: null,
     memberName: '',
     roleTemplateId: null,
     model: '',
@@ -241,6 +244,7 @@ function createMemberNode(
   memberName: string,
   agent: AgentInfo | undefined,
   options?: {
+    deptId?: number | null;
     deptName?: string;
     deptResponsibility?: string;
     children?: DraftOrgNode[];
@@ -250,6 +254,7 @@ function createMemberNode(
     id: createDraftNodeId('member'),
     kind: 'member',
     agentId: typeof agent?.id === 'number' ? agent.id : null,
+    deptId: typeof options?.deptId === 'number' ? options.deptId : null,
     memberName,
     roleTemplateId: agent?.role_template_id ?? null,
     model: agent?.model || '',
@@ -302,6 +307,7 @@ function buildDraftOrgNodeFromDeptTree(
     .filter((child): child is DraftOrgNode => child !== null);
 
   return createMemberNode(managerName, agentsByName.get(managerName), {
+    deptId: node.dept_id ?? null,
     deptName: node.dept_name,
     deptResponsibility: node.dept_responsibility,
     children: [...extraMemberNodes, ...childNodes],
@@ -453,6 +459,7 @@ function buildDeptTreePayload(root: DraftOrgNode | null = draftOrgTree.value): D
     });
 
     return {
+      dept_id: isRoot || childMembers.length > 0 ? node.deptId : null,
       dept_name: isRoot || childMembers.length > 0 ? node.deptName : '',
       dept_responsibility: isRoot || childMembers.length > 0 ? node.deptResponsibility : '',
       manager: node.memberName,
@@ -562,6 +569,15 @@ const currentTemplateModelLabel = computed(() => {
 
 const currentTemplateName = computed(() => currentMemberTemplateOption.value?.name || '');
 
+watch(
+  [memberEditorName, memberEditorKeyword, memberEditorTemplateId, memberEditorModel, memberEditorDriver],
+  () => {
+    if (memberEditorStatus.value) {
+      memberEditorStatus.value = '';
+    }
+  },
+);
+
 function toGraphNode(node: DraftOrgNode, teamName: string): TeamGraphNode {
   if (node.kind === 'pending') {
     return {
@@ -670,6 +686,7 @@ watch(
 
       syncCommittedState(deptTree, nextMembers);
       editingPendingSlotId.value = null;
+      memberEditorStatus.value = '';
       editingDepartmentMemberName.value = '';
       departmentEditorName.value = '';
       departmentEditorResponsibility.value = '';
@@ -689,6 +706,7 @@ watch(
       committedOrgTree.value = null;
       draftOrgTree.value = null;
       editingPendingSlotId.value = null;
+      memberEditorStatus.value = '';
       editingDepartmentMemberName.value = '';
       departmentEditorName.value = '';
       departmentEditorResponsibility.value = '';
@@ -707,6 +725,7 @@ watch(
 function cancelTeamMemberEdit(): void {
   draftOrgTree.value = cloneDraftOrgNode(committedOrgTree.value);
   editingPendingSlotId.value = null;
+  memberEditorStatus.value = '';
   editingDepartmentMemberName.value = '';
   departmentEditorName.value = '';
   departmentEditorResponsibility.value = '';
@@ -737,6 +756,7 @@ async function saveTeamMembers(): Promise<void> {
 
     syncCommittedState(nextDeptTree, nextAgents);
     editingPendingSlotId.value = null;
+    memberEditorStatus.value = '';
     editingDepartmentMemberName.value = '';
     departmentEditorName.value = '';
     departmentEditorResponsibility.value = '';
@@ -831,14 +851,14 @@ function saveMemberEditor(): void {
 
   const nextMemberName = memberEditorName.value.trim();
   if (!nextMemberName) {
-    teamMemberStatus.value = '成员名称不能为空';
+    memberEditorStatus.value = '成员名称不能为空';
     return;
   }
 
   const allMemberNames = collectMemberNodes(draftOrgTree.value).map((node) => node.memberName);
   const originalName = editingPendingSlotId.value ? '' : editingMemberName.value;
   if (allMemberNames.some((memberName) => memberName === nextMemberName && memberName !== originalName)) {
-    teamMemberStatus.value = `成员名称“${nextMemberName}”已存在`;
+    memberEditorStatus.value = `成员名称“${nextMemberName}”已存在`;
     return;
   }
 
@@ -864,6 +884,7 @@ function saveMemberEditor(): void {
     }
 
     editingPendingSlotId.value = null;
+    memberEditorStatus.value = '';
     showGlobalSuccessToast('已经更新到组织树');
     closeMemberEditor();
     return;
@@ -879,6 +900,7 @@ function saveMemberEditor(): void {
   targetNode.model = memberEditorModel.value.trim();
   targetNode.driver = memberEditorDriver.value || targetNode.driver || '';
   draftOrgTree.value = nextTree;
+  memberEditorStatus.value = '';
   showGlobalSuccessToast('已经更新到组织树');
   closeMemberEditor();
 }
@@ -1067,6 +1089,7 @@ function confirmDangerAction(): void {
       :editable="memberEditorEditable"
       :team-name="teamName"
       :member-name="memberEditorName"
+      :status="memberEditorStatus"
       :employee-number="currentEditingMemberEmployeeNumber"
       :member-model="memberEditorModel"
       :keyword="memberEditorKeyword"
