@@ -26,6 +26,7 @@ type RawRoomInfo = Partial<RoomInfo> & {
     send_time?: string;
   }>;
   room_type?: string;
+  tags?: string[];
 };
 
 type RawAgentInfo = Partial<AgentInfo> & {
@@ -173,6 +174,9 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
     members: room.members ?? room.agents ?? [],
+    tags: Array.isArray(room.tags)
+      ? room.tags.filter((tag): tag is string => typeof tag === 'string')
+      : [],
   };
 }
 
@@ -390,7 +394,7 @@ export async function getDeptTree(teamId: number): Promise<DeptTreeNode | null> 
 }
 
 export async function setDeptTree(teamId: number, deptTree: DeptTreeNode): Promise<{ status: string }> {
-  return requestJson(`/teams/${teamId}/dept_tree.json`, {
+  return requestJson(`/teams/${teamId}/dept_tree/update.json`, {
     method: 'PUT',
     body: JSON.stringify({ dept_tree: deptTree }),
   });

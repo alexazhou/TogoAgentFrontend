@@ -10,6 +10,10 @@ defineProps<{
 const emit = defineEmits<{
   selectRoom: [roomId: number];
 }>();
+
+function isDeptRoom(room: RoomState): boolean {
+  return Array.isArray(room.tags) && room.tags.includes('DEPT');
+}
 </script>
 
 <template>
@@ -43,6 +47,7 @@ const emit = defineEmits<{
               <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
             </div>
             <div class="room-head-right">
+              <span v-if="isDeptRoom(room)" class="room-tag room-tag-dept">部门群</span>
               <div class="room-meta">{{ room.members.length }} 人</div>
             </div>
           </div>
@@ -145,6 +150,23 @@ const emit = defineEmits<{
   gap: 6px;
   justify-content: flex-end;
   flex: 0 0 auto;
+}
+
+.room-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.room-tag-dept {
+  border: 1px solid rgba(47, 127, 102, 0.24);
+  background: rgba(47, 127, 102, 0.12);
+  color: #2f7f66;
 }
 
 .room-meta {
