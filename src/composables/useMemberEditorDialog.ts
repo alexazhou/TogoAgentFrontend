@@ -4,6 +4,7 @@ import { getAgentDetail } from '../api';
 export type MemberEditorMode = 'view' | 'edit';
 
 export type MemberTemplateOption = {
+  id: number;
   name: string;
   model: string;
 };
@@ -26,7 +27,7 @@ type UseMemberEditorDialogOptions = {
   resolveName: (memberName: string) => string;
   resolveModel: (memberName: string) => string;
   resolveDriver: (memberName: string) => string;
-  resolveTemplate: (memberName: string) => string;
+  resolveTemplateId: (memberName: string) => number | null;
   canLoadMemberDetail?: (memberName: string) => boolean;
 };
 
@@ -35,7 +36,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   const editingMemberName = ref('');
   const memberEditorName = ref('');
   const memberEditorKeyword = ref('');
-  const memberEditorTemplate = ref('');
+  const memberEditorTemplateId = ref<number | null>(null);
   const memberEditorModel = ref('');
   const memberEditorDriver = ref('');
   const memberEditorMode = ref<MemberEditorMode>('view');
@@ -44,7 +45,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
 
   const memberEditorEditable = computed(() => memberEditorMode.value === 'edit');
   const currentMemberTemplateOption = computed(
-    () => options.templateOptions.value.find((item) => item.name === memberEditorTemplate.value) ?? null,
+    () => options.templateOptions.value.find((item) => item.id === memberEditorTemplateId.value) ?? null,
   );
   const memberModelOptions = computed(() => {
     const optionsMap = new Map<string, string>();
@@ -87,7 +88,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     editingMemberName.value = '';
     memberEditorName.value = '';
     memberEditorKeyword.value = '';
-    memberEditorTemplate.value = '';
+    memberEditorTemplateId.value = null;
     memberEditorModel.value = '';
     memberEditorDriver.value = '';
     memberEditorMode.value = 'view';
@@ -130,7 +131,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     editingMemberName.value = agentName;
     memberEditorName.value = options.resolveName(agentName);
     memberEditorKeyword.value = '';
-    memberEditorTemplate.value = options.resolveTemplate(agentName);
+    memberEditorTemplateId.value = options.resolveTemplateId(agentName);
     memberEditorModel.value = options.resolveModel(agentName);
     memberEditorDriver.value = options.resolveDriver(agentName);
     void loadMemberDriver(agentName);
@@ -142,7 +143,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     editingMemberName.value = agentName;
     memberEditorName.value = options.resolveName(agentName);
     memberEditorKeyword.value = '';
-    memberEditorTemplate.value = options.resolveTemplate(agentName);
+    memberEditorTemplateId.value = options.resolveTemplateId(agentName);
     memberEditorModel.value = options.resolveModel(agentName);
     memberEditorDriver.value = options.resolveDriver(agentName);
     void loadMemberDriver(agentName);
@@ -154,7 +155,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     editingMemberName.value = displayName;
     memberEditorName.value = displayName;
     memberEditorKeyword.value = '';
-    memberEditorTemplate.value = '';
+    memberEditorTemplateId.value = null;
     memberEditorModel.value = '';
     memberEditorDriver.value = '';
   }
@@ -163,15 +164,15 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     resetDialogState();
   }
 
-  function replaceSelectedTemplate(templateName: string): void {
-    memberEditorTemplate.value = templateName;
+  function replaceSelectedTemplate(templateId: number | null): void {
+    memberEditorTemplateId.value = templateId;
   }
 
   return {
     editingMemberName,
     memberEditorName,
     memberEditorKeyword,
-    memberEditorTemplate,
+    memberEditorTemplateId,
     memberEditorModel,
     memberEditorDriver,
     memberEditorMode,

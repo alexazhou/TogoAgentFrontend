@@ -12,7 +12,8 @@ const props = defineProps<{
   employeeNumber: string;
   memberModel: string;
   keyword: string;
-  selectedTemplate: string;
+  selectedTemplateId: number | null;
+  selectedTemplateName: string;
   currentTemplateModel: string;
   modelOptions: MemberModelOption[];
   driver: string;
@@ -26,7 +27,7 @@ const emit = defineEmits<{
   'update:memberName': [value: string];
   'update:memberModel': [value: string];
   'update:keyword': [value: string];
-  'update:selectedTemplate': [value: string];
+  'update:selectedTemplate': [value: number | null];
   'update:driver': [value: string];
 }>();
 
@@ -47,8 +48,8 @@ const keywordModel = computed({
 });
 
 const selectedTemplateModel = computed({
-  get: () => props.selectedTemplate,
-  set: (value: string) => emit('update:selectedTemplate', value),
+  get: () => props.selectedTemplateId,
+  set: (value: number | null) => emit('update:selectedTemplate', value),
 });
 
 const driverModel = computed({
@@ -57,7 +58,7 @@ const driverModel = computed({
 });
 
 const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配');
-const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.selectedTemplate.trim()));
+const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.selectedTemplateId !== null));
 const selectedMemberAvatarSeed = computed(() => (
   props.teamName && props.memberName.trim()
     ? `${props.teamName}::${props.memberName.trim()}`
@@ -144,10 +145,10 @@ const selectedMemberAvatarSeed = computed(() => (
           </div>
           <div class="member-selected-body">
             <AgentCardBase
-              v-if="selectedTemplate"
+              v-if="selectedTemplateName"
               class="member-selected-card"
               :title="memberNameModel"
-              :subtitle="selectedTemplate"
+              :subtitle="selectedTemplateName"
               :employee-number="employeeNumber"
               :avatar-name="memberNameModel"
               :avatar-seed="selectedMemberAvatarSeed"
@@ -176,7 +177,7 @@ const selectedMemberAvatarSeed = computed(() => (
           <div class="member-template-grid">
             <div
               v-for="item in templateOptions"
-              :key="item.name"
+              :key="item.id"
               class="member-template-option"
             >
               <AgentTemplateCard
@@ -187,7 +188,7 @@ const selectedMemberAvatarSeed = computed(() => (
                 v-if="editable"
                 type="button"
                 class="member-template-use"
-                @click="selectedTemplateModel = item.name"
+                @click="selectedTemplateModel = item.id"
               >
                 使用
               </button>

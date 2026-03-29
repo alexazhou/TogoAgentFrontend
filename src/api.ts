@@ -9,6 +9,7 @@ import type {
   FrontendDriverType,
   FrontendModelOption,
   MessageInfo,
+  RoleTemplateDetail,
   RoleTemplateSummary,
   RoomInfo,
   TeamDetail,
@@ -30,7 +31,7 @@ type RawRoomInfo = Partial<RoomInfo> & {
 type RawAgentInfo = Partial<AgentInfo> & {
   employee_number?: number;
   status?: string;
-  role_template_name?: string;
+  role_template_id?: number;
   employ_status?: string;
   driver?: string;
 };
@@ -38,7 +39,7 @@ type RawAgentInfo = Partial<AgentInfo> & {
 type RawAgentDetail = Partial<AgentDetail> & {
   employee_number?: number;
   status?: string;
-  role_template_name?: string;
+  role_template_id?: number;
   employ_status?: string;
   driver?: string;
 };
@@ -188,13 +189,11 @@ function normalizeDriverTypeValue(value?: string | null): string {
 }
 
 function normalizeAgent(agent: RawAgentInfo): AgentInfo {
-  const templateName = agent.role_template_name ?? agent.template_name ?? null;
   return {
     id: typeof agent.id === 'number' ? agent.id : null,
     name: String(agent.name ?? ''),
     employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
-    template_name: templateName,
-    role_template_name: templateName,
+    role_template_id: typeof agent.role_template_id === 'number' ? agent.role_template_id : null,
     model: String(agent.model ?? ''),
     team_name: String(agent.team_name ?? ''),
     status: normalizeAgentStatus(agent.status),
@@ -214,7 +213,7 @@ function parseDriverType(detail: RawAgentDetail): string {
 function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
   return {
     ...normalizeAgent(agent),
-    agent_name: String(agent.agent_name ?? agent.role_template_name ?? agent.template_name ?? agent.name ?? ''),
+    agent_name: String(agent.agent_name ?? agent.name ?? ''),
     driver_type: parseDriverType(agent),
     prompt: String(agent.prompt ?? ''),
   };
@@ -237,7 +236,7 @@ export async function setAgentsByTeamId(
   payload: Array<{
     id: number;
     name: string;
-    role_template_name: string;
+    role_template_id: number;
     model: string;
     driver: string;
   }>,
@@ -253,7 +252,7 @@ export async function saveMembersByTeamId(
   payload: Array<{
     id: number | null;
     name: string;
-    role_template_name: string;
+    role_template_id: number;
     model: string;
     driver: string;
   }>,
@@ -280,9 +279,82 @@ export async function getTeams(): Promise<TeamSummary[]> {
 export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
   const data = await requestJson<{ role_templates: RawRoleTemplateSummary[] }>('/role_templates/list.json');
   return data.role_templates.map((template) => ({
+    id: Number(template.id ?? 0),
     name: String(template.name ?? ''),
     model: String(template.model ?? ''),
+    prompt: String(template.prompt ?? ''),
+    type: typeof template.type === 'string' ? template.type : null,
+    driver: typeof template.driver === 'string' ? template.driver : null,
   }));
+}
+
+export async function getRoleTemplateDetail(templateId: number): Promise<RoleTemplateDetail> {
+  const data = await requestJson<Partial<RoleTemplateDetail>>(`/role_templates/${templateId}.json`);
+  return {
+    id: Number(data.id ?? templateId),
+    name: String(data.name ?? ''),
+    model: String(data.model ?? ''),
+    prompt: String(data.prompt ?? ''),
+    type: typeof data.type === 'string' ? data.type : null,
+    driver: typeof data.driver === 'string' ? data.driver : null,
+    allowed_tools: Array.isArray(data.allowed_tools)
+      ? data.allowed_tools.map((item) => String(item))
+      : null,
+  };
+}
+
+export async function createRoleTemplate(payload: {
+  name: string;
+  soul: string;
+  model: string;
+  driver: string | null;
+  allowed_tools: string[] | null;
+}): Promise<RoleTemplateDetail> {
+  const data = await requestJson<Partial<RoleTemplateDetail>>('/role_templates/create.json', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: Number(data.id ?? 0),
+    name: String(data.name ?? ''),
+    model: String(data.model ?? ''),
+    prompt: String(data.prompt ?? ''),
+    type: typeof data.type === 'string' ? data.type : null,
+    driver: typeof data.driver === 'string' ? data.driver : null,
+    allowed_tools: Array.isArray(data.allowed_tools)
+      ? data.allowed_tools.map((item) => String(item))
+      : null,
+  };
+}
+
+export async function updateRoleTemplate(templateId: number, payload: {
+  name: string;
+  soul: string;
+  model: string;
+  driver: string | null;
+  allowed_tools: string[] | null;
+}): Promise<RoleTemplateDetail> {
+  const data = await requestJson<Partial<RoleTemplateDetail>>(`/role_templates/${templateId}/modify.json`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return {
+    id: Number(data.id ?? templateId),
+    name: String(data.name ?? ''),
+    model: String(data.model ?? ''),
+    prompt: String(data.prompt ?? ''),
+    type: typeof data.type === 'string' ? data.type : null,
+    driver: typeof data.driver === 'string' ? data.driver : null,
+    allowed_tools: Array.isArray(data.allowed_tools)
+      ? data.allowed_tools.map((item) => String(item))
+      : null,
+  };
+}
+
+export async function deleteRoleTemplate(templateId: number): Promise<{ status: string; id: number; name: string }> {
+  return requestJson(`/role_templates/${templateId}/delete.json`, {
+    method: 'POST',
+  });
 }
 
 export async function getFrontendConfig(): Promise<FrontendConfig> {

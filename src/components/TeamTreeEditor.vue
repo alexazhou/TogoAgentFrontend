@@ -38,7 +38,7 @@ const committedDeptTree = ref<DeptTreeNode | null>(null);
 const committedMembers = ref<TeamMember[]>([]);
 const teamMembersDraft = ref<string[]>([]);
 const teamMemberNameDraftsById = ref<Record<number, string>>({});
-const teamMemberRoleDrafts = ref<Record<string, string>>({});
+const teamMemberRoleDrafts = ref<Record<string, number | null>>({});
 const teamMemberModelDrafts = ref<Record<string, string>>({});
 const teamMemberDriverDrafts = ref<Record<string, string>>({});
 const teamMemberDeptNameDrafts = ref<Record<string, string>>({});
@@ -81,7 +81,7 @@ function cloneDeptTree(node: DeptTreeNode | null): DeptTreeNode | null {
 function cloneMembers(members: TeamMember[]): TeamMember[] {
   return members.map((member) => ({
     name: member.name,
-    role_template: member.role_template,
+    role_template_id: member.role_template_id,
   }));
 }
 
@@ -114,8 +114,8 @@ function buildCommittedTreeBaseline(): DeptTreeNode | null {
   return cloneDeptTree(committedDeptTree.value) ?? buildFallbackDeptTree(committedMembers.value);
 }
 
-function buildTeamMemberRoleDraft(members: TeamMember[]): Record<string, string> {
-  return Object.fromEntries(members.map((member) => [member.name, member.role_template]));
+function buildTeamMemberRoleDraft(members: TeamMember[]): Record<string, number | null> {
+  return Object.fromEntries(members.map((member) => [member.name, member.role_template_id]));
 }
 
 function buildTeamMemberNameDraftsById(agents: AgentInfo[]): Record<number, string> {
@@ -268,8 +268,7 @@ function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
     id: null,
     name,
     employee_number: null,
-    template_name: null,
-    role_template_name: '',
+    role_template_id: null,
     model: '',
     team_name: props.teamName,
     status: 'idle',
@@ -345,7 +344,7 @@ function resolveDraftAgentId(memberName: string, agents: AgentInfo[] = committed
 function buildMembersSavePayload(agents: AgentInfo[] = committedAgents.value): Array<{
   id: number | null;
   name: string;
-  role_template_name: string;
+  role_template_id: number;
   model: string;
   driver: string;
 }> {
@@ -360,11 +359,10 @@ function buildMembersSavePayload(agents: AgentInfo[] = committedAgents.value): A
     return {
       id: agentId,
       name: memberName,
-      role_template_name:
+      role_template_id:
         teamMemberRoleDrafts.value[memberName]
-        || originalAgent?.role_template_name
-        || originalAgent?.template_name
-        || memberName,
+        ?? originalAgent?.role_template_id
+        ?? 0,
       model: teamMemberModelDrafts.value[memberName] || originalAgent?.model || '',
       driver: draftDriverType || originalDriverType || 'native',
     };
@@ -383,7 +381,7 @@ function buildMembersSavePayload(agents: AgentInfo[] = committedAgents.value): A
 function buildCommittedMembersSaveBaseline(): Array<{
   id: number | null;
   name: string;
-  role_template_name: string;
+  role_template_id: number;
   model: string;
   driver: string;
 }> {
@@ -391,7 +389,7 @@ function buildCommittedMembersSaveBaseline(): Array<{
     .map((agent) => ({
       id: typeof agent.id === 'number' ? agent.id : null,
       name: agent.name,
-      role_template_name: agent.role_template_name || agent.template_name || agent.name,
+      role_template_id: agent.role_template_id ?? 0,
       model: agent.model || '',
       driver: parseDriverTypeValue(agent.driver || '') || 'native',
     }))
@@ -456,7 +454,7 @@ function syncCommittedState(tree: DeptTreeNode | null, agents: AgentInfo[]): voi
   committedAgents.value = nextAgents.map((agent) => ({ ...agent }));
   const members = nextAgents.map((agent) => ({
     name: agent.name,
-    role_template: agent.role_template_name || agent.template_name || agent.name,
+    role_template_id: agent.role_template_id ?? 0,
   }));
   syncCommittedMembers(members);
   syncDraftFromCommitted();
@@ -466,9 +464,21 @@ const selectedTeamMembers = computed(() => (
   teamMembersDraft.value
 ));
 
-const selectedTeamMemberTemplates = computed<Record<string, string>>(() => {
-  return { ...teamMemberRoleDrafts.value };
-});
+function resolveRoleTemplateNameById(templateId: number | null | undefined): string {
+  if (typeof templateId !== 'number' || templateId <= 0) {
+    return '未选择模板';
+  }
+  return roleTemplateCatalog.value.find((template) => template.id === templateId)?.name || `模板 #${templateId}`;
+}
+
+const selectedTeamMemberTemplates = computed<Record<string, string>>(() => (
+  Object.fromEntries(
+    Object.entries(teamMemberRoleDrafts.value).map(([memberName, templateId]) => [
+      memberName,
+      resolveRoleTemplateNameById(templateId),
+    ]),
+  )
+));
 
 const teamMemberEmployeeNumberDrafts = computed<Record<string, string>>(() => {
   return Object.fromEntries(
@@ -493,6 +503,8 @@ const currentTemplateModelLabel = computed(() => {
     ? templateModel
     : resolveDefaultModelLabel(frontendConfig.value);
 });
+
+const currentTemplateName = computed(() => currentMemberTemplateOption.value?.name || '');
 
 const graphRootNode = computed<TeamGraphNode | null>(() => {
   const leaderName = teamMembersDraft.value[0] ?? '';
@@ -526,7 +538,7 @@ const graphRootNode = computed<TeamGraphNode | null>(() => {
       kind: 'member',
       name: memberName,
       departmentName: teamMemberDeptNameDrafts.value[memberName] || memberName,
-      subtitle: teamMemberRoleDrafts.value[memberName] || memberName,
+      subtitle: resolveRoleTemplateNameById(teamMemberRoleDrafts.value[memberName]),
       employeeNumber: teamMemberEmployeeNumberDrafts.value[memberName] || '',
       avatarName: memberName,
       avatarSeed: buildMemberAvatarSeed(memberName),
@@ -575,22 +587,23 @@ const hasTeamMemberChanges = computed(() =>
 );
 
 const memberTemplateOptions = computed(() => {
-  const definitions = new Map<string, { name: string; model: string }>();
+  const definitions = new Map<number, MemberTemplateOption>();
 
   roleTemplateCatalog.value.forEach((template) => {
-    const templateName = template.name;
-    if (!definitions.has(templateName)) {
-      definitions.set(templateName, {
-        name: templateName,
+    if (!definitions.has(template.id)) {
+      definitions.set(template.id, {
+        id: template.id,
+        name: template.name,
         model: template.model || '自动',
       });
     }
   });
 
-  Object.values(teamMemberRoleDrafts.value).forEach((templateName) => {
-    if (!definitions.has(templateName)) {
-      definitions.set(templateName, {
-        name: templateName,
+  Object.values(teamMemberRoleDrafts.value).forEach((templateId) => {
+    if (typeof templateId === 'number' && templateId > 0 && !definitions.has(templateId)) {
+      definitions.set(templateId, {
+        id: templateId,
+        name: `模板 #${templateId}`,
         model: '自动',
       });
     }
@@ -599,10 +612,10 @@ const memberTemplateOptions = computed(() => {
   return Array.from(definitions.values()).sort((left, right) => left.name.localeCompare(right.name));
 });
 
-function resolveMemberRoleTemplate(memberName: string): string {
+function resolveMemberRoleTemplateId(memberName: string): number | null {
   return teamMemberRoleDrafts.value[memberName]
-    || committedMembers.value.find((member) => member.name === memberName)?.role_template
-    || memberName;
+    ?? committedMembers.value.find((member) => member.name === memberName)?.role_template_id
+    ?? null;
 }
 
 function collectMemberBranch(memberName: string): string[] {
@@ -627,7 +640,7 @@ const {
   editingMemberName,
   memberEditorName,
   memberEditorKeyword,
-  memberEditorTemplate,
+  memberEditorTemplateId,
   memberEditorModel,
   memberEditorDriver,
   memberEditorOpen,
@@ -650,7 +663,7 @@ const {
   resolveName: (memberName: string) => memberName,
   resolveModel: (memberName: string) => teamMemberModelDrafts.value[memberName] || '',
   resolveDriver: (memberName: string) => teamMemberDriverDrafts.value[memberName] || '',
-  resolveTemplate: resolveMemberRoleTemplate,
+  resolveTemplateId: resolveMemberRoleTemplateId,
   canLoadMemberDetail: (memberName: string) =>
     committedMembers.value.some((member) => member.name === memberName),
 });
@@ -821,12 +834,12 @@ function toggleTeamMember(agentName: string): void {
   teamMembersDraft.value = [...teamMembersDraft.value, agentName];
   teamMemberRoleDrafts.value = {
     ...teamMemberRoleDrafts.value,
-    [agentName]: teamMemberRoleDrafts.value[agentName] || agentName,
+    [agentName]: teamMemberRoleDrafts.value[agentName] ?? null,
   };
 }
 
 function saveMemberEditor(): void {
-  if (!memberEditorTemplate.value) {
+  if (memberEditorTemplateId.value === null) {
     return;
   }
 
@@ -847,7 +860,7 @@ function saveMemberEditor(): void {
     }
     teamMemberRoleDrafts.value = {
       ...teamMemberRoleDrafts.value,
-      [nextMemberName]: memberEditorTemplate.value,
+      [nextMemberName]: memberEditorTemplateId.value,
     };
     teamMemberDeptNameDrafts.value = {
       ...teamMemberDeptNameDrafts.value,
@@ -907,7 +920,7 @@ function saveMemberEditor(): void {
     const nextRoleDrafts = { ...teamMemberRoleDrafts.value };
     const previousRoleTemplate = nextRoleDrafts[originalName];
     delete nextRoleDrafts[originalName];
-    nextRoleDrafts[nextMemberName] = memberEditorTemplate.value || previousRoleTemplate || nextMemberName;
+    nextRoleDrafts[nextMemberName] = memberEditorTemplateId.value ?? previousRoleTemplate ?? null;
     teamMemberRoleDrafts.value = nextRoleDrafts;
 
     const nextModelDrafts = { ...teamMemberModelDrafts.value };
@@ -955,7 +968,7 @@ function saveMemberEditor(): void {
 
   teamMemberRoleDrafts.value = {
     ...teamMemberRoleDrafts.value,
-    [nextMemberName]: memberEditorTemplate.value,
+    [nextMemberName]: memberEditorTemplateId.value,
   };
   teamMemberModelDrafts.value = {
     ...teamMemberModelDrafts.value,
@@ -1130,7 +1143,8 @@ function confirmDangerAction(): void {
       :employee-number="currentEditingMemberEmployeeNumber"
       :member-model="memberEditorModel"
       :keyword="memberEditorKeyword"
-      :selected-template="memberEditorTemplate"
+      :selected-template-id="memberEditorTemplateId"
+      :selected-template-name="currentTemplateName"
       :current-template-model="currentTemplateModelLabel"
       :model-options="memberModelOptions"
       :driver="memberEditorDriver"
