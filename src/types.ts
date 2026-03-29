@@ -7,7 +7,8 @@ export interface AgentInfo {
   employee_number?: number | null;
   role_template_id?: number | null;
   model: string;
-  team_name: string;
+  team_id?: number | null;
+  team_name?: string | null;
   status: AgentStatus;
   employ_status?: string | null;
   driver?: string;
@@ -39,6 +40,7 @@ export interface WsMessageEvent {
   room_id: number;
   room_key: string;
   room_name: string;
+  team_id: number;
   team_name: string;
   sender: string;
   content: string;
@@ -48,7 +50,7 @@ export interface WsMessageEvent {
 export interface WsAgentStatusEvent {
   event: 'member_status';
   member_name: string;
-  team_name: string;
+  team_id: number;
   status: 'ACTIVE' | 'IDLE';
 }
 
