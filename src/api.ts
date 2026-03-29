@@ -433,7 +433,7 @@ export async function deleteTeam(teamId: number): Promise<{ status: string; name
   });
 }
 
-export async function createTeam(payload: CreateTeamPayload): Promise<{ status: string; name: string }> {
+export async function createTeam(payload: CreateTeamPayload): Promise<{ status: string; id: number; name: string }> {
   return requestJson('/teams/create.json', {
     method: 'POST',
     body: JSON.stringify(payload),

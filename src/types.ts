@@ -132,11 +132,11 @@ export interface CreateTeamPayload {
   name: string;
   working_directory: string;
   config: Record<string, unknown>;
-  members: Array<{
+  members?: Array<{
     name: string;
     role_template: string;
   }>;
-  preset_rooms: Array<{
+  preset_rooms?: Array<{
     name: string;
     members: string[];
     initial_topic: string;

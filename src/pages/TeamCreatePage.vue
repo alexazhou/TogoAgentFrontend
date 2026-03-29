@@ -3,10 +3,11 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import { createTeam } from '../api';
+import ConfirmDialog from '../components/ConfirmDialog.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import SettingsBreadcrumb from '../components/settings/SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
-import { firstTeamId, loadTeams, preferredTeamId, teams } from '../teamStore';
+import { firstTeamId, loadTeams, preferredTeamId } from '../teamStore';
 
 const router = useRouter();
 
@@ -24,6 +25,7 @@ const slogan = ref('');
 const rules = ref('');
 const submitting = ref(false);
 const errorMessage = ref('');
+const confirmOpen = ref(false);
 
 const breadcrumbItems = computed<SettingsBreadcrumbItem[]>(() => [
   { key: 'settings', label: '系统设置', current: false },
@@ -95,41 +97,49 @@ async function handleSubmit(): Promise<void> {
     return;
   }
 
+  confirmOpen.value = false;
   submitting.value = true;
   errorMessage.value = '';
 
   try {
-    await createTeam({
+    const created = await createTeam({
       name: name.value.trim(),
       working_directory: workingDirectory.value.trim(),
       config: {
         slogan: slogan.value.trim(),
         rules: rules.value.trim(),
       },
-      members: [],
-      preset_rooms: [],
     });
     await loadTeams();
-    const createdTeam = teams.value.find((team) => team.name === name.value.trim());
-    if (createdTeam) {
-      showGlobalSuccessToast('团队创建成功，请添加成员');
-      router.push({
-        name: 'settings',
-        params: {
-          teamId: createdTeam.id,
-          section: 'teams',
-        },
-        query: {
-          detailTeamId: String(createdTeam.id),
-        },
-      }).catch(console.error);
-    }
+    showGlobalSuccessToast('团队创建成功，请添加成员');
+    router.push({
+      name: 'settings',
+      params: {
+        teamId: created.id,
+        section: 'teams',
+      },
+      query: {
+        detailTeamId: String(created.id),
+      },
+    }).catch(console.error);
   } catch (error) {
     errorMessage.value = '创建团队失败，请检查名称是否重复。';
     console.error(error);
   } finally {
     submitting.value = false;
   }
+}
+
+function requestSubmit(): void {
+  if (!canSubmit.value) {
+    return;
+  }
+
+  confirmOpen.value = true;
+}
+
+function closeConfirmDialog(): void {
+  confirmOpen.value = false;
 }
 
 onMounted(() => {
@@ -190,7 +200,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <form class="team-detail-stack" @submit.prevent="handleSubmit">
+            <form class="team-detail-stack" @submit.prevent="requestSubmit">
               <TeamInfoCard
                 :name="name"
                 :working-directory="workingDirectory"
@@ -215,13 +225,22 @@ onMounted(() => {
                     type="button"
                     class="secondary-button team-info-action-button"
                     :disabled="!canSubmit"
-                    @click="handleSubmit"
+                    @click="requestSubmit"
                   >
                   {{ submitting ? '创建中...' : '创建团队' }}
                 </button>
               </template>
             </TeamInfoCard>
           </form>
+
+          <ConfirmDialog
+            :open="confirmOpen"
+            title="确认创建团队"
+            :message="`确认创建团队“${name.trim()}”吗？创建后会进入团队详情页。`"
+            confirm-label="创建"
+            @close="closeConfirmDialog"
+            @confirm="handleSubmit"
+          />
         </div>
       </section>
       </main>
