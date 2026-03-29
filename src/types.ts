@@ -59,6 +59,12 @@ export interface RoomState extends RoomInfo {
   unread: number;
 }
 
+export interface RoomMemberProfile {
+  name: string;
+  employee_number: number | null;
+  role_template_name: string | null;
+}
+
 export interface TeamSummary {
   id: number;
   name: string;
