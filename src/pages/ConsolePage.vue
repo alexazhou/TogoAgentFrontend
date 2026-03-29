@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState, reconnectProgress, totalMessageCount } from '../appUiState';
-import { createEventsSocket, getAgentsByTeamId, getRoomMessages, getRooms, postRoomMessage } from '../api';
+import { createEventsSocket, getAgentsByTeamId, getRoleTemplates, getRoomMessages, getRooms, postRoomMessage } from '../api';
 import AgentListSection from '../components/AgentListSection.vue';
 import ChatPanel from '../components/ChatPanel.vue';
 import RoomListSection from '../components/RoomListSection.vue';
@@ -11,6 +11,8 @@ import type {
   AgentInfo,
   AgentStatus,
   MessageInfo,
+  RoleTemplateSummary,
+  RoomMemberProfile,
   RoomState,
   WsAgentStatusEvent,
   WsEvent,
@@ -23,13 +25,14 @@ const router = useRouter();
 
 const rooms = ref<RoomState[]>([]);
 const agents = ref<AgentInfo[]>([]);
+const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const messages = ref<MessageInfo[]>([]);
 const selectedRoomId = ref<number | null>(null);
 const draft = ref('');
 const loading = ref(true);
 const reloadingMessages = ref(false);
 const errorMessage = ref('');
-const composerNotice = ref('当前为观察模式');
+const composerNotice = ref('');
 const messageViewport = useTemplateRef('messageViewport');
 const shouldFollowMessages = ref(true);
 const reconnectAttempt = ref(0);
@@ -58,6 +61,24 @@ const currentTeam = computed(() => findTeamById(teamId.value));
 const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === selectedRoomId.value) ?? null,
 );
+const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
+  if (!currentRoom.value) {
+    return [];
+  }
+
+  const agentMap = new Map(agents.value.map((agent) => [agent.name, agent]));
+  const templateMap = new Map(roleTemplates.value.map((template) => [template.id, template.name]));
+
+  return currentRoom.value.members.map((memberName) => {
+    const agent = agentMap.get(memberName);
+    const templateName = agent?.role_template_id ? (templateMap.get(agent.role_template_id) ?? null) : null;
+    return {
+      name: memberName,
+      employee_number: typeof agent?.employee_number === 'number' ? agent.employee_number : null,
+      role_template_name: templateName,
+    };
+  });
+});
 
 function getMessageStream(): HTMLElement | null {
   const viewport = messageViewport.value?.querySelector('.message-stream');
@@ -160,7 +181,7 @@ async function loadRoomMessages(
     if (room) {
       room.unread = 0;
     }
-    composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
+    composerNotice.value = '';
     if (options?.syncRoute !== false && routeRoomId.value !== roomId) {
       await navigateToRoom(roomId, options?.replaceRoute ?? false);
     }
@@ -214,12 +235,14 @@ async function refreshAll(): Promise<void> {
   errorMessage.value = '';
 
   try {
-    const [nextAgents, nextRooms] = await Promise.all([
+    const [nextAgents, nextRooms, nextRoleTemplates] = await Promise.all([
       getAgentsByTeamId(teamId.value),
       hydrateRooms(teamId.value),
+      getRoleTemplates(),
     ]);
     agents.value = nextAgents;
     rooms.value = nextRooms;
+    roleTemplates.value = nextRoleTemplates;
 
     const fallbackRoomId = rooms.value[0]?.room_id ?? null;
     const targetRoomId =
@@ -420,7 +443,7 @@ function openAgent(agentName: string): void {
 }
 
 watch(currentRoom, (room) => {
-  composerNotice.value = room?.room_type === 'private' ? '' : '当前为观察模式';
+  composerNotice.value = '';
 });
 
 watch(
@@ -495,6 +518,7 @@ onBeforeUnmount(() => {
     <div ref="messageViewport" class="chat-shell">
       <ChatPanel
         :current-room="currentRoom"
+        :member-profiles="roomMemberProfiles"
         :messages="messages"
         :error-message="errorMessage"
         :reloading-messages="reloadingMessages"
