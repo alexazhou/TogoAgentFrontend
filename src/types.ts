@@ -5,8 +5,7 @@ export interface AgentInfo {
   id?: number | null;
   name: string;
   employee_number?: number | null;
-  template_name?: string | null;
-  role_template_name?: string | null;
+  role_template_id?: number | null;
   model: string;
   team_name: string;
   status: AgentStatus;
@@ -87,11 +86,6 @@ export interface DeptTreeNode {
   children: DeptTreeNode[];
 }
 
-export interface RoleTemplateSummary {
-  name: string;
-  model: string;
-}
-
 export interface FrontendModelOption {
   name: string;
   model: string;
@@ -123,18 +117,35 @@ export interface TeamDetail extends TeamSummary {
 
 export interface TeamMember {
   name: string;
-  role_template: string;
+  role_template_id: number;
 }
 
 export interface CreateTeamPayload {
   name: string;
   working_directory: string;
   config: Record<string, unknown>;
-  members: TeamMember[];
+  members: Array<{
+    name: string;
+    role_template: string;
+  }>;
   preset_rooms: Array<{
     name: string;
     members: string[];
     initial_topic: string;
     max_turns: number;
   }>;
+}
+
+export interface RoleTemplateSummary {
+  id: number;
+  name: string;
+  model: string;
+  prompt?: string;
+  type?: string | null;
+  driver?: string | null;
+}
+
+export interface RoleTemplateDetail extends RoleTemplateSummary {
+  prompt: string;
+  allowed_tools: string[] | null;
 }

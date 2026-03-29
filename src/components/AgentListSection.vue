@@ -31,7 +31,6 @@ const emit = defineEmits<{
           <div class="agent-copy">
             <strong class="agent-name-line">
               <span class="agent-name">{{ agent.name }}</span>
-              <span v-if="agent.template_name" class="agent-template">{{ agent.template_name }}</span>
             </strong>
             <p>{{ agent.model }}</p>
           </div>

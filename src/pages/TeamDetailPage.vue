@@ -2,22 +2,26 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
-import { getTeamDetail } from '../api';
+import { getRoleTemplates, getTeamDetail } from '../api';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
-import type { TeamDetail } from '../types';
+import type { RoleTemplateSummary, TeamDetail } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 
 const team = ref<TeamDetail | null>(null);
+const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
 
 const teamId = computed(() => Number(route.params.teamId));
 const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
 const selectedAgentTemplates = computed<Record<string, string>>(() =>
-  Object.fromEntries((team.value?.members ?? []).map((member) => [member.name, member.role_template])),
+  Object.fromEntries((team.value?.members ?? []).map((member) => [
+    member.name,
+    roleTemplates.value.find((template) => template.id === member.role_template_id)?.name || `模板 #${member.role_template_id}`,
+  ])),
 );
 
 async function loadDetail(): Promise<void> {
@@ -26,7 +30,12 @@ async function loadDetail(): Promise<void> {
   totalMessageCount.value = 0;
 
   try {
-    team.value = await getTeamDetail(teamId.value);
+    const [detail, templates] = await Promise.all([
+      getTeamDetail(teamId.value),
+      getRoleTemplates(),
+    ]);
+    team.value = detail;
+    roleTemplates.value = templates;
   } catch (error) {
     errorMessage.value = '团队详情加载失败。';
     console.error(error);
