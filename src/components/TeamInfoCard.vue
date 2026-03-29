@@ -50,7 +50,7 @@ function displayValue(value: string, fallback = '未设置'): string {
         </div>
 
         <div class="info-row info-row-multiline">
-          <span class="info-key">团队须知</span>
+          <span class="info-key">团队职责</span>
           <div class="info-value info-value-multiline">{{ displayValue(rules) }}</div>
         </div>
       </div>
@@ -90,11 +90,11 @@ function displayValue(value: string, fallback = '未设置'): string {
         </label>
 
         <label class="edit-field edit-field-wide">
-          <span class="field-label">团队须知</span>
+          <span class="field-label">团队职责</span>
           <textarea
             :value="rules"
             rows="3"
-            placeholder="例如：1. 先沟通后执行 2. 结果同步到群聊"
+            placeholder="例如：1. 负责核心业务开发 2. 提升系统可用性"
             @input="emit('update:rules', ($event.target as HTMLTextAreaElement).value)"
           ></textarea>
         </label>
