@@ -270,7 +270,7 @@ async function refreshAll(): Promise<void> {
 }
 
 function applyMessageEvent(event: WsMessageEvent): void {
-  if (!currentTeam.value || event.team_name !== currentTeam.value.name) {
+  if (!currentTeam.value || event.team_id !== currentTeam.value.id) {
     return;
   }
 
@@ -304,13 +304,13 @@ function applyMessageEvent(event: WsMessageEvent): void {
 }
 
 function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
-  if (!currentTeam.value || event.team_name !== currentTeam.value.name) {
+  if (!currentTeam.value || event.team_id !== currentTeam.value.id) {
     return;
   }
 
   const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
   agents.value = agents.value.map((agent) =>
-    agent.name === event.member_name && agent.team_name === event.team_name
+    agent.name === event.member_name
       ? { ...agent, status: normalizedStatus }
       : agent,
   );
