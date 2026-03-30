@@ -150,12 +150,12 @@ export interface RoleTemplateSummary {
   id: number;
   name: string;
   model: string;
-  prompt?: string;
+  soul?: string;
   type?: string | null;
   driver?: string | null;
 }
 
 export interface RoleTemplateDetail extends RoleTemplateSummary {
-  prompt: string;
+  soul: string;
   allowed_tools: string[] | null;
 }

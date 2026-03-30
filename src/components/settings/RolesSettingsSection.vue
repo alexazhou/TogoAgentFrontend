@@ -36,7 +36,7 @@ const statusText = ref('');
 const deleteConfirmOpen = ref(false);
 const form = ref({
   name: '',
-  prompt: '',
+  soul: '',
   model: '',
   driver: '',
   allowedToolsText: '',
@@ -44,30 +44,37 @@ const form = ref({
 
 type RoleTemplateFormSnapshot = {
   name: string;
-  prompt: string;
+  soul: string;
   model: string;
   driver: string | null;
   allowed_tools: string[] | null;
 };
 
+function equalsIgnoreCase(value: string | null | undefined, expected: string): boolean {
+  return String(value ?? '').trim().toLowerCase() === expected.toLowerCase();
+}
+
+function isSystemType(type: string | null | undefined): boolean {
+  return equalsIgnoreCase(type, 'system');
+}
+
 const currentTypeLabel = computed(() => {
-  const normalized = String(currentDetail.value?.type ?? '').toLowerCase();
-  if (normalized === 'system') {
+  if (isSystemType(currentDetail.value?.type)) {
     return '系统模板';
   }
-  if (normalized === 'user') {
+  if (equalsIgnoreCase(currentDetail.value?.type, 'user')) {
     return '用户模板';
   }
   return '未定义';
 });
 
-const isSystemTemplate = computed(() => String(currentDetail.value?.type ?? '').toLowerCase() === 'system');
+const isSystemTemplate = computed(() => isSystemType(currentDetail.value?.type));
 const canDelete = computed(() => !isCreating.value && !!currentDetail.value && !isSystemTemplate.value && !isDeleting.value);
 const isNameReadonly = computed(() => !isCreating.value && isSystemTemplate.value);
 const isSystemReadonlyFields = computed(() => !isCreating.value && isSystemTemplate.value);
 const formSnapshot = computed<RoleTemplateFormSnapshot>(() => ({
   name: form.value.name.trim(),
-  prompt: form.value.prompt,
+  soul: form.value.soul,
   model: form.value.model.trim(),
   driver: normalizeNullableText(form.value.driver),
   allowed_tools: normalizeAllowedToolsList(parseAllowedTools()),
@@ -78,7 +85,7 @@ const currentDetailSnapshot = computed<RoleTemplateFormSnapshot | null>(() => {
   }
   return {
     name: currentDetail.value.name.trim(),
-    prompt: currentDetail.value.prompt,
+    soul: currentDetail.value.soul,
     model: currentDetail.value.model.trim(),
     driver: normalizeNullableText(currentDetail.value.driver),
     allowed_tools: normalizeAllowedToolsList(currentDetail.value.allowed_tools),
@@ -111,8 +118,8 @@ const driverSelectOptions = computed(() => [
   })),
 ]);
 
-function buildPromptPreview(prompt: string | undefined): string {
-  const normalized = String(prompt ?? '')
+function buildSoulPreview(soul: string | undefined): string {
+  const normalized = String(soul ?? '')
     .replace(/\s+/g, ' ')
     .trim();
   if (!normalized) {
@@ -124,7 +131,7 @@ function buildPromptPreview(prompt: string | undefined): string {
 function resetForm(detail?: RoleTemplateDetail | null): void {
   form.value = {
     name: detail?.name || '',
-    prompt: detail?.prompt || '',
+    soul: detail?.soul || '',
     model: detail?.model || '',
     driver: detail?.driver || '',
     allowedToolsText: (detail?.allowed_tools ?? []).join(', '),
@@ -223,7 +230,7 @@ async function saveCurrentTemplate(): Promise<void> {
     if (isCreating.value) {
       const created = await createRoleTemplate({
         name: form.value.name.trim(),
-        soul: form.value.prompt,
+        soul: form.value.soul,
         model: form.value.model.trim(),
         driver: form.value.driver || null,
         allowed_tools: parseAllowedTools(),
@@ -233,7 +240,7 @@ async function saveCurrentTemplate(): Promise<void> {
     } else if (selectedTemplateId.value !== null) {
       const updated = await updateRoleTemplate(selectedTemplateId.value, {
         name: form.value.name.trim(),
-        soul: form.value.prompt,
+        soul: form.value.soul,
         model: form.value.model.trim(),
         driver: form.value.driver || null,
         allowed_tools: parseAllowedTools(),
@@ -331,12 +338,12 @@ onMounted(() => {
                 </div>
                 <span
                   class="role-chip"
-                  :class="template.type === 'system' ? 'role-chip--system' : 'role-chip--user'"
+                  :class="isSystemType(template.type) ? 'role-chip--system' : 'role-chip--user'"
                 >
-                  {{ template.type === 'system' ? '系统模板' : '用户模板' }}
+                  {{ isSystemType(template.type) ? '系统模板' : '用户模板' }}
                 </span>
               </div>
-              <p class="role-row-preview">{{ buildPromptPreview(template.prompt) }}</p>
+              <p class="role-row-preview">{{ buildSoulPreview(template.soul) }}</p>
             </div>
           </button>
         </div>
@@ -376,7 +383,7 @@ onMounted(() => {
           <label class="role-field role-field--wide">
             <span>Soul</span>
             <textarea
-              v-model="form.prompt"
+              v-model="form.soul"
               class="role-textarea"
               :class="{ 'role-input--readonly': isSystemReadonlyFields }"
               rows="12"
