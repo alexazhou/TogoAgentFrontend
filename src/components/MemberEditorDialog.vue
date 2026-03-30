@@ -16,6 +16,7 @@ const props = defineProps<{
   selectedTemplateId: number | null;
   selectedTemplateName: string;
   currentTemplateModel: string;
+  currentTemplateSoul: string;
   modelOptions: MemberModelOption[];
   driver: string;
   driverOptions: MemberDriverOption[];
@@ -60,6 +61,7 @@ const driverModel = computed({
 
 const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配');
 const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.selectedTemplateId !== null));
+const memberTemplateSoul = computed(() => props.currentTemplateSoul.trim() || '当前模板未配置 soul。');
 const selectedMemberAvatarSeed = computed(() => (
   props.teamName && props.memberName.trim()
     ? `${props.teamName}::${props.memberName.trim()}`
@@ -141,27 +143,40 @@ const selectedMemberAvatarSeed = computed(() => (
           </label>
         </div>
 
-        <section class="member-selected-panel">
-          <div class="member-selected-head">
-            <span class="panel-label">已选角色</span>
-          </div>
-          <div class="member-selected-body">
-            <AgentCardBase
-              v-if="selectedTemplateName"
-              class="member-selected-card"
-              :title="memberNameModel"
-              :subtitle="selectedTemplateName"
-              :employee-number="employeeNumber"
-              :avatar-name="memberNameModel"
-              :avatar-seed="selectedMemberAvatarSeed"
-              :selected="false"
-              variant="graph"
-            />
-            <div v-else class="member-template-empty member-selected-empty">
-              当前还没有选中模板
+        <div class="member-editor-body">
+          <section class="member-selected-panel">
+            <div class="member-selected-head">
+              <span class="panel-label">已选角色</span>
             </div>
-          </div>
-        </section>
+            <div class="member-selected-body">
+              <AgentCardBase
+                v-if="selectedTemplateName"
+                class="member-selected-card"
+                :title="memberNameModel"
+                :subtitle="selectedTemplateName"
+                :employee-number="employeeNumber"
+                :avatar-name="memberNameModel"
+                :avatar-seed="selectedMemberAvatarSeed"
+                :selected="false"
+                variant="graph"
+              />
+              <div v-else class="member-template-empty member-selected-empty">
+                当前还没有选中模板
+              </div>
+            </div>
+          </section>
+
+          <section class="member-soul-panel">
+            <div class="member-soul-head">
+              <span class="panel-label">Soul</span>
+            </div>
+            <textarea
+              :value="memberTemplateSoul"
+              class="member-soul-input member-editor-input member-editor-input--readonly"
+              readonly
+            />
+          </section>
+        </div>
 
         <section v-if="editable" class="member-template-panel">
           <div class="member-template-head">
@@ -315,6 +330,15 @@ const selectedMemberAvatarSeed = computed(() => (
   gap: 12px;
 }
 
+.member-editor-body {
+  --member-selected-card-width: 153px;
+  --member-selected-card-height: calc(var(--member-selected-card-width) * 4 / 3);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
 .member-editor-field {
   display: grid;
   grid-template-rows: auto 36px auto;
@@ -400,7 +424,15 @@ const selectedMemberAvatarSeed = computed(() => (
 .member-selected-panel {
   display: grid;
   grid-template-rows: auto auto;
-  gap: 12px;
+  gap: 6px;
+  grid-column: 1;
+}
+
+.member-soul-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+  grid-column: 2 / -1;
 }
 
 .member-template-panel {
@@ -415,27 +447,23 @@ const selectedMemberAvatarSeed = computed(() => (
 }
 
 .member-selected-head {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
-}
-
-.member-selected-head .panel-label {
-  grid-column: 2;
-  justify-self: center;
+  padding-left: calc((100% - var(--member-selected-card-width)) / 2);
 }
 
 .member-selected-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 126px;
+  min-height: var(--member-selected-card-height);
 }
 
 .member-selected-card {
   pointer-events: none;
-  --member-card-width: 153px;
+  --member-card-width: var(--member-selected-card-width);
   --entity-overline-size: 0.96rem;
   --entity-title-size: 1rem;
   --entity-subtitle-size: 0.88rem;
@@ -444,6 +472,43 @@ const selectedMemberAvatarSeed = computed(() => (
 
 .member-selected-empty {
   width: min(320px, 100%);
+  min-height: var(--member-selected-card-height);
+}
+
+.member-soul-head {
+  display: flex;
+  align-items: flex-start;
+}
+
+.member-soul-input {
+  min-height: var(--member-selected-card-height);
+  height: var(--member-selected-card-height);
+  padding: 12px;
+  resize: none;
+  overflow: auto;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  text-align: left;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.member-soul-input::-webkit-scrollbar {
+  width: 12px;
+}
+
+.member-soul-input::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.member-soul-input::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+}
+
+.member-soul-input::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .member-template-search {
@@ -578,6 +643,19 @@ const selectedMemberAvatarSeed = computed(() => (
 @media (max-width: 900px) {
   .member-editor-summary {
     grid-template-columns: 1fr;
+  }
+
+  .member-editor-body {
+    grid-template-columns: 1fr;
+  }
+
+  .member-selected-panel,
+  .member-soul-panel {
+    grid-column: auto;
+  }
+
+  .member-selected-body {
+    justify-content: center;
   }
 }
 </style>

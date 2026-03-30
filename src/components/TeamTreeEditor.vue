@@ -508,6 +508,7 @@ const memberTemplateOptions = computed(() => {
         id: template.id,
         name: template.name,
         model: template.model || '自动',
+        soul: template.soul || '',
       });
     }
   });
@@ -518,6 +519,7 @@ const memberTemplateOptions = computed(() => {
         id: node.roleTemplateId,
         name: `模板 #${node.roleTemplateId}`,
         model: '自动',
+        soul: '',
       });
     }
   });
@@ -568,6 +570,7 @@ const currentTemplateModelLabel = computed(() => {
 });
 
 const currentTemplateName = computed(() => currentMemberTemplateOption.value?.name || '');
+const currentTemplateSoul = computed(() => currentMemberTemplateOption.value?.soul || '');
 
 watch(
   [memberEditorName, memberEditorKeyword, memberEditorTemplateId, memberEditorModel, memberEditorDriver],
@@ -679,7 +682,12 @@ watch(
       frontendConfig.value = nextFrontendConfig;
       modelCatalog.value = buildModelCatalog(nextFrontendConfig);
       driverCatalog.value = buildDriverCatalog(nextFrontendConfig);
-      roleTemplateCatalog.value = roleTemplates;
+      roleTemplateCatalog.value = roleTemplates.map((template) => ({
+        id: template.id,
+        name: template.name,
+        model: template.model || '自动',
+        soul: template.soul || '',
+      }));
       const nextMembers = teamAgents.filter(isOnBoardAgent).map((agent) => ({
         ...agent,
       }));
@@ -1096,6 +1104,7 @@ function confirmDangerAction(): void {
       :selected-template-id="memberEditorTemplateId"
       :selected-template-name="currentTemplateName"
       :current-template-model="currentTemplateModelLabel"
+      :current-template-soul="currentTemplateSoul"
       :model-options="memberModelOptions"
       :driver="memberEditorDriver"
       :driver-options="memberDriverOptions"
