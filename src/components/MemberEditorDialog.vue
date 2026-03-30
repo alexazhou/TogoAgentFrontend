@@ -163,15 +163,14 @@ const selectedMemberAvatarSeed = computed(() => (
           </div>
         </section>
 
-        <section class="member-template-panel">
+        <section v-if="editable" class="member-template-panel">
           <div class="member-template-head">
-            <span class="panel-label">Agent 模板</span>
+            <span class="panel-label">可选角色</span>
             <label class="member-template-search">
               <input
                 v-model="keywordModel"
                 type="text"
-                placeholder="搜索模板"
-                :disabled="!editable"
+                placeholder="搜索角色"
               />
             </label>
           </div>
@@ -187,7 +186,6 @@ const selectedMemberAvatarSeed = computed(() => (
                 :selected="false"
               />
               <button
-                v-if="editable"
                 type="button"
                 class="member-template-use"
                 @click="selectedTemplateModel = item.id"
@@ -409,8 +407,8 @@ const selectedMemberAvatarSeed = computed(() => (
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px 12px 10px;
   border: 1px solid color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%);
   border-radius: 16px;
   background: color-mix(in srgb, var(--surface-soft) 74%, var(--panel-bg) 26%);
@@ -453,11 +451,12 @@ const selectedMemberAvatarSeed = computed(() => (
 }
 
 .member-template-head {
-  min-height: 30px;
+  min-height: 24px;
 }
 
 .member-template-head .panel-label {
   font-size: 0.94rem;
+  padding-top: 4px;
 }
 
 .member-template-search input {
@@ -484,9 +483,9 @@ const selectedMemberAvatarSeed = computed(() => (
   flex-wrap: nowrap;
   gap: 12px;
   align-items: start;
-  padding-top: 4px;
+  padding-top: 2px;
   padding-right: 4px;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--focus-border) 22%, var(--panel-border) 78%) transparent;
   contain: layout paint;
