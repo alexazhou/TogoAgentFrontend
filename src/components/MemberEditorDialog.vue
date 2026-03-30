@@ -389,7 +389,7 @@ const selectedMemberAvatarSeed = computed(() => (
 
 .member-editor-input--editable {
   border: 1px solid color-mix(in srgb, var(--focus-border) 34%, var(--panel-border) 66%);
-  background: color-mix(in srgb, #fff 88%, var(--surface-soft) 12%);
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--selected) 34%, transparent);
 }
 
@@ -529,7 +529,7 @@ const selectedMemberAvatarSeed = computed(() => (
   padding: 0 10px;
   border: 1px solid color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
   font-size: 0.76rem;
   box-shadow: none;
 }

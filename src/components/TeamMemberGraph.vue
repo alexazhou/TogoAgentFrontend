@@ -172,11 +172,6 @@ const {
   cursor: grabbing;
 }
 
-.member-graph:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--focus-border) 62%, transparent);
-  outline-offset: -2px;
-}
-
 .member-canvas {
   --member-card-width: 102px;
   --member-gap: 18px;
@@ -246,9 +241,16 @@ const {
   background: var(--selected);
 }
 
+:deep(.member-action-button--danger) {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--team-create-control-border) 66%);
+  background: color-mix(in srgb, var(--danger) 18%, var(--panel-bg) 82%);
+  color: color-mix(in srgb, var(--text-strong) 82%, var(--danger) 18%);
+}
+
 :deep(.member-action-button--danger:hover) {
   border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
-  background: color-mix(in srgb, #fee2e2 82%, #fff 18%);
+  background: color-mix(in srgb, var(--danger) 26%, var(--panel-bg) 74%);
+  color: color-mix(in srgb, var(--text-strong) 72%, var(--danger) 28%);
 }
 
 @media (max-width: 640px) {
