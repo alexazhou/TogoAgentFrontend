@@ -49,7 +49,16 @@ type RawDeptTreeResponse = {
   dept_tree?: DeptTreeNode | null;
 };
 
-type RawRoleTemplateSummary = Partial<RoleTemplateSummary>;
+type RawRoleTemplateSummary = Partial<RoleTemplateSummary> & {
+  id?: unknown;
+  name?: unknown;
+  model?: unknown;
+  prompt?: unknown;
+  soul?: unknown;
+  type?: unknown;
+  driver?: unknown;
+  allowed_tools?: unknown;
+};
 type RawFrontendModelOption = Partial<FrontendModelOption>;
 type RawFrontendDriverType = Partial<FrontendDriverType>;
 type RawFrontendConfig = {
@@ -192,6 +201,19 @@ function normalizeDriverTypeValue(value?: string | null): string {
   return '';
 }
 
+function normalizeRoleTemplateTypeValue(value?: unknown): string | null {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'system' || normalized === 'user') {
+    return normalized;
+  }
+  return null;
+}
+
+function normalizeRoleTemplateDriverValue(value?: unknown): string | null {
+  const normalized = normalizeDriverTypeValue(typeof value === 'string' ? value : '');
+  return normalized || null;
+}
+
 function normalizeAgent(agent: RawAgentInfo): AgentInfo {
   return {
     id: typeof agent.id === 'number' ? agent.id : null,
@@ -287,21 +309,21 @@ export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
     id: Number(template.id ?? 0),
     name: String(template.name ?? ''),
     model: String(template.model ?? ''),
-    prompt: String(template.prompt ?? ''),
-    type: typeof template.type === 'string' ? template.type : null,
-    driver: typeof template.driver === 'string' ? template.driver : null,
+    prompt: String(template.prompt ?? template.soul ?? ''),
+    type: normalizeRoleTemplateTypeValue(template.type),
+    driver: normalizeRoleTemplateDriverValue(template.driver),
   }));
 }
 
 export async function getRoleTemplateDetail(templateId: number): Promise<RoleTemplateDetail> {
-  const data = await requestJson<Partial<RoleTemplateDetail>>(`/role_templates/${templateId}.json`);
+  const data = await requestJson<RawRoleTemplateSummary>(`/role_templates/${templateId}.json`);
   return {
     id: Number(data.id ?? templateId),
     name: String(data.name ?? ''),
     model: String(data.model ?? ''),
-    prompt: String(data.prompt ?? ''),
-    type: typeof data.type === 'string' ? data.type : null,
-    driver: typeof data.driver === 'string' ? data.driver : null,
+    prompt: String(data.prompt ?? data.soul ?? ''),
+    type: normalizeRoleTemplateTypeValue(data.type),
+    driver: normalizeRoleTemplateDriverValue(data.driver),
     allowed_tools: Array.isArray(data.allowed_tools)
       ? data.allowed_tools.map((item) => String(item))
       : null,
@@ -315,7 +337,7 @@ export async function createRoleTemplate(payload: {
   driver: string | null;
   allowed_tools: string[] | null;
 }): Promise<RoleTemplateDetail> {
-  const data = await requestJson<Partial<RoleTemplateDetail>>('/role_templates/create.json', {
+  const data = await requestJson<RawRoleTemplateSummary>('/role_templates/create.json', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -323,9 +345,9 @@ export async function createRoleTemplate(payload: {
     id: Number(data.id ?? 0),
     name: String(data.name ?? ''),
     model: String(data.model ?? ''),
-    prompt: String(data.prompt ?? ''),
-    type: typeof data.type === 'string' ? data.type : null,
-    driver: typeof data.driver === 'string' ? data.driver : null,
+    prompt: String(data.prompt ?? data.soul ?? ''),
+    type: normalizeRoleTemplateTypeValue(data.type),
+    driver: normalizeRoleTemplateDriverValue(data.driver),
     allowed_tools: Array.isArray(data.allowed_tools)
       ? data.allowed_tools.map((item) => String(item))
       : null,
@@ -339,7 +361,7 @@ export async function updateRoleTemplate(templateId: number, payload: {
   driver: string | null;
   allowed_tools: string[] | null;
 }): Promise<RoleTemplateDetail> {
-  const data = await requestJson<Partial<RoleTemplateDetail>>(`/role_templates/${templateId}/modify.json`, {
+  const data = await requestJson<RawRoleTemplateSummary>(`/role_templates/${templateId}/modify.json`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -347,9 +369,9 @@ export async function updateRoleTemplate(templateId: number, payload: {
     id: Number(data.id ?? templateId),
     name: String(data.name ?? ''),
     model: String(data.model ?? ''),
-    prompt: String(data.prompt ?? ''),
-    type: typeof data.type === 'string' ? data.type : null,
-    driver: typeof data.driver === 'string' ? data.driver : null,
+    prompt: String(data.prompt ?? data.soul ?? ''),
+    type: normalizeRoleTemplateTypeValue(data.type),
+    driver: normalizeRoleTemplateDriverValue(data.driver),
     allowed_tools: Array.isArray(data.allowed_tools)
       ? data.allowed_tools.map((item) => String(item))
       : null,
