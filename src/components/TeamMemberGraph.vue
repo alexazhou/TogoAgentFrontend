@@ -101,12 +101,13 @@ const {
     ref="graphRef"
     class="member-graph"
     :class="{ 'is-panning': isPanning, 'is-editing': !props.readonly, 'is-empty': !graphRootNode }"
+    tabindex="0"
     @pointerdown="startPan"
     @pointermove="movePan"
     @pointerup="endPan"
     @pointercancel="endPan"
     @pointerleave="endPan"
-    @wheel.prevent="handleWheelZoom"
+    @wheel="handleWheelZoom"
   >
     <div v-if="!graphRootNode" class="member-empty-state">
       <strong>当前还没有成员</strong>
@@ -169,6 +170,11 @@ const {
 
 .member-graph.is-panning {
   cursor: grabbing;
+}
+
+.member-graph:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--focus-border) 62%, transparent);
+  outline-offset: -2px;
 }
 
 .member-canvas {

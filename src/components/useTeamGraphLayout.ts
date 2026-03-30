@@ -142,6 +142,7 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
       return;
     }
 
+    graphRef.value.focus({ preventScroll: true });
     isPanning.value = true;
     panStartX = event.clientX;
     panStartY = event.clientY;
@@ -178,6 +179,11 @@ export function useTeamGraphLayout(options: UseTeamGraphLayoutOptions) {
 
   function handleWheelZoom(event: WheelEvent): void {
     if (!graphRef.value || event.deltaY === 0) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    if (activeElement !== graphRef.value && !graphRef.value.contains(activeElement)) {
       return;
     }
 
