@@ -7,6 +7,7 @@ export type MemberTemplateOption = {
   id: number;
   name: string;
   model: string;
+  soul: string;
 };
 
 export type MemberDriverOption = {
