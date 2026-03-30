@@ -93,6 +93,18 @@ const emit = defineEmits<{
   overflow: hidden;
   align-self: stretch;
   padding-bottom: 10px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.member-panel:focus-within {
+  border-color: color-mix(in srgb, var(--focus-border) 88%, #ffffff 12%);
+  box-shadow:
+    var(--panel-shadow),
+    0 0 0 4px color-mix(in srgb, var(--focus-border) 28%, transparent);
+  background: color-mix(in srgb, var(--panel-bg) 84%, var(--selected) 16%);
 }
 
 .member-panel-head {
@@ -109,7 +121,7 @@ const emit = defineEmits<{
   display: inline-flex;
   align-items: center;
   min-height: 36px;
-  background: #fff;
+  background: color-mix(in srgb, var(--panel-bg) 90%, transparent);
   padding: 0 8px;
 }
 
@@ -136,7 +148,7 @@ const emit = defineEmits<{
   flex-wrap: wrap;
   gap: 8px;
   min-height: 40px;
-  background: #fff;
+  background: color-mix(in srgb, var(--panel-bg) 90%, transparent);
   padding: 4px 10px 0;
 }
 
@@ -158,7 +170,7 @@ const emit = defineEmits<{
 
 .member-panel-action--primary {
   border-color: color-mix(in srgb, var(--focus-border) 45%, var(--team-create-control-border) 55%);
-  background: color-mix(in srgb, var(--selected) 22%, #fff 78%);
+  background: color-mix(in srgb, var(--selected) 28%, var(--panel-bg) 72%);
 }
 
 .member-panel-action--primary:disabled {

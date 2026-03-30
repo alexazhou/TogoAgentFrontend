@@ -398,12 +398,14 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 .team-delete-button {
   min-width: 112px;
   border-color: color-mix(in srgb, #ef4444 30%, var(--team-create-control-border) 70%);
-  background: color-mix(in srgb, #fee2e2 48%, var(--panel-bg) 52%);
+  background: color-mix(in srgb, var(--danger) 18%, var(--panel-bg) 82%);
+  color: color-mix(in srgb, var(--text-strong) 82%, var(--danger) 18%);
 }
 
 .team-delete-button:hover:not(:disabled) {
   border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
-  background: color-mix(in srgb, #fee2e2 78%, #fff 22%);
+  background: color-mix(in srgb, var(--danger) 26%, var(--panel-bg) 74%);
+  color: color-mix(in srgb, var(--text-strong) 72%, var(--danger) 28%);
 }
 
 .team-card,
