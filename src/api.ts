@@ -53,7 +53,6 @@ type RawRoleTemplateSummary = Partial<RoleTemplateSummary> & {
   id?: unknown;
   name?: unknown;
   model?: unknown;
-  prompt?: unknown;
   soul?: unknown;
   type?: unknown;
   driver?: unknown;
@@ -202,16 +201,28 @@ function normalizeDriverTypeValue(value?: string | null): string {
 }
 
 function normalizeRoleTemplateTypeValue(value?: unknown): string | null {
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (normalized === 'system' || normalized === 'user') {
-    return normalized;
+  const raw = String(value ?? '').trim();
+  if (raw === 'SYSTEM') {
+    return 'system';
+  }
+  if (raw === 'USER') {
+    return 'user';
   }
   return null;
 }
 
 function normalizeRoleTemplateDriverValue(value?: unknown): string | null {
-  const normalized = normalizeDriverTypeValue(typeof value === 'string' ? value : '');
-  return normalized || null;
+  const raw = String(value ?? '').trim();
+  if (raw === 'NATIVE') {
+    return 'native';
+  }
+  if (raw === 'CLAUDE_SDK') {
+    return 'claude_sdk';
+  }
+  if (raw === 'TSP') {
+    return 'tsp';
+  }
+  return null;
 }
 
 function normalizeAgent(agent: RawAgentInfo): AgentInfo {
@@ -309,7 +320,7 @@ export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
     id: Number(template.id ?? 0),
     name: String(template.name ?? ''),
     model: String(template.model ?? ''),
-    prompt: String(template.prompt ?? template.soul ?? ''),
+    prompt: String(template.soul ?? ''),
     type: normalizeRoleTemplateTypeValue(template.type),
     driver: normalizeRoleTemplateDriverValue(template.driver),
   }));
@@ -321,7 +332,7 @@ export async function getRoleTemplateDetail(templateId: number): Promise<RoleTem
     id: Number(data.id ?? templateId),
     name: String(data.name ?? ''),
     model: String(data.model ?? ''),
-    prompt: String(data.prompt ?? data.soul ?? ''),
+    prompt: String(data.soul ?? ''),
     type: normalizeRoleTemplateTypeValue(data.type),
     driver: normalizeRoleTemplateDriverValue(data.driver),
     allowed_tools: Array.isArray(data.allowed_tools)
@@ -345,7 +356,7 @@ export async function createRoleTemplate(payload: {
     id: Number(data.id ?? 0),
     name: String(data.name ?? ''),
     model: String(data.model ?? ''),
-    prompt: String(data.prompt ?? data.soul ?? ''),
+    prompt: String(data.soul ?? ''),
     type: normalizeRoleTemplateTypeValue(data.type),
     driver: normalizeRoleTemplateDriverValue(data.driver),
     allowed_tools: Array.isArray(data.allowed_tools)
@@ -369,7 +380,7 @@ export async function updateRoleTemplate(templateId: number, payload: {
     id: Number(data.id ?? templateId),
     name: String(data.name ?? ''),
     model: String(data.model ?? ''),
-    prompt: String(data.prompt ?? data.soul ?? ''),
+    prompt: String(data.soul ?? ''),
     type: normalizeRoleTemplateTypeValue(data.type),
     driver: normalizeRoleTemplateDriverValue(data.driver),
     allowed_tools: Array.isArray(data.allowed_tools)
