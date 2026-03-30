@@ -168,6 +168,7 @@ onBeforeUnmount(() => {
 
 .message-row.side-center {
   align-items: center;
+  padding: 2px 0 4px;
 }
 
 .message-meta {
@@ -222,11 +223,13 @@ onBeforeUnmount(() => {
 
 .system-note {
   text-align: center;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 78%, var(--text-strong) 22%);
   background: transparent;
-  padding: 6px 0 10px;
-  max-width: 100%;
-  line-height: 1.45;
+  padding: 0;
+  max-width: min(72%, 760px);
+  line-height: 1.5;
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
 }
 
 @media (max-width: 980px) {
