@@ -180,41 +180,22 @@ function buildDriverCatalog(config: FrontendConfig | null): MemberDriverOption[]
   ];
 }
 
-function resolveTreeNodeMemberName(node: DeptTreeNode): string {
-  const managerName = node.manager.trim();
-  if (managerName) {
-    return managerName;
-  }
-
-  if (node.members.length === 1) {
-    return node.members[0]?.trim() || '';
-  }
-
-  if (node.members.length === 0) {
-    return node.dept_name.trim();
-  }
-
-  return '';
-}
-
-function collectMemberNamesFromDeptTree(tree: DeptTreeNode | null): string[] {
+function collectMemberIdsFromDeptTree(tree: DeptTreeNode | null): number[] {
   if (!tree) {
     return [];
   }
 
-  const names: string[] = [];
+  const ids: number[] = [];
   const stack = [tree];
   while (stack.length) {
     const current = stack.pop()!;
-    const managerName = resolveTreeNodeMemberName(current);
-    if (managerName && !names.includes(managerName)) {
-      names.push(managerName);
+    if (current.manager_id !== null && !ids.includes(current.manager_id)) {
+      ids.push(current.manager_id);
     }
 
-    current.members.forEach((memberName) => {
-      const normalizedName = memberName.trim();
-      if (normalizedName && !names.includes(normalizedName)) {
-        names.push(normalizedName);
+    current.agent_ids.forEach((agentId) => {
+      if (!ids.includes(agentId)) {
+        ids.push(agentId);
       }
     });
 
@@ -223,18 +204,18 @@ function collectMemberNamesFromDeptTree(tree: DeptTreeNode | null): string[] {
     }
   }
 
-  return names;
+  return ids;
 }
 
 function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
-  return collectMemberNamesFromDeptTree(tree).map((name) => ({
-    id: null,
-    name,
+  return collectMemberIdsFromDeptTree(tree).map((agentId) => ({
+    id: agentId,
+    name: `Agent #${agentId}`,
     employee_number: null,
     role_template_id: null,
     model: '',
     team_name: props.teamName,
-    status: 'idle',
+    status: 'idle' as const,
     employ_status: null,
     driver: '',
   }));
@@ -279,55 +260,67 @@ function buildFallbackOrgTree(agents: AgentInfo[]): DraftOrgNode | null {
 
 function buildDraftOrgNodeFromDeptTree(
   node: DeptTreeNode,
-  agentsByName: Map<string, AgentInfo>,
-  visitedNames: Set<string>,
+  agentsById: Map<number, AgentInfo>,
+  visitedIds: Set<number>,
 ): DraftOrgNode | null {
-  const managerName = resolveTreeNodeMemberName(node);
-  if (!managerName) {
+  const managerId = node.manager_id;
+  if (managerId === null) {
     return null;
   }
 
-  visitedNames.add(managerName);
-  const childManagerNames = new Set(
+  visitedIds.add(managerId);
+  const childManagerIds = new Set(
     node.children
-      .map((child) => resolveTreeNodeMemberName(child))
-      .filter(Boolean),
+      .map((child) => child.manager_id)
+      .filter((id): id is number => id !== null),
   );
 
-  const extraMemberNodes = node.members
-    .map((memberName) => memberName.trim())
-    .filter((memberName) => memberName && memberName !== managerName && !childManagerNames.has(memberName))
-    .map((memberName) => {
-      visitedNames.add(memberName);
-      return createMemberNode(memberName, agentsByName.get(memberName));
+  const extraMemberNodes = node.agent_ids
+    .filter((agentId) => agentId !== managerId && !childManagerIds.has(agentId))
+    .map((agentId) => {
+      visitedIds.add(agentId);
+      return createMemberNode(
+        agentsById.get(agentId)?.name ?? `Agent #${agentId}`,
+        agentsById.get(agentId),
+      );
     });
 
   const childNodes = node.children
-    .map((child) => buildDraftOrgNodeFromDeptTree(child, agentsByName, visitedNames))
+    .map((child) => buildDraftOrgNodeFromDeptTree(child, agentsById, visitedIds))
     .filter((child): child is DraftOrgNode => child !== null);
 
-  return createMemberNode(managerName, agentsByName.get(managerName), {
-    deptId: node.dept_id ?? null,
-    deptName: node.dept_name,
-    deptResponsibility: node.dept_responsibility,
-    children: [...extraMemberNodes, ...childNodes],
-  });
+  const managerAgent = agentsById.get(managerId);
+  return createMemberNode(
+    managerAgent?.name ?? `Agent #${managerId}`,
+    managerAgent,
+    {
+      deptId: node.id ?? null,
+      deptName: node.name,
+      deptResponsibility: node.responsibility,
+      children: [...extraMemberNodes, ...childNodes],
+    },
+  );
 }
 
 function buildDraftOrgTree(tree: DeptTreeNode | null, agents: AgentInfo[]): DraftOrgNode | null {
-  const agentsByName = new Map(agents.map((agent) => [agent.name, agent]));
+  const agentsById = new Map<number, AgentInfo>();
+  agents.forEach((agent) => {
+    if (typeof agent.id === 'number') {
+      agentsById.set(agent.id, agent);
+    }
+  });
 
   if (!tree) {
     return buildFallbackOrgTree(agents);
   }
 
-  const visitedNames = new Set<string>();
-  const root = buildDraftOrgNodeFromDeptTree(tree, agentsByName, visitedNames);
+  const visitedIds = new Set<number>();
+  const root = buildDraftOrgNodeFromDeptTree(tree, agentsById, visitedIds);
   if (!root) {
     return buildFallbackOrgTree(agents);
   }
 
-  const extraAgents = agents.filter((agent) => !visitedNames.has(agent.name));
+  const extraAgents = agents.filter((agent) => typeof agent.id === 'number' && !visitedIds.has(agent.id));
   root.children.push(...extraAgents.map((agent) => createMemberNode(agent.name, agent)));
   return root;
 }
@@ -440,13 +433,13 @@ function buildCommittedMembersSaveBaseline(): Array<{
 }
 
 function buildDeptTreePayload(root: DraftOrgNode | null = draftOrgTree.value): DeptTreeNode | null {
-  if (!root || root.kind !== 'member' || !root.memberName) {
+  if (!root || root.kind !== 'member' || !root.memberName || root.agentId === null) {
     return null;
   }
 
   const buildNode = (node: DraftOrgNode, isRoot = false): DeptTreeNode => {
     const childMembers = node.children.filter((child) => child.kind === 'member');
-    const members = [node.memberName];
+    const agentIds: number[] = node.agentId !== null ? [node.agentId] : [];
     const children: DeptTreeNode[] = [];
 
     childMembers.forEach((child) => {
@@ -455,15 +448,17 @@ function buildDeptTreePayload(root: DraftOrgNode | null = draftOrgTree.value): D
         return;
       }
 
-      members.push(child.memberName);
+      if (child.agentId !== null) {
+        agentIds.push(child.agentId);
+      }
     });
 
     return {
-      dept_id: isRoot || childMembers.length > 0 ? node.deptId : null,
-      dept_name: isRoot || childMembers.length > 0 ? node.deptName : '',
-      dept_responsibility: isRoot || childMembers.length > 0 ? node.deptResponsibility : '',
-      manager: node.memberName,
-      members,
+      id: isRoot || childMembers.length > 0 ? node.deptId : null,
+      name: isRoot || childMembers.length > 0 ? node.deptName : '',
+      responsibility: isRoot || childMembers.length > 0 ? node.deptResponsibility : '',
+      manager_id: node.agentId,
+      agent_ids: agentIds,
       children,
     };
   };
