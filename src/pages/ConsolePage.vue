@@ -88,13 +88,20 @@ const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
 
   const agentMap = new Map(agents.value.map((agent) => [agent.name, agent]));
   const templateMap = new Map(roleTemplates.value.map((template) => [template.id, template.name]));
+  const memberAgents: AgentInfo[] = [];
 
-  return currentRoom.value.members.map((memberName) => {
+  for (const memberName of currentRoom.value.members) {
     const agent = agentMap.get(memberName);
-    const templateName = agent?.role_template_id ? (templateMap.get(agent.role_template_id) ?? null) : null;
+    if (agent) {
+      memberAgents.push(agent);
+    }
+  }
+
+  return memberAgents.map((agent) => {
+    const templateName = agent.role_template_id ? (templateMap.get(agent.role_template_id) ?? null) : null;
     return {
-      name: memberName,
-      employee_number: typeof agent?.employee_number === 'number' ? agent.employee_number : null,
+      name: agent.name,
+      employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
       role_template_name: templateName,
     };
   });
@@ -105,6 +112,7 @@ const roomCreateMemberOptions = computed(() =>
     .filter((agent): agent is AgentInfo & { id: number } =>
       typeof agent.id === 'number'
       && agent.id !== 0
+      && agent.special !== 'system'
       && (agent.special !== null && agent.special !== undefined
         || String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD'),
     )
@@ -120,7 +128,7 @@ const roomCreateMemberOptions = computed(() =>
     })),
 );
 const canSubmitCreateRoom = computed(() =>
-  Boolean(createRoomName.value.trim()) && createRoomMemberIds.value.length > 0 && !creatingRoom.value,
+  Boolean(createRoomName.value.trim()) && createRoomMemberIds.value.length >= 2 && !creatingRoom.value,
 );
 const createRoomConfirmMessage = computed(() => {
   const memberNameMap = new Map(roomCreateMemberOptions.value.map((member) => [member.id, member.name]));
@@ -538,7 +546,7 @@ async function confirmCreateRoom(): Promise<void> {
   try {
     const payload = {
       name: createRoomName.value.trim(),
-      member_ids: [...createRoomMemberIds.value],
+      agent_ids: [...createRoomMemberIds.value],
     };
     const result = await createTeamRoom(teamId.value, payload);
     const nextRooms = await hydrateRooms(teamId.value);
@@ -658,6 +666,7 @@ onBeforeUnmount(() => {
       :members="roomCreateMemberOptions"
       :selected-member-ids="createRoomMemberIds"
       :submitting="creatingRoom"
+      :can-submit="canSubmitCreateRoom"
       @close="closeCreateRoomDialog"
       @update:room-name="createRoomName = $event"
       @toggle-member="toggleCreateRoomMember"

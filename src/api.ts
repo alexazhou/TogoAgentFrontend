@@ -18,8 +18,6 @@ import type {
 import { showGlobalRequestError } from './appUiState';
 
 type RawRoomInfo = Partial<RoomInfo> & {
-  name?: string;
-  agents?: string[];
   messages?: Array<{
     sender_name?: string;
     content?: string;
@@ -173,7 +171,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const teamName = room.team_name ?? 'default';
-  const roomName = room.room_name ?? room.name ?? '';
+  const roomName = room.room_name ?? '';
   const roomType = (room.room_type ?? 'group').toLowerCase();
 
   return {
@@ -182,7 +180,10 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     team_name: teamName,
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
-    members: room.members ?? room.agents ?? [],
+    members: Array.isArray(room.members)
+      ? room.members.filter((member): member is string =>
+        typeof member === 'string' && member.toUpperCase() !== 'SYSTEM')
+      : [],
     tags: Array.isArray(room.tags)
       ? room.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
@@ -295,7 +296,7 @@ export async function getRooms(teamId?: number): Promise<RoomInfo[]> {
 
 export async function createTeamRoom(teamId: number, payload: {
   name: string;
-  member_ids: number[];
+  agent_ids: number[];
   initial_topic?: string | null;
   max_turns?: number;
 }): Promise<{ status: string; room_name: string }> {
