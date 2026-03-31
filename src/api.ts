@@ -35,6 +35,7 @@ type RawAgentInfo = Partial<AgentInfo> & {
   role_template_id?: number;
   employ_status?: string;
   driver?: string;
+  special?: string | null;
 };
 
 type RawAgentDetail = Partial<AgentDetail> & {
@@ -201,6 +202,10 @@ function normalizeDriverTypeValue(value?: string | null): string {
 }
 
 function normalizeAgent(agent: RawAgentInfo): AgentInfo {
+  const normalizedSpecial = agent.special === 'operator' || agent.special === 'system'
+    ? agent.special
+    : null;
+
   return {
     id: typeof agent.id === 'number' ? agent.id : null,
     name: String(agent.name ?? ''),
@@ -212,6 +217,7 @@ function normalizeAgent(agent: RawAgentInfo): AgentInfo {
     status: normalizeAgentStatus(agent.status),
     employ_status: agent.employ_status ?? null,
     driver: normalizeDriverTypeValue(typeof agent.driver === 'string' ? agent.driver : ''),
+    special: normalizedSpecial,
   };
 }
 
@@ -237,9 +243,12 @@ export async function getAgents(): Promise<AgentInfo[]> {
   return data.agents.map(normalizeAgent);
 }
 
-export async function getAgentsByTeamId(teamId: number): Promise<AgentInfo[]> {
+export async function getAgentsByTeamId(teamId: number, options?: { includeSpecial?: boolean }): Promise<AgentInfo[]> {
   const data = await requestJson<{ agents: RawAgentInfo[] }>(
-    withSearch('/agents/list.json', { team_id: teamId }),
+    withSearch('/agents/list.json', {
+      team_id: teamId,
+      include_special: options?.includeSpecial ? 1 : undefined,
+    }),
   );
   return data.agents.map(normalizeAgent);
 }
@@ -282,6 +291,23 @@ export async function getRooms(teamId?: number): Promise<RoomInfo[]> {
     withSearch('/rooms/list.json', { team_id: teamId }),
   );
   return data.rooms.map(normalizeRoom);
+}
+
+export async function createTeamRoom(teamId: number, payload: {
+  name: string;
+  member_ids: number[];
+  initial_topic?: string | null;
+  max_turns?: number;
+}): Promise<{ status: string; room_name: string }> {
+  return requestJson(`/teams/${teamId}/rooms/create.json`, {
+    method: 'POST',
+    body: JSON.stringify({
+      type: 'group',
+      initial_topic: null,
+      max_turns: 100,
+      ...payload,
+    }),
+  });
 }
 
 export async function getTeams(): Promise<TeamSummary[]> {

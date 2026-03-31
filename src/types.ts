@@ -12,6 +12,7 @@ export interface AgentInfo {
   status: AgentStatus;
   employ_status?: string | null;
   driver?: string;
+  special?: 'operator' | 'system' | null;
 }
 
 export interface AgentDetail extends AgentInfo {

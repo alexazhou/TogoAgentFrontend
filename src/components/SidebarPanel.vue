@@ -13,6 +13,7 @@ defineProps<{
 const emit = defineEmits<{
   selectRoom: [roomId: number];
   selectAgent: [agentName: string];
+  createRoom: [];
 }>();
 </script>
 
@@ -22,7 +23,9 @@ const emit = defineEmits<{
       :loading="loading"
       :rooms="rooms"
       :current-room-id="currentRoomId"
+      :create-disabled="loading"
       @select-room="emit('selectRoom', $event)"
+      @create-room="emit('createRoom')"
     />
     <AgentListSection :agents="agents" @select-agent="emit('selectAgent', $event)" />
   </aside>

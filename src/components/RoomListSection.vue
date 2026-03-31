@@ -5,10 +5,12 @@ defineProps<{
   loading: boolean;
   rooms: RoomState[];
   currentRoomId: number | null;
+  createDisabled?: boolean;
 }>();
 
 const emit = defineEmits<{
   selectRoom: [roomId: number];
+  createRoom: [];
 }>();
 
 function isDeptRoom(room: RoomState): boolean {
@@ -20,7 +22,18 @@ function isDeptRoom(room: RoomState): boolean {
   <section class="sidebar-card panel">
     <div class="block-head">
       <h2>聊天室</h2>
-      <span>{{ loading ? 0 : rooms.length }}</span>
+      <div class="room-list-head-actions">
+        <span>{{ loading ? 0 : rooms.length }}</span>
+        <button
+          type="button"
+          class="room-add-button"
+          :disabled="createDisabled"
+          aria-label="新建聊天室"
+          @click="emit('createRoom')"
+        >
+          +
+        </button>
+      </div>
     </div>
 
     <div class="sidebar-scroll">
@@ -194,5 +207,42 @@ function isDeptRoom(room: RoomState): boolean {
   background: var(--surface-soft);
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.room-list-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-add-button {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--team-create-control-border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text-strong);
+  font-size: 0.92rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.room-add-button:hover:not(:disabled) {
+  border-color: var(--focus-border);
+  background: var(--selected);
+  transform: translateY(-1px);
+}
+
+.room-add-button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  transform: none;
 }
 </style>
