@@ -89,11 +89,11 @@ export interface TeamRoomDetail {
 }
 
 export interface DeptTreeNode {
-  dept_id?: number | null;
-  dept_name: string;
-  dept_responsibility: string;
-  manager: string;
-  members: string[];
+  id?: number | null;
+  name: string;
+  responsibility: string;
+  manager_id: number | null;
+  agent_ids: number[];
   children: DeptTreeNode[];
 }
 
