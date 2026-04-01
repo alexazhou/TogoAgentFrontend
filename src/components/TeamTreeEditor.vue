@@ -135,10 +135,6 @@ function createDepartmentNameAllocator(initialDepartmentNames: string[] = []): (
   };
 }
 
-function isOnBoardAgent(agent: AgentInfo): boolean {
-  return String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD';
-}
-
 function parseDriverTypeValue(driver: string): string {
   const normalized = driver.trim().toLowerCase();
   if (normalized === 'native' || normalized === 'claude_sdk' || normalized === 'tsp') {
@@ -490,6 +486,22 @@ const selectedTeamMemberTemplates = computed<Record<string, string>>(() => (
   )
 ));
 
+const memberPanelStatus = computed(() => {
+  if (isLoading.value) {
+    return '正在加载组织结构...';
+  }
+
+  if (teamMemberStatus.value === '加载失败') {
+    return teamMemberStatus.value;
+  }
+
+  return '';
+});
+
+const inlineTeamMemberStatus = computed(() => (
+  memberPanelStatus.value ? '' : teamMemberStatus.value
+));
+
 const currentEditingMemberEmployeeNumber = computed(() => (
   findMemberNode(draftOrgTree.value, editingMemberName.value)?.employeeNumber || ''
 ));
@@ -683,7 +695,7 @@ watch(
         model: template.model || '自动',
         soul: template.soul || '',
       }));
-      const nextMembers = teamAgents.filter(isOnBoardAgent).map((agent) => ({
+      const nextMembers = teamAgents.map((agent) => ({
         ...agent,
       }));
 
@@ -755,7 +767,7 @@ async function saveTeamMembers(): Promise<void> {
       await setDeptTree(props.teamId, nextDeptTree);
     }
 
-    const nextAgents = savedMembers.filter(isOnBoardAgent).map((agent) => ({ ...agent }));
+    const nextAgents = savedMembers.map((agent) => ({ ...agent }));
 
     syncCommittedState(nextDeptTree, nextAgents);
     editingPendingSlotId.value = null;
@@ -1065,14 +1077,14 @@ function confirmDangerAction(): void {
 
 <template>
   <div class="team-tree-editor">
-    <p v-if="isLoading" class="team-member-status">正在加载组织结构...</p>
-    <p v-if="teamMemberStatus" class="team-member-status">{{ teamMemberStatus }}</p>
+    <p v-if="inlineTeamMemberStatus" class="team-member-status">{{ inlineTeamMemberStatus }}</p>
 
     <TeamMembersCard
       :team-name="teamName"
       :selected-agents="selectedTeamMembers"
       :member-templates="selectedTeamMemberTemplates"
       :root-node="graphRootNode"
+      :status-message="memberPanelStatus"
       :readonly="isReadonly"
       :actions="memberPanelActions"
       :show-edit-action="!isReadonly"
