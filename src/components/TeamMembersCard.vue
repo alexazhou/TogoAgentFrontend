@@ -14,12 +14,14 @@ withDefaults(defineProps<{
   selectedAgents: string[];
   memberTemplates?: Record<string, string>;
   rootNode?: TeamGraphNode | null;
+  statusMessage?: string;
   readonly?: boolean;
   actions?: MemberPanelAction[];
   showEditAction?: boolean;
 }>(), {
   memberTemplates: () => ({}),
   rootNode: null,
+  statusMessage: '',
   readonly: false,
   actions: () => [],
   showEditAction: false,
@@ -60,7 +62,12 @@ const emit = defineEmits<{
         </button>
     </div>
 
+    <div v-if="statusMessage" class="member-panel-status">
+      <strong>{{ statusMessage }}</strong>
+    </div>
+
     <TeamMemberGraph
+      v-else
       :team-name="teamName"
       :selected-agents="selectedAgents"
       :member-templates="memberTemplates"
@@ -176,5 +183,27 @@ const emit = defineEmits<{
 .member-panel-action--primary:disabled {
   border-color: color-mix(in srgb, var(--panel-border) 76%, transparent 24%);
   background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
+}
+
+.member-panel-status {
+  min-height: 452px;
+  display: grid;
+  place-items: center;
+  padding: 48px 20px 20px;
+  text-align: center;
+}
+
+.member-panel-status strong {
+  min-width: 280px;
+  min-height: 220px;
+  padding: 24px 28px;
+  border: 1px dashed color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel-bg) 72%, var(--surface-soft) 28%);
+  display: grid;
+  place-items: center;
+  color: var(--text-strong);
+  font-size: 1rem;
+  font-weight: 600;
 }
 </style>
