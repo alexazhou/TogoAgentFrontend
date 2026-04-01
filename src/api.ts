@@ -25,6 +25,7 @@ type RawRoomInfo = Partial<RoomInfo> & {
   }>;
   room_type?: string;
   tags?: string[];
+  biz_id?: string | null;
 };
 
 type RawAgentInfo = Partial<AgentInfo> & {
@@ -187,6 +188,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     tags: Array.isArray(room.tags)
       ? room.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
+    biz_id: typeof room.biz_id === 'string' && room.biz_id.trim() ? room.biz_id : null,
   };
 }
 

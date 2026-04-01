@@ -29,6 +29,7 @@ export interface RoomInfo {
   state: string;
   members: string[];
   tags?: string[];
+  biz_id?: string | null;
 }
 
 export interface MessageInfo {
@@ -67,6 +68,7 @@ export interface RoomMemberProfile {
   name: string;
   employee_number: number | null;
   role_template_name: string | null;
+  is_leader: boolean;
 }
 
 export interface TeamSummary {

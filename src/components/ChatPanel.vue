@@ -103,7 +103,10 @@ function closeMembers(): void {
           <div v-if="currentMembers.length" class="chat-members-grid">
             <article v-for="member in currentMembers" :key="member.name" class="chat-member-card">
               <span v-if="member.employee_number !== null" class="chat-member-card__employee">#{{ member.employee_number }}</span>
-              <img class="chat-member-card__avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${member.name} avatar`" />
+              <div class="chat-member-card__avatar-wrap">
+                <span v-if="member.is_leader" class="chat-member-card__leader-flag">Leader</span>
+                <img class="chat-member-card__avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${member.name} avatar`" />
+              </div>
               <strong>{{ member.name }}</strong>
               <span v-if="member.role_template_name" class="chat-member-card__meta">{{ member.role_template_name }}</span>
             </article>
@@ -281,6 +284,24 @@ function closeMembers(): void {
   font-size: 0.8rem;
   line-height: 1;
   letter-spacing: 0.04em;
+}
+
+.chat-member-card__avatar-wrap {
+  position: relative;
+  padding-top: 14px;
+}
+
+.chat-member-card__leader-flag {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -30%);
+  color: #5f87ab;
+  font-size: 0.72rem;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .chat-member-card__avatar {
