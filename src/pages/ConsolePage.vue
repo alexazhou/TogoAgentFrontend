@@ -6,6 +6,7 @@ import {
   createEventsSocket,
   createTeamRoom,
   getAgentsByTeamId,
+  getDeptTree,
   getRoleTemplates,
   getRoomMessages,
   getRooms,
@@ -20,6 +21,7 @@ import { findTeamById } from '../teamStore';
 import type {
   AgentInfo,
   AgentStatus,
+  DeptTreeNode,
   MessageInfo,
   RoleTemplateSummary,
   RoomMemberProfile,
@@ -35,6 +37,7 @@ const router = useRouter();
 
 const rooms = ref<RoomState[]>([]);
 const agents = ref<AgentInfo[]>([]);
+const deptTree = ref<DeptTreeNode | null>(null);
 const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const messages = ref<MessageInfo[]>([]);
 const selectedRoomId = ref<number | null>(null);
@@ -81,6 +84,71 @@ const visibleAgents = computed(() =>
     !agent.special && String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD',
   ),
 );
+
+function isDeptRoom(room: RoomState | null): boolean {
+  return Boolean(room && Array.isArray(room.tags) && room.tags.includes('DEPT'));
+}
+
+function parseDeptIdFromBizId(bizId: string | null | undefined): number | null {
+  const matched = String(bizId ?? '').match(/^DEPT:(\d+)$/);
+  if (!matched) {
+    return null;
+  }
+
+  const deptId = Number(matched[1]);
+  return Number.isFinite(deptId) ? deptId : null;
+}
+
+function findDeptNodeById(tree: DeptTreeNode | null, deptId: number): DeptTreeNode | null {
+  if (!tree) {
+    return null;
+  }
+  if (tree.id === deptId) {
+    return tree;
+  }
+  for (const child of tree.children) {
+    const matched = findDeptNodeById(child, deptId);
+    if (matched) {
+      return matched;
+    }
+  }
+  return null;
+}
+
+function findDeptNodeByName(tree: DeptTreeNode | null, deptName: string): DeptTreeNode | null {
+  if (!tree) {
+    return null;
+  }
+  if (tree.name === deptName) {
+    return tree;
+  }
+  for (const child of tree.children) {
+    const matched = findDeptNodeByName(child, deptName);
+    if (matched) {
+      return matched;
+    }
+  }
+  return null;
+}
+
+const currentDeptLeaderName = computed<string | null>(() => {
+  const room = currentRoom.value;
+  if (!room || !isDeptRoom(room)) {
+    return null;
+  }
+
+  const deptId = parseDeptIdFromBizId(room.biz_id);
+  const deptNode = deptId !== null
+    ? findDeptNodeById(deptTree.value, deptId)
+    : findDeptNodeByName(deptTree.value, room.room_name);
+  if (!deptNode || typeof deptNode.manager_id !== 'number') {
+    return null;
+  }
+
+  const leader = agents.value.find((agent) => agent.id === deptNode.manager_id);
+  return leader?.name ?? null;
+});
+
 const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
   if (!currentRoom.value) {
     return [];
@@ -103,6 +171,7 @@ const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
       name: agent.name,
       employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
       role_template_name: templateName,
+      is_leader: agent.name === currentDeptLeaderName.value,
     };
   });
 });
@@ -294,14 +363,16 @@ async function refreshAll(): Promise<void> {
   errorMessage.value = '';
 
   try {
-    const [nextAgents, nextRooms, nextRoleTemplates] = await Promise.all([
+    const [nextAgents, nextRooms, nextRoleTemplates, nextDeptTree] = await Promise.all([
       getAgentsByTeamId(teamId.value, { includeSpecial: true }),
       hydrateRooms(teamId.value),
       getRoleTemplates(),
+      getDeptTree(teamId.value),
     ]);
     agents.value = nextAgents;
     rooms.value = nextRooms;
     roleTemplates.value = nextRoleTemplates;
+    deptTree.value = nextDeptTree;
 
     const fallbackRoomId = rooms.value[0]?.room_id ?? null;
     const targetRoomId =
@@ -323,6 +394,7 @@ async function refreshAll(): Promise<void> {
   } catch (error) {
     errorMessage.value = '无法连接到后端服务，请确认服务已启动。';
     console.error(error);
+    deptTree.value = null;
   } finally {
     loading.value = false;
   }
