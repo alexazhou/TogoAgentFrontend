@@ -40,11 +40,11 @@ export interface MessageInfo {
 
 export interface WsMessageEvent {
   event: 'message';
-  room_id: number;
-  room_key: string;
-  room_name: string;
-  team_id: number;
-  team_name: string;
+  gt_room: {
+    id: number;
+    team_id: number;
+    name: string;
+  };
   sender: string;
   content: string;
   time: string;
