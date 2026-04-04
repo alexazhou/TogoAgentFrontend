@@ -435,13 +435,13 @@ function applyMessageEvent(event: WsMessageEvent): void {
 }
 
 function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
-  if (!currentTeam.value || event.team_id !== currentTeam.value.id) {
+  if (!currentTeam.value || event.gt_agent.team_id !== currentTeam.value.id) {
     return;
   }
 
   const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
   agents.value = agents.value.map((agent) =>
-    agent.name === event.agent_name
+    agent.name === event.gt_agent.name
       ? { ...agent, status: normalizedStatus }
       : agent,
   );

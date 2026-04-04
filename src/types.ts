@@ -52,9 +52,11 @@ export interface WsMessageEvent {
 
 export interface WsAgentStatusEvent {
   event: 'agent_status';
-  agent_id: number;
-  agent_name: string;
-  team_id: number;
+  gt_agent: {
+    id: number;
+    name: string;
+    team_id: number;
+  };
   status: 'ACTIVE' | 'IDLE';
 }
 
