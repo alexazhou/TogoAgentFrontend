@@ -61,7 +61,7 @@ function isDeptRoom(room: RoomState): boolean {
             </div>
             <div class="room-head-right">
               <span v-if="isDeptRoom(room)" class="room-tag room-tag-dept">部门群</span>
-              <div class="room-meta">{{ room.members.length }} 人</div>
+              <div class="room-meta">{{ room.agents.length }} 人</div>
             </div>
           </div>
           <p class="room-preview">{{ room.preview }}</p>

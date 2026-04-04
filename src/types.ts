@@ -27,7 +27,7 @@ export interface RoomInfo {
   team_name: string;
   room_type: RoomType;
   state: string;
-  members: string[];
+  agents: string[];
   tags?: string[];
   biz_id?: string | null;
 }
@@ -88,9 +88,13 @@ export interface TeamSummary {
 export interface TeamRoomDetail {
   id: number;
   name: string;
+  type?: string;
   initial_topic: string | null;
   max_turns: number;
-  members: string[];
+  agents: string[];
+  agent_ids?: number[];
+  biz_id?: string | null;
+  tags?: string[];
 }
 
 export interface DeptTreeNode {

@@ -112,12 +112,12 @@ onMounted(() => {
             >
               <div class="room-tile-head">
                 <strong>{{ room.name }}</strong>
-                <span>{{ room.members.length }} 人</span>
+                <span>{{ room.agents.length }} 人</span>
               </div>
               <p>{{ room.initial_topic || '无初始话题' }}</p>
               <div class="room-tile-meta">
                 <span>max_turns {{ room.max_turns }}</span>
-                <span>{{ room.members.join(' / ') }}</span>
+                <span>{{ room.agents.join(' / ') }}</span>
               </div>
             </button>
 

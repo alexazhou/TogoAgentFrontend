@@ -206,8 +206,8 @@ const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
   const templateMap = new Map(roleTemplates.value.map((template) => [template.id, template.name]));
   const memberAgents: AgentInfo[] = [];
 
-  for (const memberName of currentRoom.value.members) {
-    const agent = agentMap.get(memberName);
+  for (const agentName of currentRoom.value.agents) {
+    const agent = agentMap.get(agentName);
     if (agent) {
       memberAgents.push(agent);
     }
