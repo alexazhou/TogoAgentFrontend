@@ -401,18 +401,18 @@ async function refreshAll(): Promise<void> {
 }
 
 function applyMessageEvent(event: WsMessageEvent): void {
-  if (!currentTeam.value || event.team_id !== currentTeam.value.id) {
+  if (!currentTeam.value || event.gt_room.team_id !== currentTeam.value.id) {
     return;
   }
 
-  const room = rooms.value.find((entry) => entry.room_id === event.room_id);
+  const room = rooms.value.find((entry) => entry.room_id === event.gt_room.id);
   if (!room) {
     return;
   }
 
   room.preview = formatPreview({ sender: event.sender, content: event.content });
 
-  if (event.room_id === selectedRoomId.value) {
+  if (event.gt_room.id === selectedRoomId.value) {
     const wasAtBottom = (() => {
       const viewport = getMessageStream();
       return viewport ? isAtBottom(viewport) : shouldFollowMessages.value;
