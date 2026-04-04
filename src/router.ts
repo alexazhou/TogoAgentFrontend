@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import AgentDetailPage from './pages/AgentDetailPage.vue';
 import ConsolePage from './pages/ConsolePage.vue';
 import SettingsPage from './pages/SettingsPage.vue';
 import TeamCreatePage from './pages/TeamCreatePage.vue';
@@ -35,11 +34,6 @@ const router = createRouter({
       path: '/teams/:teamId/settings/:section?',
       name: 'settings',
       component: SettingsPage,
-    },
-    {
-      path: '/teams/:teamId/agents/:agentName',
-      name: 'agent-detail',
-      component: AgentDetailPage,
     },
   ],
 });
