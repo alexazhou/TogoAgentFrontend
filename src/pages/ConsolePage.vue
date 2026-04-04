@@ -54,9 +54,15 @@ const createRoomConfirmOpen = ref(false);
 const creatingRoom = ref(false);
 const createRoomName = ref('');
 const createRoomMemberIds = ref<number[]>([]);
+const leftStack = useTemplateRef('leftStack');
+const leftStackHeight = ref(0);
+const sidebarDividerDragging = ref(false);
+const sidebarTopRatio = ref(0.62);
 
 const reconnectDelayMs = 3000;
 const connectTimeoutMs = 2000;
+const splitterHeightPx = 8;
+const sidebarTopRatioStorageKey = 'console-left-stack-top-ratio';
 
 let ws: WebSocket | null = null;
 let reconnectTimer: number | null = null;
@@ -65,6 +71,7 @@ let connectTimeoutTimer: number | null = null;
 let shouldReconnect = true;
 let activeSocketToken = 0;
 let boundMessageStream: HTMLElement | null = null;
+let leftStackResizeObserver: ResizeObserver | null = null;
 
 const teamId = computed(() => Number(route.params.teamId));
 const routeRoomId = computed<number | null>(() => {
@@ -79,11 +86,49 @@ const currentTeam = computed(() => findTeamById(teamId.value));
 const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === selectedRoomId.value) ?? null,
 );
+const leftStackStyle = computed(() => {
+  if (leftStackHeight.value <= splitterHeightPx) {
+    return {};
+  }
+
+  const availableHeight = leftStackHeight.value - splitterHeightPx;
+  const minTopHeight = Math.min(220, Math.max(120, Math.round(availableHeight * 0.28)));
+  const minBottomHeight = Math.min(180, Math.max(108, Math.round(availableHeight * 0.22)));
+  const maxTopHeight = Math.max(minTopHeight, availableHeight - minBottomHeight);
+  const topHeight = Math.round(Math.min(maxTopHeight, Math.max(minTopHeight, availableHeight * sidebarTopRatio.value)));
+
+  return {
+    gridTemplateRows: `${topHeight}px ${splitterHeightPx}px minmax(${minBottomHeight}px, 1fr)`,
+  };
+});
 const visibleAgents = computed(() =>
   agents.value.filter((agent) =>
     !agent.special && String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD',
   ),
 );
+
+function persistSidebarTopRatio(): void {
+  try {
+    localStorage.setItem(sidebarTopRatioStorageKey, String(sidebarTopRatio.value));
+  } catch {
+    // ignore localStorage failures
+  }
+}
+
+function restoreSidebarTopRatio(): void {
+  try {
+    const raw = localStorage.getItem(sidebarTopRatioStorageKey);
+    if (!raw) {
+      return;
+    }
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed) && parsed >= 0.2 && parsed <= 0.8) {
+      sidebarTopRatio.value = parsed;
+    }
+  } catch {
+    // ignore localStorage failures
+  }
+}
 
 function isDeptRoom(room: RoomState | null): boolean {
   return Boolean(room && Array.isArray(room.tags) && room.tags.includes('DEPT'));
@@ -266,6 +311,54 @@ function clearConnectTimeout(): void {
     window.clearTimeout(connectTimeoutTimer);
     connectTimeoutTimer = null;
   }
+}
+
+function refreshLeftStackHeight(): void {
+  leftStackHeight.value = leftStack.value?.clientHeight ?? 0;
+}
+
+function startSidebarResize(event: PointerEvent): void {
+  const container = leftStack.value;
+  if (!container) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const availableHeight = container.getBoundingClientRect().height - splitterHeightPx;
+  if (availableHeight <= 0) {
+    return;
+  }
+
+  const minTopHeight = Math.min(220, Math.max(120, Math.round(availableHeight * 0.28)));
+  const minBottomHeight = Math.min(180, Math.max(108, Math.round(availableHeight * 0.22)));
+  const maxTopHeight = Math.max(minTopHeight, availableHeight - minBottomHeight);
+  const startTopHeight = Math.min(maxTopHeight, Math.max(minTopHeight, availableHeight * sidebarTopRatio.value));
+  const startY = event.clientY;
+
+  sidebarDividerDragging.value = true;
+  document.body.style.cursor = 'row-resize';
+  document.body.style.userSelect = 'none';
+
+  const stopResize = (): void => {
+    sidebarDividerDragging.value = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', stopResize);
+  };
+
+  const handlePointerMove = (moveEvent: PointerEvent): void => {
+    const nextTopHeight = Math.min(
+      maxTopHeight,
+      Math.max(minTopHeight, startTopHeight + moveEvent.clientY - startY),
+    );
+    sidebarTopRatio.value = nextTopHeight / availableHeight;
+    persistSidebarTopRatio();
+  };
+
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', stopResize, { once: true });
 }
 
 function startReconnectCountdown(delayMs: number): void {
@@ -679,6 +772,14 @@ watch(
 );
 
 onMounted(async () => {
+  restoreSidebarTopRatio();
+  refreshLeftStackHeight();
+  if (leftStack.value) {
+    leftStackResizeObserver = new ResizeObserver(() => {
+      refreshLeftStackHeight();
+    });
+    leftStackResizeObserver.observe(leftStack.value);
+  }
   if (currentTeam.value) {
     await refreshAll();
   }
@@ -687,8 +788,12 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  leftStackResizeObserver?.disconnect();
+  leftStackResizeObserver = null;
   boundMessageStream?.removeEventListener('scroll', handleMessageScroll);
   boundMessageStream = null;
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
   shouldReconnect = false;
   if (reconnectTimer !== null) {
     window.clearTimeout(reconnectTimer);
@@ -705,17 +810,31 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="workspace-grid">
-    <div class="left-stack">
-      <RoomListSection
-        :loading="loading"
-        :rooms="rooms"
-        :current-room-id="selectedRoomId"
-        :create-disabled="loading || !agents.length"
-        @select-room="loadRoomMessages($event, { force: true })"
-        @create-room="openCreateRoomDialog"
-      />
+    <div ref="leftStack" class="left-stack" :style="leftStackStyle">
+      <div class="left-pane">
+        <RoomListSection
+          :loading="loading"
+          :rooms="rooms"
+          :current-room-id="selectedRoomId"
+          :create-disabled="loading || !agents.length"
+          @select-room="loadRoomMessages($event, { force: true })"
+          @create-room="openCreateRoomDialog"
+        />
+      </div>
 
-      <AgentListSection :agents="visibleAgents" @select-agent="openAgent" />
+      <button
+        type="button"
+        class="left-stack-splitter"
+        :class="{ dragging: sidebarDividerDragging }"
+        aria-label="调整聊天室和成员卡片高度"
+        @pointerdown="startSidebarResize"
+      >
+        <span class="splitter-grip"></span>
+      </button>
+
+      <div class="left-pane">
+        <AgentListSection :agents="visibleAgents" @select-agent="openAgent" />
+      </div>
     </div>
 
     <div ref="messageViewport" class="chat-shell">
@@ -769,9 +888,49 @@ onBeforeUnmount(() => {
 
 .left-stack {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) minmax(220px, 32%);
-  gap: 8px;
   min-height: 0;
+}
+
+.left-pane {
+  min-height: 0;
+  display: flex;
+}
+
+.left-pane > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.left-stack-splitter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.splitter-grip {
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-border) 55%, transparent);
+  opacity: 0;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.left-stack-splitter:hover .splitter-grip {
+  opacity: 0;
+}
+
+.left-stack-splitter.dragging .splitter-grip {
+  opacity: 0.22;
+  transform: scaleY(1.2);
 }
 
 .chat-shell {
@@ -785,7 +944,7 @@ onBeforeUnmount(() => {
   }
 
   .left-stack {
-    grid-template-rows: minmax(150px, 1fr) minmax(140px, 0.8fr);
+    min-height: 0;
   }
 }
 </style>
