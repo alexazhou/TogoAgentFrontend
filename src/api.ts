@@ -17,15 +17,17 @@ import type {
 } from './types';
 import { showGlobalRequestError } from './appUiState';
 
-type RawRoomInfo = Partial<RoomInfo> & {
-  messages?: Array<{
-    sender_name?: string;
-    content?: string;
-    send_time?: string;
-  }>;
-  room_type?: string;
-  tags?: string[];
-  biz_id?: string | null;
+type RawRoomInfo = {
+  gt_room?: {
+    id?: unknown;
+    name?: unknown;
+    type?: unknown;
+    biz_id?: unknown;
+    tags?: unknown;
+  };
+  team_name?: string;
+  state?: string;
+  agents?: unknown;
 };
 
 type RawAgentInfo = Partial<AgentInfo> & {
@@ -171,24 +173,25 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
-  const teamName = room.team_name ?? 'default';
-  const roomName = room.room_name ?? '';
-  const roomType = (room.room_type ?? 'group').toLowerCase();
+  const gtRoom = room.gt_room;
+  const teamName = typeof room.team_name === 'string' ? room.team_name : 'default';
+  const roomName = String(gtRoom?.name ?? '');
+  const roomType = String(gtRoom?.type ?? 'group').toLowerCase();
 
   return {
-    room_id: room.room_id as number,
+    room_id: Number(gtRoom?.id ?? 0),
     room_name: roomName,
     team_name: teamName,
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
-    members: Array.isArray(room.members)
-      ? room.members.filter((member): member is string =>
-        typeof member === 'string' && member.toUpperCase() !== 'SYSTEM')
+    agents: Array.isArray(room.agents)
+      ? room.agents.filter((agent): agent is string =>
+        typeof agent === 'string' && agent.toUpperCase() !== 'SYSTEM')
       : [],
-    tags: Array.isArray(room.tags)
-      ? room.tags.filter((tag): tag is string => typeof tag === 'string')
+    tags: Array.isArray(gtRoom?.tags)
+      ? gtRoom.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
-    biz_id: typeof room.biz_id === 'string' && room.biz_id.trim() ? room.biz_id : null,
+    biz_id: typeof gtRoom?.biz_id === 'string' && gtRoom.biz_id.trim() ? gtRoom.biz_id : null,
   };
 }
 
