@@ -36,6 +36,19 @@ watch([() => route.params.teamId, () => route.params.agentName], () => {
 onMounted(() => {
   loadDetail().catch(console.error);
 });
+
+const statusLabel = computed(() => {
+  if (!agent.value) {
+    return '';
+  }
+  if (agent.value.status === 'active') {
+    return '忙碌';
+  }
+  if (agent.value.status === 'failed') {
+    return '失败';
+  }
+  return '空闲';
+});
 </script>
 
 <template>
@@ -67,7 +80,7 @@ onMounted(() => {
         </article>
         <article class="summary-card">
           <span>状态</span>
-          <strong>{{ agent.status === 'active' ? '忙碌' : '空闲' }}</strong>
+          <strong>{{ statusLabel }}</strong>
         </article>
         <article class="summary-card">
           <span>Driver</span>

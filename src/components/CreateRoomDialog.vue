@@ -8,7 +8,7 @@ defineProps<{
     id: number;
     name: string;
     subtitle?: string | null;
-    status?: 'active' | 'idle';
+    status?: 'active' | 'idle' | 'failed';
   }>;
   selectedMemberIds: number[];
   submitting?: boolean;

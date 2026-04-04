@@ -9,6 +9,16 @@ defineProps<{
 const emit = defineEmits<{
   selectAgent: [agentName: string];
 }>();
+
+function statusLabel(status: AgentInfo['status']): string {
+  if (status === 'active') {
+    return '忙碌';
+  }
+  if (status === 'failed') {
+    return '失败';
+  }
+  return '空闲';
+}
 </script>
 
 <template>
@@ -37,7 +47,7 @@ const emit = defineEmits<{
         </div>
         <div class="agent-state" :data-state="agent.status">
           <span class="status-dot" :class="{ 'status-dot-pulse': agent.status === 'active' }"></span>
-          {{ agent.status === 'active' ? '忙碌' : '空闲' }}
+          {{ statusLabel(agent.status) }}
         </div>
       </button>
     </div>
@@ -149,6 +159,15 @@ const emit = defineEmits<{
 
 .agent-state[data-state='active'] .status-dot {
   background: var(--good);
+  box-shadow: none;
+}
+
+.agent-state[data-state='failed'] {
+  color: var(--danger, #f85149);
+}
+
+.agent-state[data-state='failed'] .status-dot {
+  background: var(--danger, #f85149);
   box-shadow: none;
 }
 
