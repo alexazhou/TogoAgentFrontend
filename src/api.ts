@@ -193,7 +193,11 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
 }
 
 function normalizeAgentStatus(status?: string): AgentStatus {
-  return status?.toLowerCase() === 'active' ? 'active' : 'idle';
+  const normalized = status?.toLowerCase();
+  if (normalized === 'active' || normalized === 'failed') {
+    return normalized;
+  }
+  return 'idle';
 }
 
 function normalizeDriverTypeValue(value?: string | null): string {

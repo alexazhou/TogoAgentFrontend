@@ -1,4 +1,4 @@
-export type AgentStatus = 'active' | 'idle';
+export type AgentStatus = 'active' | 'idle' | 'failed';
 export type RoomType = 'private' | 'group';
 
 export interface AgentInfo {
@@ -57,7 +57,7 @@ export interface WsAgentStatusEvent {
     name: string;
     team_id: number;
   };
-  status: 'ACTIVE' | 'IDLE';
+  status: 'ACTIVE' | 'IDLE' | 'FAILED';
 }
 
 export type WsEvent = WsMessageEvent | WsAgentStatusEvent;
