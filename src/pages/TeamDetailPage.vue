@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
 import { getRoleTemplates, getTeamDetail } from '../api';
+import AgentDetailDialog from '../components/AgentDetailDialog.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
 import type { RoleTemplateSummary, TeamDetail } from '../types';
@@ -14,6 +15,8 @@ const team = ref<TeamDetail | null>(null);
 const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
+const agentDetailOpen = ref(false);
+const selectedAgentName = ref<string | null>(null);
 
 const teamId = computed(() => Number(route.params.teamId));
 const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
@@ -49,13 +52,13 @@ function openRoom(roomId: number): void {
 }
 
 function openAgentDetail(agentName: string): void {
-  router.push({
-    name: 'agent-detail',
-    params: {
-      teamId: teamId.value,
-      agentName,
-    },
-  }).catch(console.error);
+  selectedAgentName.value = agentName;
+  agentDetailOpen.value = true;
+}
+
+function closeAgentDetail(): void {
+  agentDetailOpen.value = false;
+  selectedAgentName.value = null;
 }
 
 watch(() => route.params.teamId, () => {
@@ -125,6 +128,13 @@ onMounted(() => {
         </section>
       </div>
     </template>
+
+    <AgentDetailDialog
+      :open="agentDetailOpen"
+      :team-id="teamId"
+      :agent-name="selectedAgentName"
+      @close="closeAgentDetail"
+    />
   </section>
 </template>
 

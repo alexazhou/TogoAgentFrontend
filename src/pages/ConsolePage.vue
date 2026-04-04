@@ -13,6 +13,7 @@ import {
   postRoomMessage,
 } from '../api';
 import AgentListSection from '../components/AgentListSection.vue';
+import AgentDetailDialog from '../components/AgentDetailDialog.vue';
 import ChatPanel from '../components/ChatPanel.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import CreateRoomDialog from '../components/CreateRoomDialog.vue';
@@ -54,6 +55,8 @@ const createRoomConfirmOpen = ref(false);
 const creatingRoom = ref(false);
 const createRoomName = ref('');
 const createRoomMemberIds = ref<number[]>([]);
+const agentDetailOpen = ref(false);
+const selectedAgentName = ref<string | null>(null);
 const leftStack = useTemplateRef('leftStack');
 const leftStackHeight = ref(0);
 const sidebarDividerDragging = ref(false);
@@ -730,10 +733,13 @@ async function confirmCreateRoom(): Promise<void> {
 }
 
 function openAgent(agentName: string): void {
-  router.push({
-    name: 'agent-detail',
-    params: { teamId: teamId.value, agentName },
-  }).catch(console.error);
+  selectedAgentName.value = agentName;
+  agentDetailOpen.value = true;
+}
+
+function closeAgentDetail(): void {
+  agentDetailOpen.value = false;
+  selectedAgentName.value = null;
 }
 
 watch(currentRoom, (room) => {
@@ -872,6 +878,13 @@ onBeforeUnmount(() => {
       cancel-label="返回编辑"
       @close="closeCreateRoomConfirm"
       @confirm="confirmCreateRoom"
+    />
+
+    <AgentDetailDialog
+      :open="agentDetailOpen"
+      :team-id="teamId"
+      :agent-name="selectedAgentName"
+      @close="closeAgentDetail"
     />
   </div>
 </template>
