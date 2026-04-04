@@ -441,7 +441,7 @@ function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
 
   const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
   agents.value = agents.value.map((agent) =>
-    agent.name === event.member_name
+    agent.name === event.agent_name
       ? { ...agent, status: normalizedStatus }
       : agent,
   );
@@ -516,7 +516,7 @@ function connectWebSocket(): void {
       applyMessageEvent(payload);
       return;
     }
-    if (payload.event === 'member_status') {
+    if (payload.event === 'agent_status') {
       applyAgentStatusEvent(payload);
     }
   });
