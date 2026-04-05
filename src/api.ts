@@ -245,6 +245,7 @@ function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
     agent_name: String(agent.agent_name ?? agent.name ?? ''),
     driver_type: parseDriverType(agent),
     prompt: String(agent.prompt ?? ''),
+    error_message: typeof agent.error_message === 'string' ? agent.error_message : null,
   };
 }
 
@@ -477,6 +478,16 @@ export async function setTeamEnabled(teamId: number, enabled: boolean): Promise<
 
 export async function deleteTeam(teamId: number): Promise<{ status: string; name: string }> {
   return requestJson(`/teams/${teamId}/delete.json`, {
+    method: 'POST',
+  });
+}
+
+export async function clearTeamData(teamId: number): Promise<{
+  status: string;
+  team_id: number;
+  deleted: { tasks: number; histories: number; messages: number };
+}> {
+  return requestJson(`/teams/${teamId}/clear_data.json`, {
     method: 'POST',
   });
 }

@@ -39,6 +39,7 @@ const emit = defineEmits<{
   toggleTeamEnabled: [teamId: number, enabled: boolean];
   clearTeamDetail: [];
   deleteTeam: [];
+  clearTeamData: [];
   saveTeamInfo: [];
   resetTeamInfoDraft: [];
   treeSaved: [];
@@ -130,6 +131,9 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
         <div class="team-detail-danger-actions">
           <button type="button" class="secondary-button team-delete-button" @click="emit('deleteTeam')">
             删除团队
+          </button>
+          <button type="button" class="secondary-button team-delete-button" @click="emit('clearTeamData')">
+            清空数据
           </button>
         </div>
       </div>
