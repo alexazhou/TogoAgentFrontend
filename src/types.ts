@@ -45,7 +45,7 @@ export interface WsMessageEvent {
     team_id: number;
     name: string;
   };
-  sender: string;
+  sender_id: number;
   content: string;
   time: string;
 }

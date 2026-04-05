@@ -262,6 +262,22 @@ function getMessageStream(): HTMLElement | null {
   return viewport instanceof HTMLElement ? viewport : null;
 }
 
+function resolveMessageSenderName(senderId: number): string {
+  if (senderId === -1) {
+    return 'OPERATOR';
+  }
+  if (senderId === -2) {
+    return 'SYSTEM';
+  }
+
+  const matchedAgent = agents.value.find((agent) => agent.id === senderId);
+  if (matchedAgent?.name) {
+    return matchedAgent.name;
+  }
+
+  return String(senderId);
+}
+
 function isAtBottom(viewport: HTMLElement): boolean {
   const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
   return distanceToBottom <= 4;
@@ -507,7 +523,9 @@ function applyMessageEvent(event: WsMessageEvent): void {
     return;
   }
 
-  room.preview = formatPreview({ sender: event.sender, content: event.content });
+  const senderName = resolveMessageSenderName(event.sender_id);
+
+  room.preview = formatPreview({ sender: senderName, content: event.content });
 
   if (event.gt_room.id === selectedRoomId.value) {
     const wasAtBottom = (() => {
@@ -516,7 +534,7 @@ function applyMessageEvent(event: WsMessageEvent): void {
     })();
     messages.value = [
       ...messages.value,
-      { sender: event.sender, content: event.content, time: event.time },
+      { sender: senderName, content: event.content, time: event.time },
     ];
     totalMessageCount.value = messages.value.length;
     nextTick(() => {

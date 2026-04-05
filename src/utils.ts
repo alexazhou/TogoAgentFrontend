@@ -40,10 +40,11 @@ export function formatTime(time: string): string {
 }
 
 export function bubbleSide(sender: string): BubbleSide {
-  if (sender.trim().toUpperCase() === 'SYSTEM') {
+  const normalizedSender = sender.trim().toUpperCase();
+  if (normalizedSender === 'SYSTEM') {
     return 'center';
   }
-  if (sender.toUpperCase() === 'OPERATOR') {
+  if (normalizedSender === 'OPERATOR') {
     return 'right';
   }
   return 'left';
