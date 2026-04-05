@@ -49,6 +49,18 @@ const failureMessage = computed(() => {
   return agent.value?.error_message?.trim() ?? '';
 });
 
+const failurePreview = computed(() => {
+  const message = failureMessage.value;
+  if (!message) {
+    return '';
+  }
+  const preview = message.slice(0, 320).trimEnd();
+  if (preview.length === message.length) {
+    return preview;
+  }
+  return `${preview}...`;
+});
+
 const agentTemplateLabel = computed(() => {
   if (props.roleTemplateName?.trim()) {
     return props.roleTemplateName.trim();
@@ -98,6 +110,19 @@ async function handleResume(): Promise<void> {
     console.error(error);
   } finally {
     resuming.value = false;
+  }
+}
+
+async function copyFailureMessage(): Promise<void> {
+  if (!failureMessage.value) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(failureMessage.value);
+    showGlobalSuccessToast('已复制完整报错');
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -166,7 +191,12 @@ watch(
                     {{ resuming ? '重试中…' : '重试' }}
                   </button>
                 </div>
-                <p v-if="failureMessage" class="agent-error-message">{{ failureMessage }}</p>
+                <div v-if="failureMessage" class="agent-error-panel">
+                  <p class="agent-error-message">{{ failurePreview }}</p>
+                  <button type="button" class="agent-error-panel__copy" @click="copyFailureMessage">
+                    复制全部
+                  </button>
+                </div>
               </div>
             </div>
             <div class="agent-detail-stage__right"></div>
@@ -302,15 +332,35 @@ watch(
   color: var(--danger, #f85149);
 }
 
-.agent-error-message {
+.agent-error-panel {
   width: min(260px, 100%);
   margin: -8px 0 0;
+}
+
+.agent-error-message {
+  margin: 0;
+  max-height: 150px;
+  overflow: hidden;
   color: color-mix(in srgb, var(--danger, #f85149) 88%, var(--text) 12%);
   font-size: 0.76rem;
   line-height: 1.45;
   text-align: left;
   white-space: pre-wrap;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 8;
+  -webkit-box-orient: vertical;
+}
+
+.agent-error-panel__copy {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .status-dot {
