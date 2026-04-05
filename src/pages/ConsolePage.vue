@@ -113,6 +113,13 @@ const visibleAgents = computed(() =>
 const selectedAgentStatus = computed<AgentStatus | null>(() =>
   agents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
 );
+const selectedAgentTemplateName = computed<string | null>(() => {
+  const roleTemplateId = agents.value.find((agent) => agent.id === selectedAgentId.value)?.role_template_id;
+  if (typeof roleTemplateId !== 'number') {
+    return null;
+  }
+  return roleTemplateNameMap.value.get(roleTemplateId) ?? `模板 #${roleTemplateId}`;
+});
 
 function persistSidebarTopRatio(): void {
   try {
@@ -909,6 +916,7 @@ onBeforeUnmount(() => {
       :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"
       :agent-status="selectedAgentStatus"
+      :role-template-name="selectedAgentTemplateName"
       @close="closeAgentDetail"
     />
   </div>

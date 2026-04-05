@@ -25,6 +25,13 @@ const selectedAgents = computed(() => team.value?.members.map((member) => member
 const selectedAgentStatus = computed<AgentStatus | null>(() =>
   teamAgents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
 );
+const selectedAgentTemplateName = computed<string | null>(() => {
+  const roleTemplateId = teamAgents.value.find((agent) => agent.id === selectedAgentId.value)?.role_template_id;
+  if (typeof roleTemplateId !== 'number') {
+    return null;
+  }
+  return roleTemplates.value.find((template) => template.id === roleTemplateId)?.name ?? `模板 #${roleTemplateId}`;
+});
 const selectedAgentTemplates = computed<Record<string, string>>(() =>
   Object.fromEntries((team.value?.members ?? []).map((member) => [
     member.name,
@@ -143,6 +150,7 @@ onMounted(() => {
       :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"
       :agent-status="selectedAgentStatus"
+      :role-template-name="selectedAgentTemplateName"
       @close="closeAgentDetail"
     />
   </section>

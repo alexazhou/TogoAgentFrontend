@@ -10,6 +10,7 @@ const props = defineProps<{
   agentId: number | null;
   agentName: string | null;
   agentStatus?: AgentStatus | null;
+  roleTemplateName?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -39,6 +40,19 @@ const statusLabel = computed(() => {
     return '失败';
   }
   return '空闲';
+});
+
+const agentTemplateLabel = computed(() => {
+  if (props.roleTemplateName?.trim()) {
+    return props.roleTemplateName.trim();
+  }
+  if (!agent.value) {
+    return '未配置模板';
+  }
+  if (typeof agent.value.role_template_id === 'number' && agent.value.role_template_id > 0) {
+    return `模板 #${agent.value.role_template_id}`;
+  }
+  return '未配置模板';
 });
 
 async function loadDetail(): Promise<void> {
@@ -87,6 +101,7 @@ watch(
   },
   { immediate: true },
 );
+
 </script>
 
 <template>
@@ -110,7 +125,7 @@ watch(
               <div class="agent-detail-stage__card-stack">
                 <AgentCardBase
                   :title="agent.name"
-                  :subtitle="agent.agent_name || 'Agent'"
+                  :subtitle="agentTemplateLabel"
                   :overline="agent.team_name || ''"
                   :employee-number="String(agent.employee_number ?? '')"
                   :avatar-name="agent.name"
