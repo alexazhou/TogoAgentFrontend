@@ -56,6 +56,7 @@ const creatingRoom = ref(false);
 const createRoomName = ref('');
 const createRoomMemberIds = ref<number[]>([]);
 const agentDetailOpen = ref(false);
+const selectedAgentId = ref<number | null>(null);
 const selectedAgentName = ref<string | null>(null);
 const leftStack = useTemplateRef('leftStack');
 const leftStackHeight = ref(0);
@@ -733,12 +734,14 @@ async function confirmCreateRoom(): Promise<void> {
 }
 
 function openAgent(agentName: string): void {
+  selectedAgentId.value = agents.value.find((agent) => agent.name === agentName)?.id ?? null;
   selectedAgentName.value = agentName;
   agentDetailOpen.value = true;
 }
 
 function closeAgentDetail(): void {
   agentDetailOpen.value = false;
+  selectedAgentId.value = null;
   selectedAgentName.value = null;
 }
 
@@ -882,7 +885,7 @@ onBeforeUnmount(() => {
 
     <AgentDetailDialog
       :open="agentDetailOpen"
-      :team-id="teamId"
+      :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"
       @close="closeAgentDetail"
     />

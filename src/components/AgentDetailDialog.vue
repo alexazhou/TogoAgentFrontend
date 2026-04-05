@@ -5,7 +5,7 @@ import type { AgentDetail } from '../types';
 
 const props = defineProps<{
   open: boolean;
-  teamId: number | null;
+  agentId: number | null;
   agentName: string | null;
 }>();
 
@@ -31,7 +31,7 @@ const statusLabel = computed(() => {
 });
 
 async function loadDetail(): Promise<void> {
-  if (!props.open || props.teamId === null || !props.agentName) {
+  if (!props.open || props.agentId === null) {
     agent.value = null;
     errorMessage.value = '';
     loading.value = false;
@@ -43,7 +43,7 @@ async function loadDetail(): Promise<void> {
   agent.value = null;
 
   try {
-    agent.value = await getAgentDetail(props.teamId, props.agentName);
+    agent.value = await getAgentDetail(props.agentId);
   } catch (error) {
     errorMessage.value = 'Agent 信息加载失败。';
     console.error(error);
@@ -53,7 +53,7 @@ async function loadDetail(): Promise<void> {
 }
 
 watch(
-  () => [props.open, props.teamId, props.agentName],
+  () => [props.open, props.agentId, props.agentName],
   () => {
     loadDetail().catch(console.error);
   },
