@@ -4,7 +4,8 @@ import { RouterView, useRoute, useRouter } from 'vue-router';
 import {
   clearGlobalRequestError,
   connectionState,
-  globalToasts,
+  globalRequestErrors,
+  globalSuccessToasts,
   reconnectProgress,
   totalMessageCount,
 } from './appUiState';
@@ -132,23 +133,31 @@ onMounted(async () => {
     />
 
     <Teleport to="body">
-      <div class="global-toast-layer">
+      <div class="global-error-toast-layer">
         <div
-          v-for="toast in globalToasts"
+          v-for="toast in globalRequestErrors"
           :key="toast.id"
-          :class="toast.kind === 'error' ? 'global-error-toast' : 'global-success-toast'"
-          :role="toast.kind === 'error' ? 'alert' : 'status'"
-          :aria-live="toast.kind === 'error' ? undefined : 'polite'"
+          class="global-error-toast"
+          role="alert"
         >
           <span>{{ toast.message }}</span>
-          <button
-            v-if="toast.kind === 'error'"
-            type="button"
-            aria-label="关闭提醒"
-            @click="clearGlobalRequestError(toast.id)"
-          >
+          <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError(toast.id)">
             ×
           </button>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div class="global-success-toast-layer">
+        <div
+          v-for="toast in globalSuccessToasts"
+          :key="toast.id"
+          class="global-success-toast"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{{ toast.message }}</span>
         </div>
       </div>
     </Teleport>
@@ -194,7 +203,7 @@ onMounted(async () => {
   z-index: 1;
 }
 
-.global-toast-layer {
+.global-error-toast-layer {
   position: fixed;
   top: 8px;
   right: 8px;
@@ -239,10 +248,7 @@ onMounted(async () => {
 }
 
 .global-success-toast {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: min(345px, calc(100vw - 16px));
+  width: min(360px, calc(100vw - 40px));
   min-height: 64px;
   padding: 16px 20px;
   border: 1px solid color-mix(in srgb, #6dc7a3 42%, var(--panel-border) 58%);
@@ -252,9 +258,22 @@ onMounted(async () => {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
   font-size: 0.96rem;
   line-height: 1.45;
-  text-align: left;
+  text-align: center;
   pointer-events: none;
   animation: success-toast-drop 0.22s ease-out;
+}
+
+.global-success-toast-layer {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
 }
 
 .global-success-toast span {

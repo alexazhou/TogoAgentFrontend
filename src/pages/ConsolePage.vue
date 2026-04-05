@@ -110,6 +110,9 @@ const visibleAgents = computed(() =>
     !agent.special && String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD',
   ),
 );
+const selectedAgentStatus = computed<AgentStatus | null>(() =>
+  agents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
+);
 
 function persistSidebarTopRatio(): void {
   try {
@@ -905,6 +908,7 @@ onBeforeUnmount(() => {
       :open="agentDetailOpen"
       :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"
+      :agent-status="selectedAgentStatus"
       @close="closeAgentDetail"
     />
   </div>

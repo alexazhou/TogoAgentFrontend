@@ -6,7 +6,7 @@ import { getAgentsByTeamId, getRoleTemplates, getTeamDetail } from '../api';
 import AgentDetailDialog from '../components/AgentDetailDialog.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
-import type { AgentInfo, RoleTemplateSummary, TeamDetail } from '../types';
+import type { AgentInfo, AgentStatus, RoleTemplateSummary, TeamDetail } from '../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -22,6 +22,9 @@ const selectedAgentName = ref<string | null>(null);
 
 const teamId = computed(() => Number(route.params.teamId));
 const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
+const selectedAgentStatus = computed<AgentStatus | null>(() =>
+  teamAgents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
+);
 const selectedAgentTemplates = computed<Record<string, string>>(() =>
   Object.fromEntries((team.value?.members ?? []).map((member) => [
     member.name,
@@ -139,6 +142,7 @@ onMounted(() => {
       :open="agentDetailOpen"
       :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"
+      :agent-status="selectedAgentStatus"
       @close="closeAgentDetail"
     />
   </section>
