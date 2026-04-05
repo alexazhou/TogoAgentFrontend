@@ -28,7 +28,7 @@ export interface RoomInfo {
   team_name: string;
   room_type: RoomType;
   state: string;
-  agents: string[];
+  agents: number[];
   tags?: string[];
   biz_id?: string | null;
 }

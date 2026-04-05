@@ -185,8 +185,9 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
     agents: Array.isArray(room.agents)
-      ? room.agents.filter((agent): agent is string =>
-        typeof agent === 'string' && agent.toUpperCase() !== 'SYSTEM')
+      ? room.agents
+        .map((agent) => typeof agent === 'number' ? agent : Number(agent))
+        .filter((id) => !Number.isNaN(id) && id > 0)
       : [],
     tags: Array.isArray(gtRoom?.tags)
       ? gtRoom.tags.filter((tag): tag is string => typeof tag === 'string')
