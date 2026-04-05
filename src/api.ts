@@ -488,11 +488,8 @@ export async function createTeam(payload: CreateTeamPayload): Promise<{ status: 
   });
 }
 
-export async function getAgentDetail(teamId: number, agentName: string): Promise<AgentDetail> {
-  const encodedAgentName = encodeURIComponent(agentName);
-  const data = await requestJson<RawAgentDetail>(
-    `/teams/${teamId}/agents/${encodedAgentName}.json`,
-  );
+export async function getAgentDetail(agentId: number): Promise<AgentDetail> {
+  const data = await requestJson<RawAgentDetail>(`/agents/${agentId}.json`);
   return normalizeAgentDetail(data);
 }
 

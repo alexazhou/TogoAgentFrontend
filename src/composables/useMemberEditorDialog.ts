@@ -21,10 +21,10 @@ export type MemberModelOption = {
 };
 
 type UseMemberEditorDialogOptions = {
-  teamId: Ref<number>;
   templateOptions: ComputedRef<MemberTemplateOption[]>;
   driverCatalog: Ref<MemberDriverOption[]>;
   modelCatalog: Ref<MemberModelOption[]>;
+  resolveId: (memberName: string) => number | null;
   resolveName: (memberName: string) => string;
   resolveModel: (memberName: string) => string;
   resolveDriver: (memberName: string) => string;
@@ -41,7 +41,7 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
   const memberEditorModel = ref('');
   const memberEditorDriver = ref('');
   const memberEditorMode = ref<MemberEditorMode>('view');
-  const memberDriverCache = new Map<string, string>();
+  const memberDriverCache = new Map<number, string>();
   let memberEditorRequestId = 0;
 
   const memberEditorEditable = computed(() => memberEditorMode.value === 'edit');
@@ -97,24 +97,25 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
 
   async function loadMemberDriver(agentName: string): Promise<void> {
     const requestId = ++memberEditorRequestId;
+    const agentId = options.resolveId(agentName);
 
-    if (options.canLoadMemberDetail && !options.canLoadMemberDetail(agentName)) {
+    if ((options.canLoadMemberDetail && !options.canLoadMemberDetail(agentName)) || agentId === null) {
       return;
     }
 
-    if (memberDriverCache.has(agentName)) {
-      memberEditorDriver.value = memberDriverCache.get(agentName) || '';
+    if (memberDriverCache.has(agentId)) {
+      memberEditorDriver.value = memberDriverCache.get(agentId) || '';
       return;
     }
 
     try {
-      const detail = await getAgentDetail(options.teamId.value, agentName);
+      const detail = await getAgentDetail(agentId);
       if (requestId !== memberEditorRequestId || editingMemberName.value !== agentName) {
         return;
       }
 
       const nextDriver = detail.driver_type || '';
-      memberDriverCache.set(agentName, nextDriver);
+      memberDriverCache.set(agentId, nextDriver);
       memberEditorDriver.value = nextDriver;
     } catch (error) {
       console.error(error);

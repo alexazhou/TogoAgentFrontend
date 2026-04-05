@@ -2,11 +2,11 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
-import { getRoleTemplates, getTeamDetail } from '../api';
+import { getAgentsByTeamId, getRoleTemplates, getTeamDetail } from '../api';
 import AgentDetailDialog from '../components/AgentDetailDialog.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
-import type { RoleTemplateSummary, TeamDetail } from '../types';
+import type { AgentInfo, RoleTemplateSummary, TeamDetail } from '../types';
 
 const route = useRoute();
 const router = useRouter();
@@ -16,6 +16,8 @@ const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
 const agentDetailOpen = ref(false);
+const teamAgents = ref<AgentInfo[]>([]);
+const selectedAgentId = ref<number | null>(null);
 const selectedAgentName = ref<string | null>(null);
 
 const teamId = computed(() => Number(route.params.teamId));
@@ -33,11 +35,13 @@ async function loadDetail(): Promise<void> {
   totalMessageCount.value = 0;
 
   try {
-    const [detail, templates] = await Promise.all([
+    const [detail, nextAgents, templates] = await Promise.all([
       getTeamDetail(teamId.value),
+      getAgentsByTeamId(teamId.value),
       getRoleTemplates(),
     ]);
     team.value = detail;
+    teamAgents.value = nextAgents;
     roleTemplates.value = templates;
   } catch (error) {
     errorMessage.value = '团队详情加载失败。';
@@ -52,12 +56,14 @@ function openRoom(roomId: number): void {
 }
 
 function openAgentDetail(agentName: string): void {
+  selectedAgentId.value = teamAgents.value.find((agent) => agent.name === agentName)?.id ?? null;
   selectedAgentName.value = agentName;
   agentDetailOpen.value = true;
 }
 
 function closeAgentDetail(): void {
   agentDetailOpen.value = false;
+  selectedAgentId.value = null;
   selectedAgentName.value = null;
 }
 
@@ -131,7 +137,7 @@ onMounted(() => {
 
     <AgentDetailDialog
       :open="agentDetailOpen"
-      :team-id="teamId"
+      :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"
       @close="closeAgentDetail"
     />

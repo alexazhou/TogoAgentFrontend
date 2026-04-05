@@ -558,10 +558,10 @@ const {
   replaceSelectedTemplate,
   resetDialogState,
 } = useMemberEditorDialog({
-  teamId: computed(() => props.teamId),
   templateOptions: memberTemplateOptions,
   driverCatalog,
   modelCatalog,
+  resolveId: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.agentId ?? null,
   resolveName: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.memberName || memberName,
   resolveModel: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.model || '',
   resolveDriver: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.driver || '',
