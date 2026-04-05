@@ -493,6 +493,12 @@ export async function getAgentDetail(agentId: number): Promise<AgentDetail> {
   return normalizeAgentDetail(data);
 }
 
+export async function resumeAgent(agentId: number): Promise<{ status: string; agent_id: number; room_id: number }> {
+  return requestJson(`/agents/${agentId}/resume.json`, {
+    method: 'POST',
+  });
+}
+
 export async function getRoomMessages(roomId: number): Promise<MessageInfo[]> {
   const data = await requestJson<{ messages: MessageInfo[] }>(
     `/rooms/${roomId}/messages/list.json`,

@@ -132,14 +132,19 @@ onMounted(async () => {
       @open-settings="openSettings"
     />
 
+    <Teleport to="body">
+      <div class="global-toast-layer">
+        <div v-if="globalRequestError" class="global-error-toast" role="alert">
+          <span>{{ globalRequestError }}</span>
+          <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError">×</button>
+        </div>
+        <div v-if="globalSuccessToast" class="global-success-toast" role="status" aria-live="polite">
+          <span>{{ globalSuccessToast }}</span>
+        </div>
+      </div>
+    </Teleport>
+
     <main class="workspace">
-      <div v-if="globalRequestError" class="global-error-toast" role="alert">
-        <span>{{ globalRequestError }}</span>
-        <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError">×</button>
-      </div>
-      <div v-if="globalSuccessToast" class="global-success-toast" role="status" aria-live="polite">
-        <span>{{ globalSuccessToast }}</span>
-      </div>
       <RouterView />
     </main>
   </div>
@@ -180,11 +185,18 @@ onMounted(async () => {
   z-index: 1;
 }
 
+.global-toast-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
 .global-error-toast {
-  position: absolute;
+  position: fixed;
   top: 8px;
   right: 8px;
-  z-index: 5;
+  z-index: 101;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -199,6 +211,7 @@ onMounted(async () => {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
   font-size: 1rem;
   line-height: 1.5;
+  pointer-events: auto;
 }
 
 .global-error-toast span {
@@ -216,11 +229,11 @@ onMounted(async () => {
 }
 
 .global-success-toast {
-  position: absolute;
+  position: fixed;
   top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 5;
+  z-index: 101;
   display: flex;
   align-items: center;
   justify-content: center;
