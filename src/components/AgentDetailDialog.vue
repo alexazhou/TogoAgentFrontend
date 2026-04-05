@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { getAgentDetail, resumeAgent } from '../api';
-import { showGlobalRequestError } from '../appUiState';
 import AgentCardBase from './AgentCardBase.vue';
 import type { AgentDetail } from '../types';
 
@@ -66,7 +65,6 @@ async function handleResume(): Promise<void> {
     await resumeAgent(props.agentId);
     await loadDetail();
   } catch (error) {
-    showGlobalRequestError('触发重试失败。');
     console.error(error);
   } finally {
     resuming.value = false;

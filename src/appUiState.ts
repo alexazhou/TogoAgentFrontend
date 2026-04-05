@@ -1,36 +1,69 @@
 import { ref } from 'vue';
 import type { ConnectionState } from './utils';
 
+export type GlobalToastKind = 'error' | 'success';
+
+export interface GlobalToastItem {
+  id: number;
+  kind: GlobalToastKind;
+  message: string;
+}
+
 export const connectionState = ref<ConnectionState>('connected');
 export const reconnectProgress = ref(0);
 export const totalMessageCount = ref(0);
-export const globalRequestError = ref('');
-export const globalSuccessToast = ref('');
-let globalSuccessToastTimer: number | null = null;
+export const globalToasts = ref<GlobalToastItem[]>([]);
 
-export function showGlobalRequestError(message: string): void {
-  globalRequestError.value = message;
+let nextGlobalToastId = 1;
+const globalToastTimers = new Map<number, number>();
+
+function removeGlobalToast(toastId: number): void {
+  globalToasts.value = globalToasts.value.filter((toast) => toast.id !== toastId);
+  const timer = globalToastTimers.get(toastId);
+  if (timer !== undefined) {
+    window.clearTimeout(timer);
+    globalToastTimers.delete(toastId);
+  }
 }
 
-export function clearGlobalRequestError(): void {
-  globalRequestError.value = '';
+function pushGlobalToast(kind: GlobalToastKind, message: string, durationMs?: number): number {
+  const toastId = nextGlobalToastId++;
+  globalToasts.value = [...globalToasts.value, { id: toastId, kind, message }];
+
+  if (durationMs !== undefined) {
+    const timer = window.setTimeout(() => {
+      removeGlobalToast(toastId);
+    }, durationMs);
+    globalToastTimers.set(toastId, timer);
+  }
+
+  return toastId;
+}
+
+export function showGlobalRequestError(message: string): void {
+  pushGlobalToast('error', message);
+}
+
+export function clearGlobalRequestError(toastId?: number): void {
+  if (toastId === undefined) {
+    globalToasts.value
+      .filter((toast) => toast.kind === 'error')
+      .forEach((toast) => removeGlobalToast(toast.id));
+    return;
+  }
+  removeGlobalToast(toastId);
 }
 
 export function showGlobalSuccessToast(message: string, durationMs = 2400): void {
-  globalSuccessToast.value = message;
-  if (globalSuccessToastTimer !== null) {
-    window.clearTimeout(globalSuccessToastTimer);
-  }
-  globalSuccessToastTimer = window.setTimeout(() => {
-    globalSuccessToast.value = '';
-    globalSuccessToastTimer = null;
-  }, durationMs);
+  pushGlobalToast('success', message, durationMs);
 }
 
-export function clearGlobalSuccessToast(): void {
-  globalSuccessToast.value = '';
-  if (globalSuccessToastTimer !== null) {
-    window.clearTimeout(globalSuccessToastTimer);
-    globalSuccessToastTimer = null;
+export function clearGlobalSuccessToast(toastId?: number): void {
+  if (toastId === undefined) {
+    globalToasts.value
+      .filter((toast) => toast.kind === 'success')
+      .forEach((toast) => removeGlobalToast(toast.id));
+    return;
   }
+  removeGlobalToast(toastId);
 }

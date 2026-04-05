@@ -4,8 +4,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router';
 import {
   clearGlobalRequestError,
   connectionState,
-  globalRequestError,
-  globalSuccessToast,
+  globalToasts,
   reconnectProgress,
   totalMessageCount,
 } from './appUiState';
@@ -134,12 +133,22 @@ onMounted(async () => {
 
     <Teleport to="body">
       <div class="global-toast-layer">
-        <div v-if="globalRequestError" class="global-error-toast" role="alert">
-          <span>{{ globalRequestError }}</span>
-          <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError">×</button>
-        </div>
-        <div v-if="globalSuccessToast" class="global-success-toast" role="status" aria-live="polite">
-          <span>{{ globalSuccessToast }}</span>
+        <div
+          v-for="toast in globalToasts"
+          :key="toast.id"
+          :class="toast.kind === 'error' ? 'global-error-toast' : 'global-success-toast'"
+          :role="toast.kind === 'error' ? 'alert' : 'status'"
+          :aria-live="toast.kind === 'error' ? undefined : 'polite'"
+        >
+          <span>{{ toast.message }}</span>
+          <button
+            v-if="toast.kind === 'error'"
+            type="button"
+            aria-label="关闭提醒"
+            @click="clearGlobalRequestError(toast.id)"
+          >
+            ×
+          </button>
         </div>
       </div>
     </Teleport>
@@ -187,21 +196,22 @@ onMounted(async () => {
 
 .global-toast-layer {
   position: fixed;
-  inset: 0;
+  top: 8px;
+  right: 8px;
   z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
   pointer-events: none;
 }
 
 .global-error-toast {
-  position: fixed;
-  top: 8px;
-  right: 8px;
-  z-index: 101;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  width: min(345px, calc(100% - 16px));
+  width: min(345px, calc(100vw - 16px));
   min-height: 96px;
   padding: 18px 20px;
   border: 2px dashed color-mix(in srgb, var(--danger) 45%, var(--panel-border) 55%);
@@ -229,15 +239,10 @@ onMounted(async () => {
 }
 
 .global-success-toast {
-  position: fixed;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 101;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(360px, calc(100% - 40px));
+  width: min(345px, calc(100vw - 16px));
   min-height: 64px;
   padding: 16px 20px;
   border: 1px solid color-mix(in srgb, #6dc7a3 42%, var(--panel-border) 58%);
@@ -247,7 +252,7 @@ onMounted(async () => {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
   font-size: 0.96rem;
   line-height: 1.45;
-  text-align: center;
+  text-align: left;
   pointer-events: none;
   animation: success-toast-drop 0.22s ease-out;
 }
@@ -259,12 +264,12 @@ onMounted(async () => {
 @keyframes success-toast-drop {
   from {
     opacity: 0;
-    transform: translate(-50%, -12px);
+    transform: translateY(-12px);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 </style>
