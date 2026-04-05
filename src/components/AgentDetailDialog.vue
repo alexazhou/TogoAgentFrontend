@@ -42,6 +42,13 @@ const statusLabel = computed(() => {
   return '空闲';
 });
 
+const failureMessage = computed(() => {
+  if (currentStatus.value !== 'failed') {
+    return '';
+  }
+  return agent.value?.error_message?.trim() ?? '';
+});
+
 const agentTemplateLabel = computed(() => {
   if (props.roleTemplateName?.trim()) {
     return props.roleTemplateName.trim();
@@ -102,6 +109,20 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => currentStatus.value,
+  (status, previousStatus) => {
+    if (
+      props.open
+      && props.agentId !== null
+      && status === 'failed'
+      && previousStatus !== 'failed'
+    ) {
+      loadDetail().catch(console.error);
+    }
+  },
+);
+
 </script>
 
 <template>
@@ -145,6 +166,7 @@ watch(
                     {{ resuming ? '重试中…' : '重试' }}
                   </button>
                 </div>
+                <p v-if="failureMessage" class="agent-error-message">{{ failureMessage }}</p>
               </div>
             </div>
             <div class="agent-detail-stage__right"></div>
@@ -278,6 +300,17 @@ watch(
 
 .agent-status-panel[data-status='failed'] {
   color: var(--danger, #f85149);
+}
+
+.agent-error-message {
+  width: min(260px, 100%);
+  margin: -8px 0 0;
+  color: color-mix(in srgb, var(--danger, #f85149) 88%, var(--text) 12%);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .status-dot {

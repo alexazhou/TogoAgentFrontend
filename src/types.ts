@@ -19,6 +19,7 @@ export interface AgentDetail extends AgentInfo {
   agent_name: string;
   driver_type: string;
   prompt: string;
+  error_message?: string | null;
 }
 
 export interface RoomInfo {
