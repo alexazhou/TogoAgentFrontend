@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { getAgentDetail } from '../api';
+import { getAgentDetail, resumeAgent } from '../api';
+import { showGlobalRequestError } from '../appUiState';
+import AgentCardBase from './AgentCardBase.vue';
 import type { AgentDetail } from '../types';
 
 const props = defineProps<{
@@ -15,6 +17,7 @@ const emit = defineEmits<{
 
 const agent = ref<AgentDetail | null>(null);
 const loading = ref(false);
+const resuming = ref(false);
 const errorMessage = ref('');
 
 const statusLabel = computed(() => {
@@ -52,6 +55,24 @@ async function loadDetail(): Promise<void> {
   }
 }
 
+async function handleResume(): Promise<void> {
+  if (props.agentId === null || agent.value?.status !== 'failed' || resuming.value) {
+    return;
+  }
+
+  resuming.value = true;
+
+  try {
+    await resumeAgent(props.agentId);
+    await loadDetail();
+  } catch (error) {
+    showGlobalRequestError('触发重试失败。');
+    console.error(error);
+  } finally {
+    resuming.value = false;
+  }
+}
+
 watch(
   () => [props.open, props.agentId, props.agentName],
   () => {
@@ -77,35 +98,34 @@ watch(
         <div v-else-if="loading" class="loading-card">正在加载 Agent 信息…</div>
 
         <template v-else-if="agent">
-          <div class="summary-grid">
-            <article class="summary-card">
-              <span>预设模板</span>
-              <strong>{{ agent.agent_name }}</strong>
-            </article>
-            <article class="summary-card">
-              <span>模型</span>
-              <strong>{{ agent.model }}</strong>
-            </article>
-            <article class="summary-card">
-              <span>团队</span>
-              <strong>{{ agent.team_name }}</strong>
-            </article>
-            <article class="summary-card">
-              <span>状态</span>
-              <strong>{{ statusLabel }}</strong>
-            </article>
-            <article class="summary-card">
-              <span>Driver</span>
-              <strong>{{ agent.driver_type }}</strong>
-            </article>
-          </div>
-
-          <section class="prompt-card">
-            <div class="prompt-head">
-              <h4>Prompt</h4>
-              <span>{{ agent.prompt.length }} 字符</span>
+          <section class="agent-detail-stage">
+            <div class="agent-detail-stage__left">
+              <div class="agent-detail-stage__card-stack">
+                <AgentCardBase
+                  :title="agent.name"
+                  :subtitle="agent.agent_name || 'Agent'"
+                  :overline="agent.team_name || ''"
+                  :employee-number="String(agent.employee_number ?? '')"
+                  :avatar-name="agent.name"
+                  variant="leader"
+                  readonly
+                />
+                <div class="agent-status-panel" :data-status="agent.status">
+                  <span class="status-dot" :class="{ 'status-dot-pulse': agent.status === 'active' }"></span>
+                  <span class="agent-status-panel__value">{{ statusLabel }}</span>
+                  <button
+                    v-if="agent.status === 'failed'"
+                    type="button"
+                    class="agent-status-panel__action"
+                    :disabled="resuming"
+                    @click="handleResume"
+                  >
+                    {{ resuming ? '重试中…' : '重试' }}
+                  </button>
+                </div>
+              </div>
             </div>
-            <pre>{{ agent.prompt }}</pre>
+            <div class="agent-detail-stage__right"></div>
           </section>
         </template>
       </section>
@@ -136,8 +156,7 @@ watch(
     inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 88%, transparent);
 }
 
-.agent-detail-head,
-.prompt-head {
+.agent-detail-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -162,55 +181,131 @@ watch(
   color: var(--text-strong);
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.summary-card,
-.prompt-card,
+.agent-detail-stage,
 .loading-card {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--surface-soft);
+  background: transparent;
 }
 
-.summary-card {
-  padding: 16px;
+.agent-detail-stage {
+  min-height: 420px;
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+  padding: 8px 0 0;
 }
 
-.summary-card span,
-.prompt-head span {
+.agent-detail-stage__left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.agent-detail-stage__card-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.agent-detail-stage__card-stack :deep(.entity-card) {
+  cursor: default;
+  transform: translateY(-18px) scale(1.28);
+  transform-origin: center;
+}
+
+.agent-detail-stage__card-stack :deep(.entity-card:hover) {
+  transform: translateY(-18px) scale(1.28);
+}
+
+.agent-status-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
+  white-space: nowrap;
+  font-size: 0.96rem;
+  line-height: 1;
 }
 
-.summary-card strong {
-  display: block;
-  margin-top: 8px;
-  color: var(--text-strong);
+.agent-status-panel__value {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  line-height: inherit;
 }
 
-.prompt-card {
-  padding: 16px;
+.agent-status-panel__action {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.prompt-card pre {
-  margin: 14px 0 0;
-  border-radius: 12px;
-  background: var(--surface-quiet);
-  color: var(--text-strong);
-  padding: 16px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
-  line-height: 1.45;
+.agent-status-panel__action:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.agent-status-panel[data-status='failed'] {
+  color: var(--danger, #f85149);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--status-dot-idle);
+}
+
+.status-dot-pulse {
+  width: 6px;
+  height: 6px;
+  background: var(--good);
+  animation: agent-dot-pulse 2s ease-in-out infinite;
+}
+
+.agent-status-panel[data-status='failed'] .status-dot {
+  background: var(--danger, #f85149);
+  box-shadow: none;
+}
+
+@keyframes agent-dot-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+.agent-detail-stage__right {
+  min-height: 100%;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-quiet) 68%, transparent), transparent 58%);
 }
 
 .loading-card,
 .error-banner {
   padding: 14px;
+}
+
+.loading-card {
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  background: var(--surface-soft);
 }
 
 .error-banner {
@@ -231,8 +326,15 @@ watch(
     padding: 14px;
   }
 
-  .summary-grid {
+  .agent-detail-stage {
     grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 8px 0 0;
+    gap: 18px;
+  }
+
+  .agent-detail-stage__right {
+    min-height: 180px;
   }
 }
 </style>
