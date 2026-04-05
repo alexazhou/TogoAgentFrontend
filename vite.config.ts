@@ -42,6 +42,7 @@ export default defineConfig({
       '/role_templates/list.json': createApiProxy(backendTarget),
       '/role_templates/': createApiProxy(backendTarget),
       '/agents/list.json': createApiProxy(backendTarget),
+      '/agents/': createApiProxy(backendTarget),
       '/members/list.json': createApiProxy(backendTarget),
       '/rooms/list.json': createApiProxy(backendTarget),
       '/rooms/': createApiProxy(backendTarget),
