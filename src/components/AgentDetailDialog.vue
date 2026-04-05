@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { getAgentDetail, resumeAgent } from '../api';
+import { showGlobalSuccessToast } from '../appUiState';
 import AgentCardBase from './AgentCardBase.vue';
-import type { AgentDetail } from '../types';
+import type { AgentDetail, AgentStatus } from '../types';
 
 const props = defineProps<{
   open: boolean;
   agentId: number | null;
   agentName: string | null;
+  agentStatus?: AgentStatus | null;
 }>();
 
 const emit = defineEmits<{
@@ -19,14 +21,21 @@ const loading = ref(false);
 const resuming = ref(false);
 const errorMessage = ref('');
 
+const currentStatus = computed<AgentStatus | null>(() => {
+  if (props.agentStatus) {
+    return props.agentStatus;
+  }
+  return agent.value?.status ?? null;
+});
+
 const statusLabel = computed(() => {
-  if (!agent.value) {
+  if (!currentStatus.value) {
     return '';
   }
-  if (agent.value.status === 'active') {
+  if (currentStatus.value === 'active') {
     return '忙碌';
   }
-  if (agent.value.status === 'failed') {
+  if (currentStatus.value === 'failed') {
     return '失败';
   }
   return '空闲';
@@ -55,7 +64,7 @@ async function loadDetail(): Promise<void> {
 }
 
 async function handleResume(): Promise<void> {
-  if (props.agentId === null || agent.value?.status !== 'failed' || resuming.value) {
+  if (props.agentId === null || currentStatus.value !== 'failed' || resuming.value) {
     return;
   }
 
@@ -63,7 +72,7 @@ async function handleResume(): Promise<void> {
 
   try {
     await resumeAgent(props.agentId);
-    await loadDetail();
+    showGlobalSuccessToast('已触发重试');
   } catch (error) {
     console.error(error);
   } finally {
@@ -108,11 +117,11 @@ watch(
                   variant="leader"
                   readonly
                 />
-                <div class="agent-status-panel" :data-status="agent.status">
-                  <span class="status-dot" :class="{ 'status-dot-pulse': agent.status === 'active' }"></span>
+                <div class="agent-status-panel" :data-status="currentStatus ?? undefined">
+                  <span class="status-dot" :class="{ 'status-dot-pulse': currentStatus === 'active' }"></span>
                   <span class="agent-status-panel__value">{{ statusLabel }}</span>
                   <button
-                    v-if="agent.status === 'failed'"
+                    v-if="currentStatus === 'failed'"
                     type="button"
                     class="agent-status-panel__action"
                     :disabled="resuming"
