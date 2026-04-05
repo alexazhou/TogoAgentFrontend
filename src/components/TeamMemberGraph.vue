@@ -34,6 +34,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
   }
 
   const buildMemberAvatarSeed = (memberName: string): string => `${props.teamName}::${memberName}`;
+  const resolveMemberSubtitle = (memberName: string): string => memberTemplates.value[memberName] || '未配置模板';
 
   return {
     id: leaderName,
@@ -41,7 +42,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
     name: leaderName,
     departmentName: leaderName,
     hasDepartment: true,
-    subtitle: memberTemplates.value[leaderName] || leaderName,
+    subtitle: resolveMemberSubtitle(leaderName),
     avatarName: leaderName,
     avatarSeed: buildMemberAvatarSeed(leaderName),
     children: props.selectedAgents.slice(1).map((agentName) => ({
@@ -50,7 +51,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
       name: agentName,
       departmentName: agentName,
       hasDepartment: false,
-      subtitle: memberTemplates.value[agentName] || agentName,
+      subtitle: resolveMemberSubtitle(agentName),
       avatarName: agentName,
       avatarSeed: buildMemberAvatarSeed(agentName),
       children: [],
