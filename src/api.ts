@@ -314,7 +314,6 @@ export async function createTeamRoom(teamId: number, payload: {
   return requestJson(`/teams/${teamId}/rooms/create.json`, {
     method: 'POST',
     body: JSON.stringify({
-      type: 'group',
       initial_topic: null,
       max_turns: 100,
       ...payload,
