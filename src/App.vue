@@ -235,9 +235,15 @@ onMounted(async () => {
 
 .global-error-toast span {
   flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .global-error-toast button {
+  flex-shrink: 0;
+  align-self: flex-start;
   border: none;
   background: transparent;
   color: inherit;
