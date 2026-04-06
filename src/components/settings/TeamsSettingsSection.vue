@@ -389,6 +389,8 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 .team-detail-danger-actions {
   display: flex;
   justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .team-info-action-button {
