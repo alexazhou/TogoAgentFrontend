@@ -163,7 +163,6 @@ export interface RoleTemplateSummary {
   model: string;
   soul?: string;
   type?: string | null;
-  driver?: string | null;
 }
 
 export interface RoleTemplateDetail extends RoleTemplateSummary {

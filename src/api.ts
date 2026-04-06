@@ -57,7 +57,6 @@ type RawRoleTemplateSummary = Partial<RoleTemplateSummary> & {
   model?: unknown;
   soul?: unknown;
   type?: string | null;
-  driver?: string | null;
   allowed_tools?: unknown;
 };
 type RawFrontendModelOption = Partial<FrontendModelOption>;
@@ -187,7 +186,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     agents: Array.isArray(room.agents)
       ? room.agents
         .map((agent) => typeof agent === 'number' ? agent : Number(agent))
-        .filter((id) => !Number.isNaN(id) && id > 0)
+        .filter((id) => !Number.isNaN(id) && id !== 0 && id !== -2)
       : [],
     tags: Array.isArray(gtRoom?.tags)
       ? gtRoom.tags.filter((tag): tag is string => typeof tag === 'string')
@@ -334,7 +333,6 @@ export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
     model: String(template.model ?? ''),
     soul: String(template.soul ?? ''),
     type: template.type,
-    driver: template.driver,
   }));
 }
 
@@ -346,7 +344,6 @@ export async function getRoleTemplateDetail(templateId: number): Promise<RoleTem
     model: String(data.model ?? ''),
     soul: String(data.soul ?? ''),
     type: data.type,
-    driver: data.driver,
     allowed_tools: Array.isArray(data.allowed_tools)
       ? data.allowed_tools.map((item) => String(item))
       : null,
@@ -357,7 +354,6 @@ export async function createRoleTemplate(payload: {
   name: string;
   soul: string;
   model: string;
-  driver: string | null;
   allowed_tools: string[] | null;
 }): Promise<RoleTemplateDetail> {
   const data = await requestJson<RawRoleTemplateSummary>('/role_templates/create.json', {
@@ -370,7 +366,6 @@ export async function createRoleTemplate(payload: {
     model: String(data.model ?? ''),
     soul: String(data.soul ?? ''),
     type: data.type,
-    driver: data.driver,
     allowed_tools: Array.isArray(data.allowed_tools)
       ? data.allowed_tools.map((item) => String(item))
       : null,
@@ -381,7 +376,6 @@ export async function updateRoleTemplate(templateId: number, payload: {
   name: string;
   soul: string;
   model: string;
-  driver: string | null;
   allowed_tools: string[] | null;
 }): Promise<RoleTemplateDetail> {
   const data = await requestJson<RawRoleTemplateSummary>(`/role_templates/${templateId}/modify.json`, {
@@ -394,7 +388,6 @@ export async function updateRoleTemplate(templateId: number, payload: {
     model: String(data.model ?? ''),
     soul: String(data.soul ?? ''),
     type: data.type,
-    driver: data.driver,
     allowed_tools: Array.isArray(data.allowed_tools)
       ? data.allowed_tools.map((item) => String(item))
       : null,
