@@ -3,17 +3,15 @@ import { computed, onMounted, ref } from 'vue';
 import {
   createRoleTemplate,
   deleteRoleTemplate,
-  getFrontendConfig,
   getRoleTemplateDetail,
   getRoleTemplates,
   updateRoleTemplate,
 } from '../../api';
 import { showGlobalSuccessToast } from '../../appUiState';
 import ConfirmDialog from '../ConfirmDialog.vue';
-import CustomSelect from '../CustomSelect.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from './types';
-import type { FrontendDriverType, RoleTemplateDetail, RoleTemplateSummary } from '../../types';
+import type { RoleTemplateDetail, RoleTemplateSummary } from '../../types';
 
 defineProps<{
   breadcrumbItems: SettingsBreadcrumbItem[];
@@ -24,7 +22,6 @@ const emit = defineEmits<{
 }>();
 
 const templates = ref<RoleTemplateSummary[]>([]);
-const driverOptions = ref<FrontendDriverType[]>([]);
 const selectedTemplateId = ref<number | null>(null);
 const currentDetail = ref<RoleTemplateDetail | null>(null);
 const isLoading = ref(false);
@@ -38,7 +35,6 @@ const form = ref({
   name: '',
   soul: '',
   model: '',
-  driver: '',
   allowedToolsText: '',
 });
 
@@ -46,7 +42,6 @@ type RoleTemplateFormSnapshot = {
   name: string;
   soul: string;
   model: string;
-  driver: string | null;
   allowed_tools: string[] | null;
 };
 
@@ -76,7 +71,6 @@ const formSnapshot = computed<RoleTemplateFormSnapshot>(() => ({
   name: form.value.name.trim(),
   soul: form.value.soul,
   model: form.value.model.trim(),
-  driver: normalizeNullableText(form.value.driver),
   allowed_tools: normalizeAllowedToolsList(parseAllowedTools()),
 }));
 const currentDetailSnapshot = computed<RoleTemplateFormSnapshot | null>(() => {
@@ -87,7 +81,6 @@ const currentDetailSnapshot = computed<RoleTemplateFormSnapshot | null>(() => {
     name: currentDetail.value.name.trim(),
     soul: currentDetail.value.soul,
     model: currentDetail.value.model.trim(),
-    driver: normalizeNullableText(currentDetail.value.driver),
     allowed_tools: normalizeAllowedToolsList(currentDetail.value.allowed_tools),
   };
 });
@@ -110,14 +103,6 @@ const canSave = computed(() => {
   return !!currentDetail.value && !isSystemTemplate.value && isDirty.value;
 });
 
-const driverSelectOptions = computed(() => [
-  { value: '', label: '自动' },
-  ...driverOptions.value.map((driver) => ({
-    value: driver.name,
-    label: driver.name,
-  })),
-]);
-
 function buildSoulPreview(soul: string | undefined): string {
   const normalized = String(soul ?? '')
     .replace(/\s+/g, ' ')
@@ -133,7 +118,6 @@ function resetForm(detail?: RoleTemplateDetail | null): void {
     name: detail?.name || '',
     soul: detail?.soul || '',
     model: detail?.model || '',
-    driver: detail?.driver || '',
     allowedToolsText: (detail?.allowed_tools ?? []).join(', '),
   };
 }
@@ -144,11 +128,6 @@ function parseAllowedTools(): string[] | null {
     .map((item) => item.trim())
     .filter(Boolean);
   return items.length ? items : null;
-}
-
-function normalizeNullableText(value: string | null | undefined): string | null {
-  const normalized = String(value ?? '').trim();
-  return normalized ? normalized : null;
 }
 
 function normalizeAllowedToolsList(value: string[] | null | undefined): string[] | null {
@@ -185,8 +164,6 @@ async function loadRoleSettings(preferredId?: number | null): Promise<void> {
   isLoading.value = true;
   statusText.value = '';
   try {
-    const frontendConfig = await getFrontendConfig();
-    driverOptions.value = frontendConfig.driver_types;
     await loadTemplateList(preferredId);
   } catch (error) {
     console.error(error);
@@ -232,7 +209,6 @@ async function saveCurrentTemplate(): Promise<void> {
         name: form.value.name.trim(),
         soul: form.value.soul,
         model: form.value.model.trim(),
-        driver: form.value.driver || null,
         allowed_tools: parseAllowedTools(),
       });
       await loadRoleSettings(created.id);
@@ -242,7 +218,6 @@ async function saveCurrentTemplate(): Promise<void> {
         name: form.value.name.trim(),
         soul: form.value.soul,
         model: form.value.model.trim(),
-        driver: form.value.driver || null,
         allowed_tools: parseAllowedTools(),
       });
       currentDetail.value = updated;
@@ -417,16 +392,6 @@ onMounted(() => {
                 :class="{ 'role-input--readonly': isSystemReadonlyFields }"
                 placeholder="为空则使用默认模型"
                 :readonly="isSystemReadonlyFields"
-              />
-            </label>
-
-            <label class="role-field">
-              <span>驱动</span>
-              <CustomSelect
-                v-model="form.driver"
-                :options="driverSelectOptions"
-                placeholder="自动"
-                :disabled="isSystemReadonlyFields"
               />
             </label>
 

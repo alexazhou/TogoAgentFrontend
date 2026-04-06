@@ -534,17 +534,26 @@ function applyMessageEvent(event: WsMessageEvent): void {
   }
 
   const senderName = resolveMessageSenderName(event.sender_id);
+  const nextMessage = { sender: senderName, content: event.content, time: event.time };
 
-  room.preview = formatPreview({ sender: senderName, content: event.content });
+  room.preview = formatPreview(nextMessage);
 
   if (event.gt_room.id === selectedRoomId.value) {
     const wasAtBottom = (() => {
       const viewport = getMessageStream();
       return viewport ? isAtBottom(viewport) : shouldFollowMessages.value;
     })();
+    const alreadyExists = messages.value.some((message) =>
+      message.sender === nextMessage.sender
+      && message.content === nextMessage.content
+      && message.time === nextMessage.time,
+    );
+    if (alreadyExists) {
+      return;
+    }
     messages.value = [
       ...messages.value,
-      { sender: senderName, content: event.content, time: event.time },
+      nextMessage,
     ];
     totalMessageCount.value = messages.value.length;
     nextTick(() => {
