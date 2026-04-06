@@ -290,11 +290,11 @@ export async function saveMembersByTeamId(
     driver: string;
   }>,
 ): Promise<AgentInfo[]> {
-  const data = await requestJson<{ members: RawAgentInfo[] }>(`/teams/${teamId}/members/save.json`, {
+  const data = await requestJson<{ agents: RawAgentInfo[] }>(`/teams/${teamId}/agents/save.json`, {
     method: 'PUT',
-    body: JSON.stringify({ members: payload }),
+    body: JSON.stringify({ agents: payload }),
   });
-  return data.members.map(normalizeAgent);
+  return data.agents.map(normalizeAgent);
 }
 
 export async function getRooms(teamId?: number): Promise<RoomInfo[]> {
