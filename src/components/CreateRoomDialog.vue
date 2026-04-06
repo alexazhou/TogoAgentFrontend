@@ -50,7 +50,7 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
         <section class="create-room-members">
           <div class="create-room-members-head">
             <span>选择成员</span>
-            <small>至少 2 人，已选 {{ selectedMemberIds.length }} 人</small>
+            <small>已选 {{ selectedMemberIds.length }} 人</small>
           </div>
 
           <div v-if="members.length" class="create-room-members-grid">
