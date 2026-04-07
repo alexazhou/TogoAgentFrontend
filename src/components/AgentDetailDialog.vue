@@ -240,9 +240,10 @@ function getActivityToolName(activity: AgentActivity): string {
   return typeof toolName === 'string' ? toolName : '';
 }
 
-function upsertActivity(nextActivity: AgentActivity): void {
+function upsertActivity(nextActivity: AgentActivity): boolean {
   const nextItems = [...activities.value];
   const index = nextItems.findIndex((item) => item.id === nextActivity.id);
+  const inserted = index < 0;
   if (index >= 0) {
     nextItems[index] = nextActivity;
   } else {
@@ -250,6 +251,7 @@ function upsertActivity(nextActivity: AgentActivity): void {
   }
   nextItems.sort((a, b) => a.id - b.id);
   activities.value = nextItems;
+  return inserted;
 }
 
 async function scrollActivitiesToBottom(): Promise<void> {
@@ -320,7 +322,9 @@ function handleAgentActivityEvent(event: WsAgentActivityEvent): void {
   if (!activity || props.agentId === null || activity.agent_id !== props.agentId) {
     return;
   }
-  upsertActivity(activity);
+  if (upsertActivity(activity)) {
+    scrollActivitiesToBottom().catch(console.error);
+  }
 }
 
 function connectEventsSocket(): void {
@@ -458,6 +462,28 @@ watch(
   },
 );
 
+watch(
+  () => [props.open, activitiesLoading.value, visibleActivities.value.length],
+  ([open, loadingActivities, count]) => {
+    if (!open || loadingActivities || count === 0) {
+      return;
+    }
+    scrollActivitiesToBottom().catch(console.error);
+  },
+  { flush: 'post' },
+);
+
+watch(
+  () => [props.open, activityListRef.value, visibleActivities.value.length],
+  ([open, listEl, count]) => {
+    if (!open || !listEl || count === 0) {
+      return;
+    }
+    scrollActivitiesToBottom().catch(console.error);
+  },
+  { flush: 'post' },
+);
+
 onBeforeUnmount(() => {
   disconnectEventsSocket();
 });
@@ -543,7 +569,7 @@ onBeforeUnmount(() => {
                 <div v-else-if="!visibleActivities.length" class="agent-activity-empty">
                   暂无活动记录。
                 </div>
-                <div v-else ref="activityListRef" class="agent-activity-list">
+                <div v-else ref="activityListRef" class="agent-activity-list sidebar-scroll">
                   <article
                     v-for="activity in visibleActivities"
                     :key="activity.id"
