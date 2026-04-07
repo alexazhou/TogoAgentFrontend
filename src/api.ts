@@ -1,4 +1,7 @@
 import type {
+  AgentActivity,
+  AgentActivityStatus,
+  AgentActivityType,
   AgentStatus,
   AgentDetail,
   AgentInfo,
@@ -45,6 +48,23 @@ type RawAgentDetail = Partial<AgentDetail> & {
   role_template_id?: number;
   employ_status?: string;
   driver?: string;
+};
+
+type RawAgentActivity = Partial<AgentActivity> & {
+  id?: unknown;
+  agent_id?: unknown;
+  team_id?: unknown;
+  activity_type?: unknown;
+  status?: unknown;
+  title?: unknown;
+  detail?: unknown;
+  error_message?: unknown;
+  started_at?: unknown;
+  finished_at?: unknown;
+  duration_ms?: unknown;
+  metadata?: unknown;
+  created_at?: unknown;
+  updated_at?: unknown;
 };
 
 type RawDeptTreeResponse = {
@@ -203,6 +223,22 @@ function normalizeAgentStatus(status?: string): AgentStatus {
   return 'idle';
 }
 
+function normalizeActivityType(value?: unknown): AgentActivityType {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'llm_infer' || normalized === 'tool_call' || normalized === 'compact') {
+    return normalized;
+  }
+  return 'agent_state';
+}
+
+function normalizeActivityStatus(value?: unknown): AgentActivityStatus {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'started' || normalized === 'succeeded' || normalized === 'failed') {
+    return normalized;
+  }
+  return 'cancelled';
+}
+
 function normalizeDriverTypeValue(value?: string | null): string {
   const normalized = String(value ?? '').trim().toLowerCase();
   if (normalized === 'native' || normalized === 'claude_sdk' || normalized === 'tsp') {
@@ -246,6 +282,27 @@ function normalizeAgentDetail(agent: RawAgentDetail): AgentDetail {
     driver_type: parseDriverType(agent),
     prompt: String(agent.prompt ?? ''),
     error_message: typeof agent.error_message === 'string' ? agent.error_message : null,
+  };
+}
+
+function normalizeAgentActivity(activity: RawAgentActivity): AgentActivity {
+  return {
+    id: Number(activity.id ?? 0),
+    agent_id: Number(activity.agent_id ?? 0),
+    team_id: Number(activity.team_id ?? 0),
+    activity_type: normalizeActivityType(activity.activity_type),
+    status: normalizeActivityStatus(activity.status),
+    title: String(activity.title ?? ''),
+    detail: typeof activity.detail === 'string' ? activity.detail : '',
+    error_message: typeof activity.error_message === 'string' ? activity.error_message : null,
+    started_at: typeof activity.started_at === 'string' ? activity.started_at : null,
+    finished_at: typeof activity.finished_at === 'string' ? activity.finished_at : null,
+    duration_ms: typeof activity.duration_ms === 'number' ? activity.duration_ms : null,
+    metadata: typeof activity.metadata === 'object' && activity.metadata !== null
+      ? activity.metadata as Record<string, unknown>
+      : {},
+    created_at: typeof activity.created_at === 'string' ? activity.created_at : null,
+    updated_at: typeof activity.updated_at === 'string' ? activity.updated_at : null,
   };
 }
 
@@ -495,6 +552,11 @@ export async function createTeam(payload: CreateTeamPayload): Promise<{ status: 
 export async function getAgentDetail(agentId: number): Promise<AgentDetail> {
   const data = await requestJson<RawAgentDetail>(`/agents/${agentId}.json`);
   return normalizeAgentDetail(data);
+}
+
+export async function getAgentActivities(agentId: number): Promise<AgentActivity[]> {
+  const data = await requestJson<{ activities: RawAgentActivity[] }>(`/agents/${agentId}/activities.json`);
+  return (data.activities ?? []).map(normalizeAgentActivity);
 }
 
 export async function resumeAgent(agentId: number): Promise<{ status: string; agent_id: number; room_id: number }> {

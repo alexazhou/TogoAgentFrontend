@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { getAgentDetail, resumeAgent } from '../api';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { createEventsSocket, getAgentActivities, getAgentDetail, resumeAgent } from '../api';
 import { showGlobalSuccessToast } from '../appUiState';
 import AgentCardBase from './AgentCardBase.vue';
-import type { AgentDetail, AgentStatus } from '../types';
+import type {
+  AgentActivity,
+  AgentActivityStatus,
+  AgentActivityType,
+  AgentDetail,
+  AgentStatus,
+  WsAgentActivityEvent,
+  WsAgentStatusEvent,
+  WsEvent,
+} from '../types';
 
 const props = defineProps<{
   open: boolean;
@@ -18,11 +27,22 @@ const emit = defineEmits<{
 }>();
 
 const agent = ref<AgentDetail | null>(null);
+const activities = ref<AgentActivity[]>([]);
 const loading = ref(false);
+const activitiesLoading = ref(false);
 const resuming = ref(false);
 const errorMessage = ref('');
+const activitiesErrorMessage = ref('');
+const runtimeStatus = ref<AgentStatus | null>(null);
+
+let eventsSocket: WebSocket | null = null;
+let reconnectTimer: number | null = null;
+let activeSocketToken = 0;
 
 const currentStatus = computed<AgentStatus | null>(() => {
+  if (runtimeStatus.value) {
+    return runtimeStatus.value;
+  }
   if (props.agentStatus) {
     return props.agentStatus;
   }
@@ -73,6 +93,264 @@ const agentTemplateLabel = computed(() => {
   }
   return '未配置模板';
 });
+
+const visibleActivities = computed(() => activities.value.slice(0, 30));
+
+const currentRunningActivity = computed<AgentActivity | null>(() => (
+  activities.value.find((activity) => activity.status === 'started') ?? null
+));
+
+function normalizeWsAgentStatus(value: string): AgentStatus {
+  const normalized = value.toLowerCase();
+  if (normalized === 'active' || normalized === 'failed') {
+    return normalized;
+  }
+  return 'idle';
+}
+
+function normalizeActivityTypeValue(value: unknown): AgentActivityType {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'llm_infer' || normalized === 'tool_call' || normalized === 'compact') {
+    return normalized;
+  }
+  return 'agent_state';
+}
+
+function normalizeActivityStatusValue(value: unknown): AgentActivityStatus {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === 'started' || normalized === 'succeeded' || normalized === 'failed') {
+    return normalized;
+  }
+  return 'cancelled';
+}
+
+function normalizeIncomingActivity(value: unknown): AgentActivity | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const raw = value as Partial<AgentActivity> & Record<string, unknown>;
+  return {
+    id: Number(raw.id ?? 0),
+    agent_id: Number(raw.agent_id ?? 0),
+    team_id: Number(raw.team_id ?? 0),
+    activity_type: normalizeActivityTypeValue(raw.activity_type),
+    status: normalizeActivityStatusValue(raw.status),
+    title: String(raw.title ?? ''),
+    detail: typeof raw.detail === 'string' ? raw.detail : '',
+    error_message: typeof raw.error_message === 'string' ? raw.error_message : null,
+    started_at: typeof raw.started_at === 'string' ? raw.started_at : null,
+    finished_at: typeof raw.finished_at === 'string' ? raw.finished_at : null,
+    duration_ms: typeof raw.duration_ms === 'number' ? raw.duration_ms : null,
+    metadata: typeof raw.metadata === 'object' && raw.metadata !== null
+      ? raw.metadata as Record<string, unknown>
+      : {},
+    created_at: typeof raw.created_at === 'string' ? raw.created_at : null,
+    updated_at: typeof raw.updated_at === 'string' ? raw.updated_at : null,
+  };
+}
+
+function activityTypeLabel(type: AgentActivityType): string {
+  if (type === 'llm_infer') {
+    return '推理';
+  }
+  if (type === 'tool_call') {
+    return '工具调用';
+  }
+  if (type === 'compact') {
+    return '上下文压缩';
+  }
+  return '状态变更';
+}
+
+function activityStatusLabel(status: AgentActivityStatus): string {
+  if (status === 'started') {
+    return '进行中';
+  }
+  if (status === 'succeeded') {
+    return '完成';
+  }
+  if (status === 'failed') {
+    return '失败';
+  }
+  return '取消';
+}
+
+function activitySummary(activity: AgentActivity): string {
+  const detail = activity.detail.trim();
+  if (detail) {
+    return detail;
+  }
+  if (activity.error_message?.trim()) {
+    return activity.error_message.trim();
+  }
+  if (activity.status === 'started') {
+    return `正在${activityTypeLabel(activity.activity_type)}`;
+  }
+  return `${activityTypeLabel(activity.activity_type)}已${activityStatusLabel(activity.status)}`;
+}
+
+function formatActivityTime(value: string | null | undefined): string {
+  if (!value) {
+    return '';
+  }
+  return value.replace('T', ' ').slice(0, 19);
+}
+
+function formatDuration(durationMs: number | null | undefined): string {
+  if (typeof durationMs !== 'number' || Number.isNaN(durationMs) || durationMs < 0) {
+    return '';
+  }
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  }
+  return `${(durationMs / 1000).toFixed(durationMs >= 10_000 ? 0 : 1)}s`;
+}
+
+function activityMetaTokens(activity: AgentActivity): string {
+  const metadata = activity.metadata ?? {};
+  const currentTotal = typeof metadata.current_total_tokens === 'number' ? metadata.current_total_tokens : null;
+  const finalTotal = typeof metadata.final_total_tokens === 'number' ? metadata.final_total_tokens : null;
+  const estimated = typeof metadata.estimated_prompt_tokens === 'number' ? metadata.estimated_prompt_tokens : null;
+  if (currentTotal !== null) {
+    return `tokens ${currentTotal}`;
+  }
+  if (finalTotal !== null) {
+    return `tokens ${finalTotal}`;
+  }
+  if (estimated !== null) {
+    return `估算 ${estimated}`;
+  }
+  return '';
+}
+
+function getActivityModel(activity: AgentActivity): string {
+  const model = activity.metadata?.model;
+  return typeof model === 'string' ? model : '';
+}
+
+function getActivityToolName(activity: AgentActivity): string {
+  const toolName = activity.metadata?.tool_name;
+  return typeof toolName === 'string' ? toolName : '';
+}
+
+function upsertActivity(nextActivity: AgentActivity): void {
+  const nextItems = [...activities.value];
+  const index = nextItems.findIndex((item) => item.id === nextActivity.id);
+  if (index >= 0) {
+    nextItems[index] = nextActivity;
+  } else {
+    nextItems.push(nextActivity);
+  }
+  nextItems.sort((a, b) => b.id - a.id);
+  activities.value = nextItems;
+}
+
+async function loadActivities(): Promise<void> {
+  if (!props.open || props.agentId === null) {
+    activities.value = [];
+    activitiesErrorMessage.value = '';
+    activitiesLoading.value = false;
+    return;
+  }
+
+  activitiesLoading.value = true;
+  activitiesErrorMessage.value = '';
+  activities.value = [];
+
+  try {
+    activities.value = await getAgentActivities(props.agentId);
+  } catch (error) {
+    activitiesErrorMessage.value = 'Agent 活动加载失败。';
+    console.error(error);
+  } finally {
+    activitiesLoading.value = false;
+  }
+}
+
+function disconnectEventsSocket(): void {
+  activeSocketToken += 1;
+  if (reconnectTimer !== null) {
+    window.clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (eventsSocket) {
+    eventsSocket.close();
+    eventsSocket = null;
+  }
+}
+
+function scheduleReconnect(): void {
+  if (reconnectTimer !== null || !props.open || props.agentId === null) {
+    return;
+  }
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = null;
+    connectEventsSocket();
+  }, 1500);
+}
+
+function handleAgentStatusEvent(event: WsAgentStatusEvent): void {
+  if (props.agentId === null || event.gt_agent.id !== props.agentId) {
+    return;
+  }
+  runtimeStatus.value = normalizeWsAgentStatus(event.status);
+  if (runtimeStatus.value === 'failed') {
+    loadDetail().catch(console.error);
+  }
+}
+
+function handleAgentActivityEvent(event: WsAgentActivityEvent): void {
+  const activity = normalizeIncomingActivity(event.activity ?? event.data);
+  if (!activity || props.agentId === null || activity.agent_id !== props.agentId) {
+    return;
+  }
+  upsertActivity(activity);
+}
+
+function connectEventsSocket(): void {
+  if (!props.open || props.agentId === null) {
+    return;
+  }
+
+  disconnectEventsSocket();
+  const socketToken = activeSocketToken + 1;
+  activeSocketToken = socketToken;
+  const socket = createEventsSocket();
+  eventsSocket = socket;
+
+  socket.addEventListener('message', (messageEvent) => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
+    try {
+      const payload = JSON.parse(messageEvent.data) as WsEvent;
+      if (payload.event === 'agent_status') {
+        handleAgentStatusEvent(payload);
+        return;
+      }
+      if (payload.event === 'agent_activity') {
+        handleAgentActivityEvent(payload);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
+  socket.addEventListener('close', () => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
+    eventsSocket = null;
+    scheduleReconnect();
+  });
+
+  socket.addEventListener('error', () => {
+    if (socketToken !== activeSocketToken) {
+      return;
+    }
+    socket.close();
+  });
+}
 
 async function loadDetail(): Promise<void> {
   if (!props.open || props.agentId === null) {
@@ -130,8 +408,24 @@ watch(
   () => [props.open, props.agentId, props.agentName],
   () => {
     loadDetail().catch(console.error);
+    loadActivities().catch(console.error);
+    runtimeStatus.value = props.agentStatus ?? null;
+    if (props.open && props.agentId !== null) {
+      connectEventsSocket();
+    } else {
+      disconnectEventsSocket();
+    }
   },
   { immediate: true },
+);
+
+watch(
+  () => props.agentStatus,
+  (status) => {
+    if (props.open) {
+      runtimeStatus.value = status ?? null;
+    }
+  },
 );
 
 watch(
@@ -147,6 +441,10 @@ watch(
     }
   },
 );
+
+onBeforeUnmount(() => {
+  disconnectEventsSocket();
+});
 
 </script>
 
@@ -199,7 +497,59 @@ watch(
                 </div>
               </div>
             </div>
-            <div class="agent-detail-stage__right"></div>
+            <div class="agent-detail-stage__right">
+              <section class="agent-activity-panel">
+                <div class="agent-activity-panel__head">
+                  <div>
+                    <p class="agent-activity-panel__eyebrow">Activity</p>
+                    <h4>运行活动</h4>
+                  </div>
+                  <span class="agent-activity-panel__badge">WS 实时更新</span>
+                </div>
+
+                <div
+                  v-if="currentRunningActivity"
+                  class="agent-activity-now"
+                  :data-type="currentRunningActivity.activity_type"
+                >
+                  <div class="agent-activity-now__row">
+                    <span class="agent-activity-now__dot"></span>
+                    <strong>{{ currentRunningActivity.title }}</strong>
+                    <span class="agent-activity-now__summary">{{ activitySummary(currentRunningActivity) }}</span>
+                    <span class="agent-activity-now__status">
+                      {{ activityStatusLabel(currentRunningActivity.status) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div v-if="activitiesErrorMessage" class="error-banner">{{ activitiesErrorMessage }}</div>
+                <div v-else-if="activitiesLoading" class="loading-card">正在加载 Agent 活动…</div>
+                <div v-else-if="!visibleActivities.length" class="agent-activity-empty">
+                  暂无活动记录。
+                </div>
+                <div v-else class="agent-activity-list">
+                  <article
+                    v-for="activity in visibleActivities"
+                    :key="activity.id"
+                    class="agent-activity-item"
+                    :data-status="activity.status"
+                  >
+                    <div class="agent-activity-item__row">
+                      <strong class="agent-activity-item__title">{{ activity.title }}</strong>
+                      <span class="agent-activity-item__type">{{ activityTypeLabel(activity.activity_type) }}</span>
+                      <span class="agent-activity-item__summary">{{ activitySummary(activity) }}</span>
+                      <span class="agent-activity-item__status">{{ activityStatusLabel(activity.status) }}</span>
+                      <span v-if="formatActivityTime(activity.started_at)">{{ formatActivityTime(activity.started_at) }}</span>
+                      <span v-if="getActivityModel(activity)">{{ getActivityModel(activity) }}</span>
+                      <span v-if="getActivityToolName(activity)">{{ getActivityToolName(activity) }}</span>
+                      <span v-if="activityMetaTokens(activity)">{{ activityMetaTokens(activity) }}</span>
+                      <span v-if="formatDuration(activity.duration_ms)">{{ formatDuration(activity.duration_ms) }}</span>
+                    </div>
+                    <p v-if="activity.error_message" class="agent-activity-item__error">{{ activity.error_message }}</p>
+                  </article>
+                </div>
+              </section>
+            </div>
           </section>
         </template>
       </section>
@@ -221,8 +571,12 @@ watch(
 
 .agent-detail-dialog {
   width: min(1080px, calc(100vw - 56px));
+  height: min(760px, calc(100vh - 56px));
   max-height: min(760px, calc(100vh - 56px));
-  overflow: auto;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
   padding: 18px;
   border-radius: 22px;
   box-shadow:
@@ -235,10 +589,6 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.agent-detail-head {
-  margin-bottom: 18px;
 }
 
 .agent-detail-eyebrow {
@@ -261,19 +611,22 @@ watch(
 }
 
 .agent-detail-stage {
-  min-height: 420px;
+  min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
+  gap: 18px;
+  align-items: stretch;
   padding: 8px 0 0;
+  overflow: hidden;
 }
 
 .agent-detail-stage__left {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
 }
 
 .agent-detail-stage__card-stack {
@@ -281,16 +634,18 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: 18px;
+  justify-content: center;
+  min-height: 100%;
 }
 
 .agent-detail-stage__card-stack :deep(.entity-card) {
   cursor: default;
-  transform: translateY(-18px) scale(1.28);
+  transform: scale(1.2);
   transform-origin: center;
 }
 
 .agent-detail-stage__card-stack :deep(.entity-card:hover) {
-  transform: translateY(-18px) scale(1.28);
+  transform: scale(1.2);
 }
 
 .agent-status-panel {
@@ -396,10 +751,191 @@ watch(
 }
 
 .agent-detail-stage__right {
-  min-height: 100%;
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--surface-quiet) 68%, transparent), transparent 58%);
+  min-height: 0;
+}
+
+.agent-activity-panel {
+  min-height: 0;
+  height: 100%;
+  border-radius: 22px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--panel-bg) 97%, var(--surface-soft) 3%);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 82%, white 18%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 8px;
+  overflow: hidden;
+}
+
+.agent-activity-panel__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-activity-panel__eyebrow {
+  margin: 0 0 2px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+}
+
+.agent-activity-panel__head h4 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.agent-activity-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(125, 163, 224, 0.12);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text) 22%);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.agent-activity-now {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(125, 163, 224, 0.08);
+  border: 1px solid rgba(125, 163, 224, 0.18);
+}
+
+.agent-activity-now__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-strong);
+  min-width: 0;
+}
+
+.agent-activity-now__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--good);
+  animation: agent-dot-pulse 2s ease-in-out infinite;
+}
+
+.agent-activity-now__status {
+  margin-left: 4px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex: none;
+}
+
+.agent-activity-now__summary {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-activity-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+.agent-activity-empty {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border: 1px dashed color-mix(in srgb, var(--panel-border) 80%, transparent);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.agent-activity-item {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 78%, white 22%);
+}
+
+.agent-activity-item[data-status='started'] {
+  border-color: rgba(125, 163, 224, 0.28);
+  box-shadow: 0 0 0 1px rgba(125, 163, 224, 0.08);
+}
+
+.agent-activity-item[data-status='failed'] {
+  border-color: color-mix(in srgb, var(--danger, #f85149) 35%, white 65%);
+  background: color-mix(in srgb, var(--danger, #f85149) 5%, white 95%);
+}
+
+.agent-activity-item__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.agent-activity-item__title {
+  flex: none;
+  color: var(--text-strong);
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.agent-activity-item__type,
+.agent-activity-item__status,
+.agent-activity-item__row span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.agent-activity-item__status {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(125, 163, 224, 0.1);
+  color: color-mix(in srgb, var(--accent) 76%, var(--text) 24%);
+  font-weight: 600;
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__status {
+  background: color-mix(in srgb, var(--danger, #f85149) 12%, white 88%);
+  color: var(--danger, #f85149);
+}
+
+.agent-activity-item__summary {
+  min-width: 0;
+  flex: 1 1 auto;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-activity-item__error {
+  margin: 0;
+  color: var(--danger, #f85149);
+  font-size: 0.74rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .loading-card,
@@ -427,8 +963,10 @@ watch(
 
   .agent-detail-dialog {
     width: min(100vw - 24px, 100%);
+    height: min(100vh - 24px, 100%);
     max-height: calc(100vh - 24px);
     padding: 14px;
+    gap: 14px;
   }
 
   .agent-detail-stage {
@@ -440,6 +978,11 @@ watch(
 
   .agent-detail-stage__right {
     min-height: 180px;
+  }
+
+  .agent-activity-panel {
+    min-height: 0;
+    padding: 10px;
   }
 }
 </style>

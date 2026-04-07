@@ -1,4 +1,6 @@
 export type AgentStatus = 'active' | 'idle' | 'failed';
+export type AgentActivityType = 'llm_infer' | 'tool_call' | 'compact' | 'agent_state';
+export type AgentActivityStatus = 'started' | 'succeeded' | 'failed' | 'cancelled';
 export type RoomType = 'private' | 'group';
 
 export interface AgentInfo {
@@ -20,6 +22,23 @@ export interface AgentDetail extends AgentInfo {
   driver_type: string;
   prompt: string;
   error_message?: string | null;
+}
+
+export interface AgentActivity {
+  id: number;
+  agent_id: number;
+  team_id: number;
+  activity_type: AgentActivityType;
+  status: AgentActivityStatus;
+  title: string;
+  detail: string;
+  error_message?: string | null;
+  started_at: string | null;
+  finished_at?: string | null;
+  duration_ms?: number | null;
+  metadata: Record<string, unknown>;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface RoomInfo {
@@ -61,7 +80,13 @@ export interface WsAgentStatusEvent {
   status: 'ACTIVE' | 'IDLE' | 'FAILED';
 }
 
-export type WsEvent = WsMessageEvent | WsAgentStatusEvent;
+export interface WsAgentActivityEvent {
+  event: 'agent_activity';
+  activity?: AgentActivity;
+  data?: AgentActivity;
+}
+
+export type WsEvent = WsMessageEvent | WsAgentStatusEvent | WsAgentActivityEvent;
 
 export interface RoomState extends RoomInfo {
   preview: string;
