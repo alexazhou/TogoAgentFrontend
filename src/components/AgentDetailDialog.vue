@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { createEventsSocket, getAgentActivities, getAgentDetail, resumeAgent } from '../api';
 import { showGlobalSuccessToast } from '../appUiState';
 import AgentCardBase from './AgentCardBase.vue';
@@ -28,6 +28,7 @@ const emit = defineEmits<{
 
 const agent = ref<AgentDetail | null>(null);
 const activities = ref<AgentActivity[]>([]);
+const activityListRef = ref<HTMLElement | null>(null);
 const loading = ref(false);
 const activitiesLoading = ref(false);
 const resuming = ref(false);
@@ -94,11 +95,17 @@ const agentTemplateLabel = computed(() => {
   return '未配置模板';
 });
 
-const visibleActivities = computed(() => activities.value.slice(0, 30));
+const visibleActivities = computed(() => activities.value.slice(-30));
 
-const currentRunningActivity = computed<AgentActivity | null>(() => (
-  activities.value.find((activity) => activity.status === 'started') ?? null
-));
+const currentRunningActivity = computed<AgentActivity | null>(() => {
+  for (let index = activities.value.length - 1; index >= 0; index -= 1) {
+    const activity = activities.value[index];
+    if (activity.status === 'started') {
+      return activity;
+    }
+  }
+  return null;
+});
 
 function normalizeWsAgentStatus(value: string): AgentStatus {
   const normalized = value.toLowerCase();
@@ -241,8 +248,16 @@ function upsertActivity(nextActivity: AgentActivity): void {
   } else {
     nextItems.push(nextActivity);
   }
-  nextItems.sort((a, b) => b.id - a.id);
+  nextItems.sort((a, b) => a.id - b.id);
   activities.value = nextItems;
+}
+
+async function scrollActivitiesToBottom(): Promise<void> {
+  await nextTick();
+  if (!activityListRef.value) {
+    return;
+  }
+  activityListRef.value.scrollTop = activityListRef.value.scrollHeight;
 }
 
 async function loadActivities(): Promise<void> {
@@ -258,7 +273,8 @@ async function loadActivities(): Promise<void> {
   activities.value = [];
 
   try {
-    activities.value = await getAgentActivities(props.agentId);
+    activities.value = (await getAgentActivities(props.agentId)).sort((a, b) => a.id - b.id);
+    await scrollActivitiesToBottom();
   } catch (error) {
     activitiesErrorMessage.value = 'Agent 活动加载失败。';
     console.error(error);
@@ -457,7 +473,7 @@ onBeforeUnmount(() => {
             <p class="agent-detail-eyebrow">Agent Card</p>
             <h3>{{ agent?.name ?? agentName ?? 'Agent' }}</h3>
           </div>
-          <button type="button" class="secondary-button" @click="emit('close')">关闭</button>
+          <button type="button" class="agent-detail-close" aria-label="关闭" @click="emit('close')">×</button>
         </div>
 
         <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
@@ -500,9 +516,9 @@ onBeforeUnmount(() => {
             <div class="agent-detail-stage__right">
               <section class="agent-activity-panel">
                 <div class="agent-activity-panel__head">
-                  <div>
-                    <p class="agent-activity-panel__eyebrow">Activity</p>
+                  <div class="agent-activity-panel__title-line">
                     <h4>运行活动</h4>
+                    <p class="agent-activity-panel__eyebrow">Activity</p>
                   </div>
                   <span class="agent-activity-panel__badge">WS 实时更新</span>
                 </div>
@@ -527,7 +543,7 @@ onBeforeUnmount(() => {
                 <div v-else-if="!visibleActivities.length" class="agent-activity-empty">
                   暂无活动记录。
                 </div>
-                <div v-else class="agent-activity-list">
+                <div v-else ref="activityListRef" class="agent-activity-list">
                   <article
                     v-for="activity in visibleActivities"
                     :key="activity.id"
@@ -576,8 +592,8 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 18px;
-  padding: 18px;
+  gap: 5px;
+  padding: 0 18px 18px;
   border-radius: 22px;
   box-shadow:
     0 20px 48px rgba(40, 67, 102, 0.16),
@@ -589,6 +605,28 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.agent-detail-head > div {
+  transform: translateY(12px);
+}
+
+.agent-detail-close {
+  width: 22px;
+  height: 22px;
+  margin-top: -12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(8px);
+}
+
+.agent-detail-close:hover {
+  color: var(--text-strong);
 }
 
 .agent-detail-eyebrow {
@@ -617,7 +655,7 @@ onBeforeUnmount(() => {
   grid-template-columns: 320px minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
-  padding: 8px 0 0;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -633,7 +671,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: 26px;
   justify-content: center;
   min-height: 100%;
 }
@@ -770,13 +808,20 @@ onBeforeUnmount(() => {
 
 .agent-activity-panel__head {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
+.agent-activity-panel__title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
 .agent-activity-panel__eyebrow {
-  margin: 0 0 2px;
+  margin: 0;
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -965,8 +1010,8 @@ onBeforeUnmount(() => {
     width: min(100vw - 24px, 100%);
     height: min(100vh - 24px, 100%);
     max-height: calc(100vh - 24px);
-    padding: 14px;
-    gap: 14px;
+    padding: 0 14px 14px;
+    gap: 5px;
   }
 
   .agent-detail-stage {
