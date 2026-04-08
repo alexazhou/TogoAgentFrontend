@@ -42,7 +42,6 @@ const draft = ref('');
 const loading = ref(true);
 const reloadingMessages = ref(false);
 const errorMessage = ref('');
-const composerNotice = ref('');
 const messageViewport = useTemplateRef('messageViewport');
 const shouldFollowMessages = ref(true);
 const createRoomDialogOpen = ref(false);
@@ -80,6 +79,12 @@ const messages = useRoomMessages(selectedRoomId);
 const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === selectedRoomId.value) ?? null,
 );
+const composerNotice = computed(() => {
+  if (!currentRoom.value || currentRoom.value.room_type === 'private') {
+    return '';
+  }
+  return '当前为观察模式，请在私聊房间向对应 Agent 发送消息。';
+});
 const leftStackStyle = computed(() => {
   if (leftStackHeight.value <= splitterHeightPx) {
     return {};
@@ -373,7 +378,6 @@ async function loadRoomMessages(
     await loadRoomMessagesState(roomId);
     selectedRoomId.value = roomId;
     setActiveRealtimeContext(teamId.value, roomId);
-    composerNotice.value = '';
     if (options?.syncRoute !== false && routeRoomId.value !== roomId) {
       await navigateToRoom(roomId, options?.replaceRoute ?? false);
     }
@@ -530,10 +534,6 @@ function closeAgentDetail(): void {
   selectedAgentId.value = null;
   selectedAgentName.value = null;
 }
-
-watch(currentRoom, (room) => {
-  composerNotice.value = '';
-});
 
 watch(
   () => currentTeam.value?.name,
