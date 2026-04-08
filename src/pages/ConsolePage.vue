@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, wa
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState } from '../appUiState';
 import {
-  createTeamRoom,
   getDeptTree,
   getRoleTemplates,
   postRoomMessage,
@@ -12,9 +11,7 @@ import AgentActivityDialog from '../components/AgentActivityDialog.vue';
 import ConsoleAgentListPanel from '../components/ConsoleAgentListPanel.vue';
 import ConsoleChatPanel from '../components/ConsoleChatPanel.vue';
 import ConsoleRoomListPanel from '../components/ConsoleRoomListPanel.vue';
-import ConfirmDialog from '../components/ConfirmDialog.vue';
 import CreateRoomDialog from '../components/CreateRoomDialog.vue';
-import { loadTeamRooms } from '../realtime/runtimeStore';
 import { useConsoleMessageScroll } from '../composables/useConsoleMessageScroll';
 import { useConsoleRuntimeState } from '../composables/useConsoleRuntimeState';
 import { findTeamById } from '../teamStore';
@@ -39,10 +36,6 @@ const reloadingMessages = ref(false);
 const errorMessage = ref('');
 const messageViewport = useTemplateRef('messageViewport');
 const createRoomDialogOpen = ref(false);
-const createRoomConfirmOpen = ref(false);
-const creatingRoom = ref(false);
-const createRoomName = ref('');
-const createRoomMemberIds = ref<number[]>([]);
 const agentDetailOpen = ref(false);
 const selectedAgentId = ref<number | null>(null);
 const selectedAgentName = ref<string | null>(null);
@@ -246,37 +239,6 @@ const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
   });
 });
 const roleTemplateNameMap = computed(() => new Map(roleTemplates.value.map((template) => [template.id, template.name])));
-const roomCreateMemberOptions = computed(() =>
-  agents.value
-    .filter((agent): agent is AgentInfo & { id: number } =>
-      typeof agent.id === 'number'
-      && agent.id !== 0
-      && agent.special !== 'system'
-      && (agent.special !== null && agent.special !== undefined
-        || String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD'),
-    )
-    .map((agent) => ({
-      id: agent.id,
-      name: agent.name,
-      subtitle: agent.special === 'operator'
-        ? '人类操作者'
-        : agent.special === 'system'
-          ? '系统消息发送者'
-          : (agent.role_template_id ? (roleTemplateNameMap.value.get(agent.role_template_id) ?? null) : null),
-      status: agent.status,
-    })),
-);
-const canSubmitCreateRoom = computed(() =>
-  Boolean(createRoomName.value.trim()) && createRoomMemberIds.value.length >= 2 && !creatingRoom.value,
-);
-const createRoomConfirmMessage = computed(() => {
-  const memberNameMap = new Map(roomCreateMemberOptions.value.map((member) => [member.id, member.name]));
-  const selectedNames = createRoomMemberIds.value
-    .map((memberId) => memberNameMap.get(memberId))
-    .filter((name): name is string => Boolean(name));
-
-  return `确认创建聊天室“${createRoomName.value.trim()}”吗？\n成员：${selectedNames.join('、') || '无'}`;
-});
 
 function refreshLeftStackHeight(): void {
   leftStackHeight.value = leftStack.value?.clientHeight ?? 0;
@@ -410,14 +372,6 @@ function updateDraft(value: string): void {
   draft.value = value;
 }
 
-function resetCreateRoomState(): void {
-  createRoomDialogOpen.value = false;
-  createRoomConfirmOpen.value = false;
-  createRoomName.value = '';
-  createRoomMemberIds.value = [];
-  creatingRoom.value = false;
-}
-
 function openCreateRoomDialog(): void {
   if (loading.value || !currentTeam.value) {
     return;
@@ -426,57 +380,7 @@ function openCreateRoomDialog(): void {
 }
 
 function closeCreateRoomDialog(): void {
-  if (creatingRoom.value) {
-    return;
-  }
-  resetCreateRoomState();
-}
-
-function toggleCreateRoomMember(memberId: number): void {
-  createRoomMemberIds.value = createRoomMemberIds.value.includes(memberId)
-    ? createRoomMemberIds.value.filter((id) => id !== memberId)
-    : [...createRoomMemberIds.value, memberId];
-}
-
-function requestCreateRoomConfirm(): void {
-  if (!canSubmitCreateRoom.value) {
-    return;
-  }
-  createRoomConfirmOpen.value = true;
-}
-
-function closeCreateRoomConfirm(): void {
-  if (creatingRoom.value) {
-    return;
-  }
-  createRoomConfirmOpen.value = false;
-}
-
-async function confirmCreateRoom(): Promise<void> {
-  if (!currentTeam.value || !canSubmitCreateRoom.value) {
-    return;
-  }
-
-  creatingRoom.value = true;
-
-  try {
-    const payload = {
-      name: createRoomName.value.trim(),
-      agent_ids: [...createRoomMemberIds.value],
-    };
-    const result = await createTeamRoom(teamId.value, payload);
-    const nextRooms = await loadTeamRooms(teamId.value);
-
-    const createdRoom = nextRooms.find((room) => room.room_name === result.room_name);
-    if (createdRoom) {
-      await loadRoomMessages(createdRoom.room_id, { force: true });
-    }
-
-    resetCreateRoomState();
-  } catch (error) {
-    console.error(error);
-    creatingRoom.value = false;
-  }
+  createRoomDialogOpen.value = false;
 }
 
 function openAgent(agentName: string): void {
@@ -593,28 +497,7 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <CreateRoomDialog
-      :open="createRoomDialogOpen && !createRoomConfirmOpen"
-      :room-name="createRoomName"
-      :members="roomCreateMemberOptions"
-      :selected-member-ids="createRoomMemberIds"
-      :submitting="creatingRoom"
-      :can-submit="canSubmitCreateRoom"
-      @close="closeCreateRoomDialog"
-      @update:room-name="createRoomName = $event"
-      @toggle-member="toggleCreateRoomMember"
-      @submit="requestCreateRoomConfirm"
-    />
-
-    <ConfirmDialog
-      :open="createRoomConfirmOpen"
-      title="确认创建聊天室"
-      :message="createRoomConfirmMessage"
-      confirm-label="确认创建"
-      cancel-label="返回编辑"
-      @close="closeCreateRoomConfirm"
-      @confirm="confirmCreateRoom"
-    />
+    <CreateRoomDialog :open="createRoomDialogOpen" @close="closeCreateRoomDialog" />
 
     <AgentActivityDialog
       :open="agentDetailOpen"

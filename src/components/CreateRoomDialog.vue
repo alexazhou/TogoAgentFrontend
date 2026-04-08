@@ -1,49 +1,222 @@
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { getAgentAvatarUrl } from '../avatar';
+import { createTeamRoom, getRoleTemplates } from '../api';
+import { showGlobalSuccessToast } from '../appUiState';
+import { loadTeamAgents, loadTeamRooms } from '../realtime/runtimeStore';
+import { useTeamAgents } from '../realtime/selectors';
+import ConfirmDialog from './ConfirmDialog.vue';
 
-defineProps<{
+type CreateRoomMemberOption = {
+  id: number;
+  name: string;
+  subtitle?: string | null;
+  status?: 'active' | 'idle' | 'failed';
+};
+
+const props = defineProps<{
   open: boolean;
-  roomName: string;
-  members: Array<{
-    id: number;
-    name: string;
-    subtitle?: string | null;
-    status?: 'active' | 'idle' | 'failed';
-  }>;
-  selectedMemberIds: number[];
-  submitting?: boolean;
-  canSubmit?: boolean;
 }>();
 
 const emit = defineEmits<{
   close: [];
-  submit: [];
-  'update:roomName': [value: string];
-  toggleMember: [memberId: number];
 }>();
 
-function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
-  return selectedMemberIds.includes(memberId);
+const route = useRoute();
+const router = useRouter();
+
+const roomName = ref('');
+const selectedMemberIds = ref<number[]>([]);
+const loadingMembers = ref(false);
+const submitting = ref(false);
+const confirmOpen = ref(false);
+const errorMessage = ref('');
+const roleTemplateNameMap = ref<Record<number, string>>({});
+
+const teamId = computed<number | null>(() => {
+  const raw = route.params.teamId;
+  if (typeof raw !== 'string') {
+    return null;
+  }
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+});
+
+const agents = useTeamAgents(teamId);
+
+const members = computed<CreateRoomMemberOption[]>(() =>
+  agents.value
+    .filter((agent): agent is typeof agent & { id: number } =>
+      typeof agent.id === 'number'
+      && agent.id !== 0
+      && agent.special !== 'system'
+      && (agent.special !== null && agent.special !== undefined
+        || String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD'),
+    )
+    .map((agent) => ({
+      id: agent.id,
+      name: agent.name,
+      subtitle: agent.special === 'operator'
+        ? '人类操作者'
+        : agent.special === 'system'
+          ? '系统消息发送者'
+          : (agent.role_template_id ? (roleTemplateNameMap.value[agent.role_template_id] ?? null) : null),
+      status: agent.status,
+    })),
+);
+
+const canSubmit = computed(() =>
+  Boolean(roomName.value.trim())
+  && selectedMemberIds.value.length >= 2
+  && !submitting.value
+  && !loadingMembers.value,
+);
+
+const confirmMessage = computed(() => {
+  const memberNameMap = new Map(members.value.map((member) => [member.id, member.name]));
+  const selectedNames = selectedMemberIds.value
+    .map((memberId) => memberNameMap.get(memberId))
+    .filter((name): name is string => Boolean(name));
+
+  return `确认创建聊天室“${roomName.value.trim()}”吗？\n成员：${selectedNames.join('、') || '无'}`;
+});
+
+function isSelected(memberId: number): boolean {
+  return selectedMemberIds.value.includes(memberId);
 }
+
+function resetDialogState(): void {
+  roomName.value = '';
+  selectedMemberIds.value = [];
+  loadingMembers.value = false;
+  submitting.value = false;
+  confirmOpen.value = false;
+  errorMessage.value = '';
+  roleTemplateNameMap.value = {};
+}
+
+async function loadDialogData(): Promise<void> {
+  if (!props.open || teamId.value === null) {
+    return;
+  }
+
+  loadingMembers.value = true;
+  errorMessage.value = '';
+
+  try {
+    const [loadedTemplates] = await Promise.all([
+      getRoleTemplates(),
+      loadTeamAgents(teamId.value, { includeSpecial: true }),
+    ]);
+
+    roleTemplateNameMap.value = Object.fromEntries(
+      loadedTemplates.map((template) => [template.id, template.name]),
+    );
+  } catch (error) {
+    errorMessage.value = '可选成员加载失败。';
+    console.error(error);
+  } finally {
+    loadingMembers.value = false;
+  }
+}
+
+function requestClose(force = false): void {
+  if (!force && submitting.value) {
+    return;
+  }
+  resetDialogState();
+  emit('close');
+}
+
+function toggleMember(memberId: number): void {
+  selectedMemberIds.value = selectedMemberIds.value.includes(memberId)
+    ? selectedMemberIds.value.filter((id) => id !== memberId)
+    : [...selectedMemberIds.value, memberId];
+}
+
+function requestConfirm(): void {
+  if (!canSubmit.value) {
+    return;
+  }
+  confirmOpen.value = true;
+}
+
+function closeConfirm(): void {
+  if (submitting.value) {
+    return;
+  }
+  confirmOpen.value = false;
+}
+
+async function confirmCreateRoom(): Promise<void> {
+  if (teamId.value === null || !canSubmit.value) {
+    return;
+  }
+
+  submitting.value = true;
+  errorMessage.value = '';
+
+  try {
+    const payload = {
+      name: roomName.value.trim(),
+      agent_ids: [...selectedMemberIds.value],
+    };
+    const result = await createTeamRoom(teamId.value, payload);
+    const nextRooms = await loadTeamRooms(teamId.value);
+    const createdRoom = nextRooms.find((room) => room.room_name === result.room_name) ?? null;
+
+    confirmOpen.value = false;
+    showGlobalSuccessToast('聊天室已创建');
+
+    if (createdRoom) {
+      await router.push({
+        name: 'console',
+        params: { teamId: teamId.value, roomId: createdRoom.room_id },
+      });
+    }
+
+    requestClose(true);
+  } catch (error) {
+    errorMessage.value = '聊天室创建失败。';
+    console.error(error);
+  } finally {
+    submitting.value = false;
+  }
+}
+
+watch(
+  () => props.open,
+  (open) => {
+    if (!open) {
+      resetDialogState();
+      return;
+    }
+    loadDialogData().catch(console.error);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="create-room-overlay" @click.self="emit('close')">
+    <div v-if="open && !confirmOpen" class="create-room-overlay" @click.self="requestClose">
       <section class="create-room-dialog panel">
         <div class="create-room-head">
           <p class="create-room-eyebrow">Create Room</p>
           <h3>新建聊天室</h3>
         </div>
 
+        <div v-if="errorMessage" class="create-room-error">{{ errorMessage }}</div>
+
         <label class="create-room-field">
           <span>房间名称</span>
           <input
-            :value="roomName"
+            v-model="roomName"
             type="text"
             maxlength="64"
             placeholder="例如：项目同步群"
-            @input="emit('update:roomName', ($event.target as HTMLInputElement).value)"
           />
         </label>
 
@@ -53,16 +226,20 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
             <small>已选 {{ selectedMemberIds.length }} 人</small>
           </div>
 
-          <div v-if="members.length" class="create-room-members-grid">
+          <div v-if="loadingMembers" class="create-room-empty">
+            正在加载可选成员…
+          </div>
+
+          <div v-else-if="members.length" class="create-room-members-grid">
             <button
               v-for="member in members"
               :key="member.id"
               type="button"
               class="create-room-member"
-              :class="{ 'is-selected': isSelected(member.id, selectedMemberIds) }"
-              @click="emit('toggleMember', member.id)"
+              :class="{ 'is-selected': isSelected(member.id) }"
+              @click="toggleMember(member.id)"
             >
-              <span v-if="isSelected(member.id, selectedMemberIds)" class="create-room-member-check">✓</span>
+              <span v-if="isSelected(member.id)" class="create-room-member-check">✓</span>
               <img
                 class="create-room-member-avatar"
                 :src="getAgentAvatarUrl(member.name)"
@@ -83,12 +260,12 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
         </section>
 
         <div class="create-room-actions">
-          <button type="button" class="ghost-button" @click="emit('close')">取消</button>
+          <button type="button" class="ghost-button" @click="requestClose">取消</button>
           <button
             type="button"
             class="secondary-button"
             :disabled="submitting || !canSubmit"
-            @click="emit('submit')"
+            @click="requestConfirm"
           >
             提交
           </button>
@@ -96,6 +273,16 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
       </section>
     </div>
   </Teleport>
+
+  <ConfirmDialog
+    :open="open && confirmOpen"
+    title="确认创建聊天室"
+    :message="confirmMessage"
+    confirm-label="确认创建"
+    cancel-label="返回编辑"
+    @close="closeConfirm"
+    @confirm="confirmCreateRoom"
+  />
 </template>
 
 <style scoped>
@@ -115,7 +302,7 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
   max-height: min(720px, calc(100vh - 40px));
   padding: 18px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 14px;
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
@@ -145,6 +332,15 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
   margin: 0;
   color: var(--text-strong);
   font-size: 1.12rem;
+}
+
+.create-room-error {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #ef4444 24%, var(--panel-border) 76%);
+  border-radius: 12px;
+  background: color-mix(in srgb, #fee2e2 58%, var(--panel-bg) 42%);
+  color: #b42318;
+  font-size: 0.82rem;
 }
 
 .create-room-field {
@@ -259,54 +455,6 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 28%, transparent);
 }
 
-.create-room-member-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.create-room-member-body {
-  min-width: 0;
-  display: grid;
-  align-content: center;
-  gap: 6px;
-  padding: 2px 2px 2px 0;
-}
-
-.create-room-member-head {
-  min-width: 0;
-}
-
-.create-room-member-avatar {
-  width: 48px;
-  height: 100%;
-  min-height: 48px;
-  border-radius: 10px;
-  object-fit: cover;
-  flex: 0 0 auto;
-  border: 1px solid color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
-  background: color-mix(in srgb, var(--panel-bg) 82%, var(--surface-soft) 18%);
-}
-
-.create-room-member-head strong {
-  font-size: 0.88rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.create-room-member p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.74rem;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .create-room-member-check {
   position: absolute;
   top: 8px;
@@ -317,19 +465,54 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--focus-border) 82%, var(--panel-bg) 18%);
+  background: var(--focus-border);
   color: white;
-  font-size: 0.78rem;
-  line-height: 1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--focus-border) 30%, transparent);
+}
+
+.create-room-member-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
+}
+
+.create-room-member-body {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.create-room-member-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.create-room-member-head strong {
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  line-height: 1.15;
+}
+
+.create-room-member-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .create-room-empty {
   padding: 12px;
   border-radius: 12px;
-  background: var(--surface-soft);
+  background: color-mix(in srgb, var(--surface-soft) 70%, var(--panel-bg) 30%);
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
 }
 
 .create-room-actions {
@@ -341,7 +524,7 @@ function isSelected(memberId: number, selectedMemberIds: number[]): boolean {
 .create-room-actions > .ghost-button,
 .create-room-actions > .secondary-button {
   min-width: 88px;
-  height: 32px;
+  height: 34px;
   padding: 0 14px;
 }
 </style>
