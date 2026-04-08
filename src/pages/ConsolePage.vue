@@ -1,23 +1,28 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { connectionState, reconnectProgress, totalMessageCount } from '../appUiState';
+import { connectionState } from '../appUiState';
 import {
-  createEventsSocket,
   createTeamRoom,
-  getAgentsByTeamId,
   getDeptTree,
   getRoleTemplates,
-  getRoomMessages,
-  getRooms,
   postRoomMessage,
 } from '../api';
 import AgentListSection from '../components/AgentListSection.vue';
-import AgentDetailDialog from '../components/AgentDetailDialog.vue';
+import AgentActivityDialog from '../components/AgentActivityDialog.vue';
 import ChatPanel from '../components/ChatPanel.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import CreateRoomDialog from '../components/CreateRoomDialog.vue';
 import RoomListSection from '../components/RoomListSection.vue';
+import {
+  getRoomMessages as getRuntimeRoomMessages,
+  loadRoomMessagesState,
+  loadTeamAgents,
+  loadTeamRooms,
+  getTeamAgents,
+  getTeamRooms,
+  setActiveRealtimeContext,
+} from '../realtime/runtimeStore';
 import { findTeamById } from '../teamStore';
 import type {
   AgentInfo,
@@ -27,20 +32,13 @@ import type {
   RoleTemplateSummary,
   RoomMemberProfile,
   RoomState,
-  WsAgentStatusEvent,
-  WsEvent,
-  WsMessageEvent,
 } from '../types';
-import { formatPreview } from '../utils';
 
 const route = useRoute();
 const router = useRouter();
 
-const rooms = ref<RoomState[]>([]);
-const agents = ref<AgentInfo[]>([]);
 const deptTree = ref<DeptTreeNode | null>(null);
 const roleTemplates = ref<RoleTemplateSummary[]>([]);
-const messages = ref<MessageInfo[]>([]);
 const selectedRoomId = ref<number | null>(null);
 const draft = ref('');
 const loading = ref(true);
@@ -49,7 +47,6 @@ const errorMessage = ref('');
 const composerNotice = ref('');
 const messageViewport = useTemplateRef('messageViewport');
 const shouldFollowMessages = ref(true);
-const reconnectAttempt = ref(0);
 const createRoomDialogOpen = ref(false);
 const createRoomConfirmOpen = ref(false);
 const creatingRoom = ref(false);
@@ -63,17 +60,9 @@ const leftStackHeight = ref(0);
 const sidebarDividerDragging = ref(false);
 const sidebarTopRatio = ref(0.62);
 
-const reconnectDelayMs = 3000;
-const connectTimeoutMs = 2000;
 const splitterHeightPx = 8;
 const sidebarTopRatioStorageKey = 'console-left-stack-top-ratio';
 
-let ws: WebSocket | null = null;
-let reconnectTimer: number | null = null;
-let reconnectCountdownTimer: number | null = null;
-let connectTimeoutTimer: number | null = null;
-let shouldReconnect = true;
-let activeSocketToken = 0;
 let boundMessageStream: HTMLElement | null = null;
 let leftStackResizeObserver: ResizeObserver | null = null;
 
@@ -87,6 +76,9 @@ const routeRoomId = computed<number | null>(() => {
   return Number.isFinite(value) ? value : null;
 });
 const currentTeam = computed(() => findTeamById(teamId.value));
+const rooms = computed<RoomState[]>(() => getTeamRooms(teamId.value));
+const agents = computed<AgentInfo[]>(() => getTeamAgents(teamId.value));
+const messages = computed<MessageInfo[]>(() => getRuntimeRoomMessages(selectedRoomId.value));
 const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === selectedRoomId.value) ?? null,
 );
@@ -272,22 +264,6 @@ function getMessageStream(): HTMLElement | null {
   return viewport instanceof HTMLElement ? viewport : null;
 }
 
-function resolveMessageSenderName(senderId: number): string {
-  if (senderId === -1) {
-    return 'OPERATOR';
-  }
-  if (senderId === -2) {
-    return 'SYSTEM';
-  }
-
-  const matchedAgent = agents.value.find((agent) => agent.id === senderId);
-  if (matchedAgent?.name) {
-    return matchedAgent.name;
-  }
-
-  return String(senderId);
-}
-
 function isAtBottom(viewport: HTMLElement): boolean {
   const distanceToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
   return distanceToBottom <= 4;
@@ -326,21 +302,6 @@ function scrollMessagesToBottom(): void {
 
   viewport.scrollTop = viewport.scrollHeight;
   shouldFollowMessages.value = true;
-}
-
-function clearReconnectCountdown(): void {
-  reconnectProgress.value = 0;
-  if (reconnectCountdownTimer !== null) {
-    window.clearInterval(reconnectCountdownTimer);
-    reconnectCountdownTimer = null;
-  }
-}
-
-function clearConnectTimeout(): void {
-  if (connectTimeoutTimer !== null) {
-    window.clearTimeout(connectTimeoutTimer);
-    connectTimeoutTimer = null;
-  }
 }
 
 function refreshLeftStackHeight(): void {
@@ -391,20 +352,6 @@ function startSidebarResize(event: PointerEvent): void {
   window.addEventListener('pointerup', stopResize, { once: true });
 }
 
-function startReconnectCountdown(delayMs: number): void {
-  const reconnectAt = Date.now() + delayMs;
-
-  const syncCountdown = (): void => {
-    const remainingMs = reconnectAt - Date.now();
-    const clampedRemaining = Math.min(Math.max(remainingMs, 0), delayMs);
-    reconnectProgress.value = 1 - clampedRemaining / delayMs;
-  };
-
-  clearReconnectCountdown();
-  syncCountdown();
-  reconnectCountdownTimer = window.setInterval(syncCountdown, 50);
-}
-
 async function navigateToRoom(roomId: number, replace = false): Promise<void> {
   const method = replace ? router.replace : router.push;
   await method({
@@ -425,13 +372,9 @@ async function loadRoomMessages(
   errorMessage.value = '';
 
   try {
-    const roomMessages = await getRoomMessages(roomId);
-    messages.value = roomMessages;
+    await loadRoomMessagesState(roomId);
     selectedRoomId.value = roomId;
-    const room = rooms.value.find((entry) => entry.room_id === roomId);
-    if (room) {
-      room.unread = 0;
-    }
+    setActiveRealtimeContext(teamId.value, roomId);
     composerNotice.value = '';
     if (options?.syncRoute !== false && routeRoomId.value !== roomId) {
       await navigateToRoom(roomId, options?.replaceRoute ?? false);
@@ -447,36 +390,6 @@ async function loadRoomMessages(
   }
 }
 
-async function hydrateRooms(targetTeamId: number): Promise<RoomState[]> {
-  const baseRooms = await getRooms(targetTeamId);
-  const previews = await Promise.all(
-    baseRooms.map(async (room) => {
-      try {
-        const roomMessages = await getRoomMessages(room.room_id);
-        const lastMessage = roomMessages[roomMessages.length - 1];
-        return {
-          room_id: room.room_id,
-          preview: lastMessage ? formatPreview(lastMessage) : '暂无消息',
-        };
-      } catch (error) {
-        console.error(error);
-        return {
-          room_id: room.room_id,
-          preview: '暂无消息',
-        };
-      }
-    }),
-  );
-
-  const previewMap = new Map(previews.map((entry) => [entry.room_id, entry.preview]));
-
-  return baseRooms.map((room) => ({
-    ...room,
-    preview: previewMap.get(room.room_id) ?? '暂无消息',
-    unread: 0,
-  }));
-}
-
 async function refreshAll(): Promise<void> {
   if (!currentTeam.value) {
     return;
@@ -486,20 +399,18 @@ async function refreshAll(): Promise<void> {
   errorMessage.value = '';
 
   try {
-    const [nextAgents, nextRooms, nextRoleTemplates, nextDeptTree] = await Promise.all([
-      getAgentsByTeamId(teamId.value, { includeSpecial: true }),
-      hydrateRooms(teamId.value),
+    const [, nextRooms, nextRoleTemplates, nextDeptTree] = await Promise.all([
+      loadTeamAgents(teamId.value, { includeSpecial: true }),
+      loadTeamRooms(teamId.value),
       getRoleTemplates(),
       getDeptTree(teamId.value),
     ]);
-    agents.value = nextAgents;
-    rooms.value = nextRooms;
     roleTemplates.value = nextRoleTemplates;
     deptTree.value = nextDeptTree;
 
-    const fallbackRoomId = rooms.value[0]?.room_id ?? null;
+    const fallbackRoomId = nextRooms[0]?.room_id ?? null;
     const targetRoomId =
-      routeRoomId.value && rooms.value.some((room) => room.room_id === routeRoomId.value)
+      routeRoomId.value && nextRooms.some((room) => room.room_id === routeRoomId.value)
         ? routeRoomId.value
         : fallbackRoomId;
 
@@ -510,9 +421,8 @@ async function refreshAll(): Promise<void> {
         syncRoute: true,
       });
     } else {
-      messages.value = [];
       selectedRoomId.value = null;
-      totalMessageCount.value = 0;
+      setActiveRealtimeContext(teamId.value, null);
     }
   } catch (error) {
     errorMessage.value = '无法连接到后端服务，请确认服务已启动。';
@@ -521,164 +431,6 @@ async function refreshAll(): Promise<void> {
   } finally {
     loading.value = false;
   }
-}
-
-function applyMessageEvent(event: WsMessageEvent): void {
-  if (!currentTeam.value || event.gt_room.team_id !== currentTeam.value.id) {
-    return;
-  }
-
-  const room = rooms.value.find((entry) => entry.room_id === event.gt_room.id);
-  if (!room) {
-    return;
-  }
-
-  const senderName = resolveMessageSenderName(event.sender_id);
-  const nextMessage = { sender: senderName, content: event.content, time: event.time };
-
-  room.preview = formatPreview(nextMessage);
-
-  if (event.gt_room.id === selectedRoomId.value) {
-    const wasAtBottom = (() => {
-      const viewport = getMessageStream();
-      return viewport ? isAtBottom(viewport) : shouldFollowMessages.value;
-    })();
-    const alreadyExists = messages.value.some((message) =>
-      message.sender === nextMessage.sender
-      && message.content === nextMessage.content
-      && message.time === nextMessage.time,
-    );
-    if (alreadyExists) {
-      return;
-    }
-    messages.value = [
-      ...messages.value,
-      nextMessage,
-    ];
-    totalMessageCount.value = messages.value.length;
-    nextTick(() => {
-      if (wasAtBottom) {
-        scrollMessagesToBottom();
-      } else {
-        syncFollowMessages();
-      }
-    });
-  } else {
-    room.unread += 1;
-  }
-}
-
-function applyAgentStatusEvent(event: WsAgentStatusEvent): void {
-  if (!currentTeam.value || event.gt_agent.team_id !== currentTeam.value.id) {
-    return;
-  }
-
-  const normalizedStatus: AgentStatus = event.status.toLowerCase() as AgentStatus;
-  agents.value = agents.value.map((agent) =>
-    agent.name === event.gt_agent.name
-      ? { ...agent, status: normalizedStatus }
-      : agent,
-  );
-}
-
-function scheduleReconnect(): void {
-  const delayMs = reconnectDelayMs;
-
-  if (reconnectTimer !== null) {
-    window.clearTimeout(reconnectTimer);
-  }
-
-  reconnectAttempt.value += 1;
-  connectionState.value = 'waiting_reconnect';
-  startReconnectCountdown(delayMs);
-  reconnectTimer = window.setTimeout(() => {
-    clearReconnectCountdown();
-    connectWebSocket();
-  }, delayMs);
-}
-
-function connectWebSocket(): void {
-  activeSocketToken += 1;
-  const socketToken = activeSocketToken;
-  const isReconnectAttempt = reconnectAttempt.value > 0;
-
-  clearConnectTimeout();
-
-  if (ws) {
-    shouldReconnect = false;
-    ws.close();
-    shouldReconnect = true;
-  }
-
-  connectionState.value = isReconnectAttempt ? 'reconnecting' : 'connecting';
-  clearReconnectCountdown();
-  ws = createEventsSocket();
-  connectTimeoutTimer = window.setTimeout(() => {
-    if (socketToken !== activeSocketToken || connectionState.value !== 'reconnecting') {
-      return;
-    }
-
-    clearConnectTimeout();
-    shouldReconnect = false;
-    ws?.close();
-    shouldReconnect = true;
-    connectionState.value = 'disconnected';
-    scheduleReconnect();
-  }, connectTimeoutMs);
-
-  ws.addEventListener('open', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    clearConnectTimeout();
-    connectionState.value = 'connected';
-    reconnectAttempt.value = 0;
-    if (reconnectTimer !== null) {
-      window.clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
-    clearReconnectCountdown();
-    refreshAll().catch(console.error);
-  });
-
-  ws.addEventListener('message', (messageEvent) => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    const payload = JSON.parse(messageEvent.data) as WsEvent;
-    if (payload.event === 'message') {
-      applyMessageEvent(payload);
-      return;
-    }
-    if (payload.event === 'agent_status') {
-      applyAgentStatusEvent(payload);
-    }
-  });
-
-  ws.addEventListener('close', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    if (isReconnectAttempt && connectTimeoutTimer !== null && connectionState.value === 'reconnecting') {
-      return;
-    }
-    clearConnectTimeout();
-    connectionState.value = 'disconnected';
-    if (shouldReconnect) {
-      scheduleReconnect();
-    }
-  });
-
-  ws.addEventListener('error', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    if (isReconnectAttempt && connectTimeoutTimer !== null && connectionState.value === 'reconnecting') {
-      return;
-    }
-    clearConnectTimeout();
-    connectionState.value = 'disconnected';
-  });
 }
 
 async function handleSubmit(): Promise<void> {
@@ -755,8 +507,7 @@ async function confirmCreateRoom(): Promise<void> {
       agent_ids: [...createRoomMemberIds.value],
     };
     const result = await createTeamRoom(teamId.value, payload);
-    const nextRooms = await hydrateRooms(teamId.value);
-    rooms.value = nextRooms;
+    const nextRooms = await loadTeamRooms(teamId.value);
 
     const createdRoom = nextRooms.find((room) => room.room_name === result.room_name);
     if (createdRoom) {
@@ -797,6 +548,17 @@ watch(
 );
 
 watch(
+  () => [teamId.value, selectedRoomId.value],
+  ([nextTeamId, nextRoomId]) => {
+    setActiveRealtimeContext(
+      Number.isFinite(nextTeamId) ? nextTeamId : null,
+      nextRoomId,
+    );
+  },
+  { immediate: true },
+);
+
+watch(
   () => routeRoomId.value,
   (roomId) => {
     if (roomId === null || roomId === selectedRoomId.value) {
@@ -810,11 +572,18 @@ watch(
 );
 
 watch(
-  messages,
-  (items) => {
-    totalMessageCount.value = items.length;
+  () => connectionState.value,
+  (state, previousState) => {
+    if (
+      !currentTeam.value
+      || state !== 'connected'
+      || previousState === 'connected'
+      || previousState === 'connecting'
+    ) {
+      return;
+    }
+    refreshAll().catch(console.error);
   },
-  { immediate: true },
 );
 
 onMounted(async () => {
@@ -830,7 +599,6 @@ onMounted(async () => {
     await refreshAll();
   }
   bindMessageScrollListener();
-  connectWebSocket();
 });
 
 onBeforeUnmount(() => {
@@ -840,17 +608,7 @@ onBeforeUnmount(() => {
   boundMessageStream = null;
   document.body.style.cursor = '';
   document.body.style.userSelect = '';
-  shouldReconnect = false;
-  if (reconnectTimer !== null) {
-    window.clearTimeout(reconnectTimer);
-  }
-  clearConnectTimeout();
-  clearReconnectCountdown();
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
-  totalMessageCount.value = 0;
+  setActiveRealtimeContext(null, null);
 });
 </script>
 
@@ -920,7 +678,7 @@ onBeforeUnmount(() => {
       @confirm="confirmCreateRoom"
     />
 
-    <AgentDetailDialog
+    <AgentActivityDialog
       :open="agentDetailOpen"
       :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"

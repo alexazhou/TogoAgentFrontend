@@ -50,6 +50,7 @@ export interface RoomInfo {
   agents: number[];
   tags?: string[];
   biz_id?: string | null;
+  current_turn_agent: { id: number; name: string } | null;
 }
 
 export interface MessageInfo {
@@ -86,11 +87,23 @@ export interface WsAgentActivityEvent {
   data?: AgentActivity;
 }
 
-export type WsEvent = WsMessageEvent | WsAgentStatusEvent | WsAgentActivityEvent;
+export interface WsRoomStatusEvent {
+  event: 'room_status';
+  gt_room: {
+    id: number;
+    team_id: number;
+    name: string;
+  };
+  state: 'SCHEDULING' | 'IDLE';
+  current_turn_agent: { id: number; name: string } | null;
+}
+
+export type WsEvent = WsMessageEvent | WsAgentStatusEvent | WsAgentActivityEvent | WsRoomStatusEvent;
 
 export interface RoomState extends RoomInfo {
   preview: string;
   unread: number;
+  current_turn_agent: { id: number; name: string } | null;
 }
 
 export interface RoomMemberProfile {

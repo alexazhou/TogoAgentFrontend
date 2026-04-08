@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
 import { getAgentsByTeamId, getRoleTemplates, getTeamDetail } from '../api';
-import AgentDetailDialog from '../components/AgentDetailDialog.vue';
+import AgentActivityDialog from '../components/AgentActivityDialog.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
 import type { AgentInfo, AgentStatus, RoleTemplateSummary, TeamDetail } from '../types';
@@ -145,7 +145,7 @@ onMounted(() => {
       </div>
     </template>
 
-    <AgentDetailDialog
+    <AgentActivityDialog
       :open="agentDetailOpen"
       :agent-id="selectedAgentId"
       :agent-name="selectedAgentName"

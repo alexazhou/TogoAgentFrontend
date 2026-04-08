@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { createEventsSocket, getAgentActivities, getAgentDetail, resumeAgent } from '../api';
-import { showGlobalSuccessToast } from '../appUiState';
+import { computed, nextTick, ref, watch } from 'vue';
+import { getAgentDetail, resumeAgent } from '../api';
+import { connectionState, showGlobalSuccessToast } from '../appUiState';
+import { getAgentActivities, getAgentStatus, loadAgentActivities } from '../realtime/runtimeStore';
 import AgentCardBase from './AgentCardBase.vue';
 import type {
   AgentActivity,
@@ -9,9 +10,6 @@ import type {
   AgentActivityType,
   AgentDetail,
   AgentStatus,
-  WsAgentActivityEvent,
-  WsAgentStatusEvent,
-  WsEvent,
 } from '../types';
 
 const props = defineProps<{
@@ -27,18 +25,15 @@ const emit = defineEmits<{
 }>();
 
 const agent = ref<AgentDetail | null>(null);
-const activities = ref<AgentActivity[]>([]);
 const activityListRef = ref<HTMLElement | null>(null);
 const loading = ref(false);
 const activitiesLoading = ref(false);
 const resuming = ref(false);
 const errorMessage = ref('');
 const activitiesErrorMessage = ref('');
-const runtimeStatus = ref<AgentStatus | null>(null);
 
-let eventsSocket: WebSocket | null = null;
-let reconnectTimer: number | null = null;
-let activeSocketToken = 0;
+const runtimeStatus = computed<AgentStatus | null>(() => getAgentStatus(props.agentId));
+const activities = computed<AgentActivity[]>(() => getAgentActivities(props.agentId));
 
 const currentStatus = computed<AgentStatus | null>(() => {
   if (runtimeStatus.value) {
@@ -96,55 +91,6 @@ const agentTemplateLabel = computed(() => {
 });
 
 const visibleActivities = computed(() => activities.value.slice(-30));
-
-function normalizeWsAgentStatus(value: string): AgentStatus {
-  const normalized = value.toLowerCase();
-  if (normalized === 'active' || normalized === 'failed') {
-    return normalized;
-  }
-  return 'idle';
-}
-
-function normalizeActivityTypeValue(value: unknown): AgentActivityType {
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (normalized === 'llm_infer' || normalized === 'tool_call' || normalized === 'compact') {
-    return normalized;
-  }
-  return 'agent_state';
-}
-
-function normalizeActivityStatusValue(value: unknown): AgentActivityStatus {
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (normalized === 'started' || normalized === 'succeeded' || normalized === 'failed') {
-    return normalized;
-  }
-  return 'cancelled';
-}
-
-function normalizeIncomingActivity(value: unknown): AgentActivity | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-  const raw = value as Partial<AgentActivity> & Record<string, unknown>;
-  return {
-    id: Number(raw.id ?? 0),
-    agent_id: Number(raw.agent_id ?? 0),
-    team_id: Number(raw.team_id ?? 0),
-    activity_type: normalizeActivityTypeValue(raw.activity_type),
-    status: normalizeActivityStatusValue(raw.status),
-    title: String(raw.title ?? ''),
-    detail: typeof raw.detail === 'string' ? raw.detail : '',
-    error_message: typeof raw.error_message === 'string' ? raw.error_message : null,
-    started_at: typeof raw.started_at === 'string' ? raw.started_at : null,
-    finished_at: typeof raw.finished_at === 'string' ? raw.finished_at : null,
-    duration_ms: typeof raw.duration_ms === 'number' ? raw.duration_ms : null,
-    metadata: typeof raw.metadata === 'object' && raw.metadata !== null
-      ? raw.metadata as Record<string, unknown>
-      : {},
-    created_at: typeof raw.created_at === 'string' ? raw.created_at : null,
-    updated_at: typeof raw.updated_at === 'string' ? raw.updated_at : null,
-  };
-}
 
 function activityTypeLabel(type: AgentActivityType): string {
   if (type === 'llm_infer') {
@@ -237,20 +183,6 @@ function getActivityToolCommand(activity: AgentActivity): string {
   return typeof command === 'string' ? command : '';
 }
 
-function upsertActivity(nextActivity: AgentActivity): boolean {
-  const nextItems = [...activities.value];
-  const index = nextItems.findIndex((item) => item.id === nextActivity.id);
-  const inserted = index < 0;
-  if (index >= 0) {
-    nextItems[index] = nextActivity;
-  } else {
-    nextItems.push(nextActivity);
-  }
-  nextItems.sort((a, b) => a.id - b.id);
-  activities.value = nextItems;
-  return inserted;
-}
-
 async function scrollActivitiesToBottom(): Promise<void> {
   await nextTick();
   if (!activityListRef.value) {
@@ -261,7 +193,6 @@ async function scrollActivitiesToBottom(): Promise<void> {
 
 async function loadActivities(): Promise<void> {
   if (!props.open || props.agentId === null) {
-    activities.value = [];
     activitiesErrorMessage.value = '';
     activitiesLoading.value = false;
     return;
@@ -269,10 +200,9 @@ async function loadActivities(): Promise<void> {
 
   activitiesLoading.value = true;
   activitiesErrorMessage.value = '';
-  activities.value = [];
 
   try {
-    activities.value = (await getAgentActivities(props.agentId)).sort((a, b) => a.id - b.id);
+    await loadAgentActivities(props.agentId);
     await scrollActivitiesToBottom();
   } catch (error) {
     activitiesErrorMessage.value = 'Agent 活动加载失败。';
@@ -280,93 +210,6 @@ async function loadActivities(): Promise<void> {
   } finally {
     activitiesLoading.value = false;
   }
-}
-
-function disconnectEventsSocket(): void {
-  activeSocketToken += 1;
-  if (reconnectTimer !== null) {
-    window.clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-  if (eventsSocket) {
-    eventsSocket.close();
-    eventsSocket = null;
-  }
-}
-
-function scheduleReconnect(): void {
-  if (reconnectTimer !== null || !props.open || props.agentId === null) {
-    return;
-  }
-  reconnectTimer = window.setTimeout(() => {
-    reconnectTimer = null;
-    connectEventsSocket();
-  }, 1500);
-}
-
-function handleAgentStatusEvent(event: WsAgentStatusEvent): void {
-  if (props.agentId === null || event.gt_agent.id !== props.agentId) {
-    return;
-  }
-  runtimeStatus.value = normalizeWsAgentStatus(event.status);
-  if (runtimeStatus.value === 'failed') {
-    loadDetail().catch(console.error);
-  }
-}
-
-function handleAgentActivityEvent(event: WsAgentActivityEvent): void {
-  const activity = normalizeIncomingActivity(event.activity ?? event.data);
-  if (!activity || props.agentId === null || activity.agent_id !== props.agentId) {
-    return;
-  }
-  if (upsertActivity(activity)) {
-    scrollActivitiesToBottom().catch(console.error);
-  }
-}
-
-function connectEventsSocket(): void {
-  if (!props.open || props.agentId === null) {
-    return;
-  }
-
-  disconnectEventsSocket();
-  const socketToken = activeSocketToken + 1;
-  activeSocketToken = socketToken;
-  const socket = createEventsSocket();
-  eventsSocket = socket;
-
-  socket.addEventListener('message', (messageEvent) => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    try {
-      const payload = JSON.parse(messageEvent.data) as WsEvent;
-      if (payload.event === 'agent_status') {
-        handleAgentStatusEvent(payload);
-        return;
-      }
-      if (payload.event === 'agent_activity') {
-        handleAgentActivityEvent(payload);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  });
-
-  socket.addEventListener('close', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    eventsSocket = null;
-    scheduleReconnect();
-  });
-
-  socket.addEventListener('error', () => {
-    if (socketToken !== activeSocketToken) {
-      return;
-    }
-    socket.close();
-  });
 }
 
 async function loadDetail(): Promise<void> {
@@ -426,22 +269,24 @@ watch(
   () => {
     loadDetail().catch(console.error);
     loadActivities().catch(console.error);
-    runtimeStatus.value = props.agentStatus ?? null;
-    if (props.open && props.agentId !== null) {
-      connectEventsSocket();
-    } else {
-      disconnectEventsSocket();
-    }
   },
   { immediate: true },
 );
 
 watch(
-  () => props.agentStatus,
-  (status) => {
-    if (props.open) {
-      runtimeStatus.value = status ?? null;
+  () => connectionState.value,
+  (state, previousState) => {
+    if (
+      !props.open
+      || props.agentId === null
+      || state !== 'connected'
+      || previousState === 'connected'
+      || previousState === 'connecting'
+    ) {
+      return;
     }
+    loadDetail().catch(console.error);
+    loadActivities().catch(console.error);
   },
 );
 
@@ -480,11 +325,6 @@ watch(
   },
   { flush: 'post' },
 );
-
-onBeforeUnmount(() => {
-  disconnectEventsSocket();
-});
-
 </script>
 
 <template>
