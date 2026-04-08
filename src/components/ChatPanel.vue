@@ -24,6 +24,9 @@ const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMe
 const membersOpen = ref(false);
 const currentMembers = computed(() => props.memberProfiles);
 
+const isScheduling = computed(() => props.currentRoom?.state === 'scheduling');
+const currentSpeaker = computed(() => props.currentRoom?.current_turn_agent?.name ?? null);
+
 watch(
   () => props.currentRoom?.room_id ?? null,
   () => {
@@ -46,8 +49,13 @@ function closeMembers(): void {
 <template>
   <section class="chat panel" :class="{ 'has-banner': hasBanner, 'no-banner': !hasBanner }">
     <div class="chat-head">
-      <div>
+      <div class="chat-head-title">
         <h2>{{ currentRoom?.room_name ?? '暂无房间' }}</h2>
+        <template v-if="currentRoom">
+          <span v-if="isScheduling" class="room-badge scheduling">调度中</span>
+          <span v-else class="room-badge idle">空闲</span>
+          <span v-if="isScheduling && currentSpeaker" class="current-speaker">🎤 {{ currentSpeaker }}</span>
+        </template>
       </div>
       <div class="chat-side-info">
         <button
@@ -152,6 +160,41 @@ function closeMembers(): void {
   font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif;
   font-weight: 600;
   letter-spacing: 0;
+}
+
+.chat-head-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.room-badge {
+  font-size: 0.68rem;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.room-badge.scheduling {
+  background: color-mix(in srgb, #3fb950 18%, transparent);
+  color: #3fb950;
+  border: 1px solid color-mix(in srgb, #3fb950 30%, transparent);
+}
+
+.room-badge.idle {
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  color: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
+}
+
+.current-speaker {
+  font-size: 0.74rem;
+  color: #3fb950;
+  white-space: nowrap;
 }
 
 .chat-side-info {
