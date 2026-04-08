@@ -2,7 +2,8 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { getAgentDetail, resumeAgent } from '../api';
 import { connectionState, showGlobalSuccessToast } from '../appUiState';
-import { getAgentActivities, getAgentStatus, loadAgentActivities } from '../realtime/runtimeStore';
+import { loadAgentActivities } from '../realtime/runtimeStore';
+import { useAgentActivities, useAgentStatus } from '../realtime/selectors';
 import AgentCardBase from './AgentCardBase.vue';
 import type {
   AgentActivity,
@@ -32,8 +33,8 @@ const resuming = ref(false);
 const errorMessage = ref('');
 const activitiesErrorMessage = ref('');
 
-const runtimeStatus = computed<AgentStatus | null>(() => getAgentStatus(props.agentId));
-const activities = computed<AgentActivity[]>(() => getAgentActivities(props.agentId));
+const runtimeStatus = useAgentStatus(() => props.agentId);
+const activities = useAgentActivities(() => props.agentId);
 
 const currentStatus = computed<AgentStatus | null>(() => {
   if (runtimeStatus.value) {
