@@ -208,14 +208,16 @@ function activityMetaTokens(activity: AgentActivity): string {
   const currentTotal = typeof metadata.current_total_tokens === 'number' ? metadata.current_total_tokens : null;
   const finalTotal = typeof metadata.final_total_tokens === 'number' ? metadata.final_total_tokens : null;
   const estimated = typeof metadata.estimated_prompt_tokens === 'number' ? metadata.estimated_prompt_tokens : null;
-  if (currentTotal !== null) {
-    return `tokens ${currentTotal}`;
-  }
+  const currentCompletion = typeof metadata.current_completion_tokens === 'number' ? metadata.current_completion_tokens : null;
   if (finalTotal !== null) {
     return `tokens ${finalTotal}`;
   }
+  if (currentTotal !== null) {
+    return `tokens ${currentTotal}`;
+  }
   if (estimated !== null) {
-    return `估算 ${estimated}`;
+    const runningTotal = estimated + (currentCompletion ?? 0);
+    return `估算 ${runningTotal}`;
   }
   return '';
 }
