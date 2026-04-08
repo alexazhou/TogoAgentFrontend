@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import {
   clearGlobalRequestError,
@@ -10,6 +10,7 @@ import {
   totalMessageCount,
 } from './appUiState';
 import TopBar from './components/TopBar.vue';
+import { startRealtimeClient, stopRealtimeClient } from './realtime/wsClient';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
 import { formatConnectionState } from './utils';
 
@@ -108,7 +109,12 @@ watch(
 
 onMounted(async () => {
   applyTheme(themeMode.value);
+  startRealtimeClient();
   await loadTeams();
+});
+
+onBeforeUnmount(() => {
+  stopRealtimeClient();
 });
 </script>
 

@@ -30,6 +30,7 @@ type RawRoomInfo = {
   };
   team_name?: string;
   state?: string;
+  current_turn_agent?: { id: number; name: string } | null;
   agents?: unknown;
 };
 
@@ -212,6 +213,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
       ? gtRoom.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
     biz_id: typeof gtRoom?.biz_id === 'string' && gtRoom.biz_id.trim() ? gtRoom.biz_id : null,
+    current_turn_agent: room.current_turn_agent ?? null,
   };
 }
 
