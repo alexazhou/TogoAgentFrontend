@@ -76,6 +76,7 @@ function isDeptRoom(room: RoomState): boolean {
 <style scoped>
 .room-card {
   width: 100%;
+  min-width: 0;
   display: block;
   padding: 8px 10px;
   text-align: left;
@@ -100,10 +101,12 @@ function isDeptRoom(room: RoomState): boolean {
   justify-content: space-between;
   gap: 6px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .room-title {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   gap: 5px;
   min-width: 0;
@@ -113,6 +116,10 @@ function isDeptRoom(room: RoomState): boolean {
   font-size: 0.88rem;
   line-height: 1.15;
   color: var(--room-title-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .room-icon {
