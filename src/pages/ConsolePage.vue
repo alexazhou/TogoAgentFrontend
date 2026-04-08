@@ -8,21 +8,19 @@ import {
   getRoleTemplates,
   postRoomMessage,
 } from '../api';
-import AgentListSection from '../components/AgentListSection.vue';
 import AgentActivityDialog from '../components/AgentActivityDialog.vue';
-import ChatPanel from '../components/ChatPanel.vue';
+import ConsoleAgentListPanel from '../components/ConsoleAgentListPanel.vue';
+import ConsoleChatPanel from '../components/ConsoleChatPanel.vue';
+import ConsoleRoomListPanel from '../components/ConsoleRoomListPanel.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import CreateRoomDialog from '../components/CreateRoomDialog.vue';
-import RoomListSection from '../components/RoomListSection.vue';
 import {
-  getRoomMessages as getRuntimeRoomMessages,
   loadRoomMessagesState,
   loadTeamAgents,
   loadTeamRooms,
-  getTeamAgents,
-  getTeamRooms,
   setActiveRealtimeContext,
 } from '../realtime/runtimeStore';
+import { useRoomMessages, useTeamAgents, useTeamRooms } from '../realtime/selectors';
 import { findTeamById } from '../teamStore';
 import type {
   AgentInfo,
@@ -76,9 +74,9 @@ const routeRoomId = computed<number | null>(() => {
   return Number.isFinite(value) ? value : null;
 });
 const currentTeam = computed(() => findTeamById(teamId.value));
-const rooms = computed<RoomState[]>(() => getTeamRooms(teamId.value));
-const agents = computed<AgentInfo[]>(() => getTeamAgents(teamId.value));
-const messages = computed<MessageInfo[]>(() => getRuntimeRoomMessages(selectedRoomId.value));
+const rooms = useTeamRooms(teamId);
+const agents = useTeamAgents(teamId);
+const messages = useRoomMessages(selectedRoomId);
 const currentRoom = computed(
   () => rooms.value.find((room) => room.room_id === selectedRoomId.value) ?? null,
 );
@@ -615,16 +613,14 @@ onBeforeUnmount(() => {
 <template>
   <div class="workspace-grid">
     <div ref="leftStack" class="left-stack" :style="leftStackStyle">
-      <div class="left-pane">
-        <RoomListSection
-          :loading="loading"
-          :rooms="rooms"
-          :current-room-id="selectedRoomId"
-          :create-disabled="loading || !agents.length"
-          @select-room="loadRoomMessages($event, { force: true })"
-          @create-room="openCreateRoomDialog"
-        />
-      </div>
+      <ConsoleRoomListPanel
+        :loading="loading"
+        :rooms="rooms"
+        :current-room-id="selectedRoomId"
+        :create-disabled="loading || !agents.length"
+        @select-room="loadRoomMessages($event, { force: true })"
+        @create-room="openCreateRoomDialog"
+      />
 
       <button
         type="button"
@@ -636,13 +632,11 @@ onBeforeUnmount(() => {
         <span class="splitter-grip"></span>
       </button>
 
-      <div class="left-pane">
-        <AgentListSection :agents="visibleAgents" @select-agent="openAgent" />
-      </div>
+      <ConsoleAgentListPanel :agents="visibleAgents" @select-agent="openAgent" />
     </div>
 
     <div ref="messageViewport" class="chat-shell">
-      <ChatPanel
+      <ConsoleChatPanel
         :current-room="currentRoom"
         :member-profiles="roomMemberProfiles"
         :messages="messages"
@@ -705,20 +699,6 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-.left-pane {
-  min-height: 0;
-  min-width: 0;
-  display: flex;
-}
-
-.left-pane > * {
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  height: 100%;
-  width: 100%;
-}
-
 .left-stack-splitter {
   display: flex;
   align-items: center;
@@ -752,6 +732,8 @@ onBeforeUnmount(() => {
 
 .chat-shell {
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 980px) {
