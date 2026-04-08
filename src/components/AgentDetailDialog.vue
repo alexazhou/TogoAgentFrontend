@@ -97,16 +97,6 @@ const agentTemplateLabel = computed(() => {
 
 const visibleActivities = computed(() => activities.value.slice(-30));
 
-const currentRunningActivity = computed<AgentActivity | null>(() => {
-  for (let index = activities.value.length - 1; index >= 0; index -= 1) {
-    const activity = activities.value[index];
-    if (activity.status === 'started') {
-      return activity;
-    }
-  }
-  return null;
-});
-
 function normalizeWsAgentStatus(value: string): AgentStatus {
   const normalized = value.toLowerCase();
   if (normalized === 'active' || normalized === 'failed') {
@@ -238,6 +228,11 @@ function getActivityModel(activity: AgentActivity): string {
 function getActivityToolName(activity: AgentActivity): string {
   const toolName = activity.metadata?.tool_name;
   return typeof toolName === 'string' ? toolName : '';
+}
+
+function getActivityToolCommand(activity: AgentActivity): string {
+  const command = activity.metadata?.command;
+  return typeof command === 'string' ? command : '';
 }
 
 function upsertActivity(nextActivity: AgentActivity): boolean {
@@ -549,21 +544,6 @@ onBeforeUnmount(() => {
                   <span class="agent-activity-panel__badge">WS 实时更新</span>
                 </div>
 
-                <div
-                  v-if="currentRunningActivity"
-                  class="agent-activity-now"
-                  :data-type="currentRunningActivity.activity_type"
-                >
-                  <div class="agent-activity-now__row">
-                    <span class="agent-activity-now__dot"></span>
-                    <strong>{{ currentRunningActivity.title }}</strong>
-                    <span class="agent-activity-now__summary">{{ activitySummary(currentRunningActivity) }}</span>
-                    <span class="agent-activity-now__status">
-                      {{ activityStatusLabel(currentRunningActivity.status) }}
-                    </span>
-                  </div>
-                </div>
-
                 <div v-if="activitiesErrorMessage" class="error-banner">{{ activitiesErrorMessage }}</div>
                 <div v-else-if="activitiesLoading" class="loading-card">正在加载 Agent 活动…</div>
                 <div v-else-if="!visibleActivities.length" class="agent-activity-empty">
@@ -577,6 +557,7 @@ onBeforeUnmount(() => {
                     :data-status="activity.status"
                   >
                     <div class="agent-activity-item__row">
+                      <span v-if="activity.status === 'started'" class="agent-activity-item__dot"></span>
                       <strong class="agent-activity-item__title">{{ activity.title }}</strong>
                       <span class="agent-activity-item__type">{{ activityTypeLabel(activity.activity_type) }}</span>
                       <span class="agent-activity-item__summary">{{ activitySummary(activity) }}</span>
@@ -584,6 +565,7 @@ onBeforeUnmount(() => {
                       <span v-if="formatActivityTime(activity.started_at)">{{ formatActivityTime(activity.started_at) }}</span>
                       <span v-if="getActivityModel(activity)">{{ getActivityModel(activity) }}</span>
                       <span v-if="getActivityToolName(activity)">{{ getActivityToolName(activity) }}</span>
+                      <span v-if="getActivityToolCommand(activity)" class="agent-activity-item__tool-command">{{ getActivityToolCommand(activity) }}</span>
                       <span v-if="activityMetaTokens(activity)">{{ activityMetaTokens(activity) }}</span>
                       <span v-if="formatDuration(activity.duration_ms)">{{ formatDuration(activity.duration_ms) }}</span>
                     </div>
@@ -872,47 +854,6 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.agent-activity-now {
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: rgba(125, 163, 224, 0.08);
-  border: 1px solid rgba(125, 163, 224, 0.18);
-}
-
-.agent-activity-now__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-strong);
-  min-width: 0;
-}
-
-.agent-activity-now__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--good);
-  animation: agent-dot-pulse 2s ease-in-out infinite;
-}
-
-.agent-activity-now__status {
-  margin-left: 4px;
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 600;
-  flex: none;
-}
-
-.agent-activity-now__summary {
-  min-width: 0;
-  flex: 1 1 auto;
-  color: var(--muted);
-  font-size: 0.78rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .agent-activity-list {
   min-height: 0;
   overflow: auto;
@@ -941,8 +882,9 @@ onBeforeUnmount(() => {
 }
 
 .agent-activity-item[data-status='started'] {
-  border-color: rgba(125, 163, 224, 0.28);
-  box-shadow: 0 0 0 1px rgba(125, 163, 224, 0.08);
+  background: rgba(125, 163, 224, 0.08);
+  border: 1px solid rgba(125, 163, 224, 0.18);
+  box-shadow: none;
 }
 
 .agent-activity-item[data-status='failed'] {
@@ -956,6 +898,15 @@ onBeforeUnmount(() => {
   gap: 8px;
   min-width: 0;
   flex-wrap: nowrap;
+}
+
+.agent-activity-item__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--good);
+  animation: agent-dot-pulse 2s ease-in-out infinite;
+  flex: none;
 }
 
 .agent-activity-item__title {
@@ -985,6 +936,15 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+.agent-activity-item[data-status='started'] .agent-activity-item__status {
+  margin-left: 4px;
+  padding: 0;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  color: var(--accent);
+}
+
 .agent-activity-item[data-status='failed'] .agent-activity-item__status {
   background: color-mix(in srgb, var(--danger, #f85149) 12%, white 88%);
   color: var(--danger, #f85149);
@@ -997,6 +957,18 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.agent-activity-item[data-status='started'] .agent-activity-item__summary {
+  color: var(--muted);
+}
+
+.agent-activity-item__tool-command {
+  max-width: 28rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 .agent-activity-item__error {
