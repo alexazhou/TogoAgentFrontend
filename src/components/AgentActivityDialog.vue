@@ -31,9 +31,17 @@ const activitiesLoading = ref(false);
 const resuming = ref(false);
 const errorMessage = ref('');
 const activitiesErrorMessage = ref('');
+const shouldFollowActivities = ref(true);
+const hasAutoScrolledForCurrentAgent = ref(false);
 
 const runtimeStatus = useAgentStatus(() => props.agentId);
 const activities = useAgentActivities(() => props.agentId);
+const displayAgent = computed<AgentDetail | null>(() => {
+  if (!agent.value || agent.value.id !== props.agentId) {
+    return null;
+  }
+  return agent.value;
+});
 
 const currentStatus = computed<AgentStatus | null>(() => {
   if (runtimeStatus.value) {
@@ -42,7 +50,7 @@ const currentStatus = computed<AgentStatus | null>(() => {
   if (props.agentStatus) {
     return props.agentStatus;
   }
-  return agent.value?.status ?? null;
+  return displayAgent.value?.status ?? null;
 });
 
 const statusLabel = computed(() => {
@@ -81,14 +89,22 @@ const agentTemplateLabel = computed(() => {
   if (props.roleTemplateName?.trim()) {
     return props.roleTemplateName.trim();
   }
-  if (!agent.value) {
+  if (!displayAgent.value) {
     return '未配置模板';
   }
-  if (typeof agent.value.role_template_id === 'number' && agent.value.role_template_id > 0) {
-    return `模板 #${agent.value.role_template_id}`;
+  if (typeof displayAgent.value.role_template_id === 'number' && displayAgent.value.role_template_id > 0) {
+    return `模板 #${displayAgent.value.role_template_id}`;
   }
   return '未配置模板';
 });
+
+const displayAgentName = computed(() => displayAgent.value?.name ?? props.agentName ?? 'Agent');
+const displayTeamName = computed(() => displayAgent.value?.team_name ?? '');
+const displayEmployeeNumber = computed(() => String(displayAgent.value?.employee_number ?? ''));
+const activityRealtimeState = computed(() => connectionState.value);
+const activityRealtimePulse = computed(
+  () => activityRealtimeState.value !== 'disconnected',
+);
 
 const visibleActivities = computed(() => activities.value.slice(-30));
 
@@ -179,6 +195,20 @@ async function scrollActivitiesToBottom(): Promise<void> {
   activityListRef.value.scrollTop = activityListRef.value.scrollHeight;
 }
 
+function isActivityListNearBottom(): boolean {
+  const listEl = activityListRef.value;
+  if (!listEl) {
+    return true;
+  }
+
+  const distanceToBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight;
+  return distanceToBottom <= 12;
+}
+
+function syncActivityFollowState(): void {
+  shouldFollowActivities.value = isActivityListNearBottom();
+}
+
 async function loadActivities(): Promise<void> {
   if (!props.open || props.agentId === null) {
     activitiesErrorMessage.value = '';
@@ -186,7 +216,7 @@ async function loadActivities(): Promise<void> {
     return;
   }
 
-  activitiesLoading.value = true;
+  activitiesLoading.value = activities.value.length === 0;
   activitiesErrorMessage.value = '';
 
   try {
@@ -210,7 +240,6 @@ async function loadDetail(): Promise<void> {
 
   loading.value = true;
   errorMessage.value = '';
-  agent.value = null;
 
   try {
     agent.value = await getAgentDetail(props.agentId);
@@ -255,6 +284,8 @@ async function copyFailureMessage(): Promise<void> {
 watch(
   () => [props.open, props.agentId, props.agentName],
   () => {
+    hasAutoScrolledForCurrentAgent.value = false;
+    shouldFollowActivities.value = true;
     loadDetail().catch(console.error);
     loadActivities().catch(console.error);
   },
@@ -298,6 +329,14 @@ watch(
     if (!open || loadingActivities || count === 0) {
       return;
     }
+    if (!hasAutoScrolledForCurrentAgent.value) {
+      hasAutoScrolledForCurrentAgent.value = true;
+      scrollActivitiesToBottom().catch(console.error);
+      return;
+    }
+    if (!shouldFollowActivities.value) {
+      return;
+    }
     scrollActivitiesToBottom().catch(console.error);
   },
   { flush: 'post' },
@@ -309,7 +348,11 @@ watch(
     if (!open || !listEl || count === 0) {
       return;
     }
-    scrollActivitiesToBottom().catch(console.error);
+    syncActivityFollowState();
+    if (!hasAutoScrolledForCurrentAgent.value) {
+      hasAutoScrolledForCurrentAgent.value = true;
+      scrollActivitiesToBottom().catch(console.error);
+    }
   },
   { flush: 'post' },
 );
@@ -322,24 +365,24 @@ watch(
         <div class="agent-detail-head">
           <div>
             <p class="agent-detail-eyebrow">Agent Card</p>
-            <h3>{{ agent?.name ?? agentName ?? 'Agent' }}</h3>
+            <h3>{{ displayAgentName }}</h3>
           </div>
           <button type="button" class="agent-detail-close" aria-label="关闭" @click="emit('close')">×</button>
         </div>
 
         <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
-        <div v-else-if="loading" class="loading-card">正在加载 Agent 信息…</div>
+        <div v-else-if="loading && !displayAgent && !agentName" class="loading-card">正在加载 Agent 信息…</div>
 
-        <template v-else-if="agent">
+        <template v-else-if="displayAgent || agentName">
           <section class="agent-detail-stage">
             <div class="agent-detail-stage__left">
               <div class="agent-detail-stage__card-stack">
                 <AgentCardBase
-                  :title="agent.name"
+                  :title="displayAgentName"
                   :subtitle="agentTemplateLabel"
-                  :overline="agent.team_name || ''"
-                  :employee-number="String(agent.employee_number ?? '')"
-                  :avatar-name="agent.name"
+                  :overline="displayTeamName"
+                  :employee-number="displayEmployeeNumber"
+                  :avatar-name="displayAgentName"
                   variant="leader"
                   readonly
                 />
@@ -371,15 +414,26 @@ watch(
                     <h4>运行活动</h4>
                     <p class="agent-activity-panel__eyebrow">Activity</p>
                   </div>
-                  <span class="agent-activity-panel__badge">WS 实时更新</span>
+                  <span class="agent-activity-panel__badge" :data-state="activityRealtimeState">
+                    <span
+                      class="agent-activity-panel__badge-dot"
+                      :class="{ 'agent-activity-panel__badge-dot--pulse': activityRealtimePulse }"
+                    ></span>
+                    实时更新
+                  </span>
                 </div>
 
                 <div v-if="activitiesErrorMessage" class="error-banner">{{ activitiesErrorMessage }}</div>
-                <div v-else-if="activitiesLoading" class="loading-card">正在加载 Agent 活动…</div>
-                <div v-else-if="!visibleActivities.length" class="agent-activity-empty">
+                <div v-else-if="activitiesLoading && !visibleActivities.length" class="loading-card">正在加载 Agent 活动…</div>
+                <div v-else-if="!activitiesLoading && !visibleActivities.length" class="agent-activity-empty">
                   暂无活动记录。
                 </div>
-                <div v-else ref="activityListRef" class="agent-activity-list sidebar-scroll">
+                <div
+                  v-else
+                  ref="activityListRef"
+                  class="agent-activity-list sidebar-scroll"
+                  @scroll="syncActivityFollowState"
+                >
                   <article
                     v-for="activity in visibleActivities"
                     :key="activity.id"
@@ -675,6 +729,7 @@ watch(
 .agent-activity-panel__badge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   height: 24px;
   padding: 0 8px;
   border-radius: 999px;
@@ -682,6 +737,58 @@ watch(
   color: color-mix(in srgb, var(--accent) 78%, var(--text) 22%);
   font-size: 0.72rem;
   font-weight: 600;
+}
+
+.agent-activity-panel__badge[data-state='connected'] {
+  color: var(--good);
+}
+
+.agent-activity-panel__badge[data-state='waiting_reconnect'],
+.agent-activity-panel__badge[data-state='reconnecting'] {
+  color: var(--warn);
+}
+
+.agent-activity-panel__badge[data-state='disconnected'] {
+  color: var(--danger);
+}
+
+.agent-activity-panel__badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--status-dot-idle);
+  flex: 0 0 auto;
+}
+
+.agent-activity-panel__badge[data-state='connected'] .agent-activity-panel__badge-dot {
+  background: var(--good);
+}
+
+.agent-activity-panel__badge[data-state='waiting_reconnect'] .agent-activity-panel__badge-dot,
+.agent-activity-panel__badge[data-state='reconnecting'] .agent-activity-panel__badge-dot,
+.agent-activity-panel__badge[data-state='connecting'] .agent-activity-panel__badge-dot {
+  background: var(--warn);
+}
+
+.agent-activity-panel__badge[data-state='disconnected'] .agent-activity-panel__badge-dot {
+  background: var(--danger);
+}
+
+.agent-activity-panel__badge-dot--pulse {
+  animation: agent-activity-badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes agent-activity-badge-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.58;
+  }
+
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
 }
 
 .agent-activity-list {
