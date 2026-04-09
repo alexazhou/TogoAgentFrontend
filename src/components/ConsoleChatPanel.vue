@@ -199,9 +199,11 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .console-chat-panel {
+  flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
   height: 100%;
+  width: 100%;
   display: flex;
 }
 
