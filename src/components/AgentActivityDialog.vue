@@ -8,7 +8,6 @@ import AgentCardBase from './AgentCardBase.vue';
 import type {
   AgentActivity,
   AgentActivityStatus,
-  AgentActivityType,
   AgentDetail,
   AgentStatus,
 } from '../types';
@@ -93,19 +92,6 @@ const agentTemplateLabel = computed(() => {
 
 const visibleActivities = computed(() => activities.value.slice(-30));
 
-function activityTypeLabel(type: AgentActivityType): string {
-  if (type === 'llm_infer') {
-    return '推理';
-  }
-  if (type === 'tool_call') {
-    return '工具调用';
-  }
-  if (type === 'compact') {
-    return '上下文压缩';
-  }
-  return '状态变更';
-}
-
 function activityStatusLabel(status: AgentActivityStatus): string {
   if (status === 'started') {
     return '进行中';
@@ -120,6 +106,10 @@ function activityStatusLabel(status: AgentActivityStatus): string {
 }
 
 function activitySummary(activity: AgentActivity): string {
+  const command = getActivityToolCommand(activity);
+  if (command) {
+    return command;
+  }
   const detail = activity.detail.trim();
   if (detail) {
     return detail;
@@ -127,10 +117,7 @@ function activitySummary(activity: AgentActivity): string {
   if (activity.error_message?.trim()) {
     return activity.error_message.trim();
   }
-  if (activity.status === 'started') {
-    return `正在${activityTypeLabel(activity.activity_type)}`;
-  }
-  return `${activityTypeLabel(activity.activity_type)}已${activityStatusLabel(activity.status)}`;
+  return '';
 }
 
 function formatActivityTime(value: string | null | undefined): string {
@@ -401,14 +388,14 @@ watch(
                   >
                     <div class="agent-activity-item__row">
                       <span v-if="activity.status === 'started'" class="agent-activity-item__dot"></span>
+                      <span v-else-if="activity.status === 'succeeded'" class="agent-activity-item__mark agent-activity-item__mark--ok">✓</span>
+                      <span v-else-if="activity.status === 'failed' || activity.status === 'cancelled'" class="agent-activity-item__mark agent-activity-item__mark--fail">✗</span>
                       <strong class="agent-activity-item__title">{{ activity.title }}</strong>
-                      <span class="agent-activity-item__type">{{ activityTypeLabel(activity.activity_type) }}</span>
-                      <span class="agent-activity-item__summary">{{ activitySummary(activity) }}</span>
+                      <span class="agent-activity-item__summary" :class="{ 'agent-activity-item__summary--code': !!getActivityToolCommand(activity) }">{{ activitySummary(activity) }}</span>
                       <span class="agent-activity-item__status">{{ activityStatusLabel(activity.status) }}</span>
                       <span v-if="formatActivityTime(activity.started_at)">{{ formatActivityTime(activity.started_at) }}</span>
                       <span v-if="getActivityModel(activity)">{{ getActivityModel(activity) }}</span>
                       <span v-if="getActivityToolName(activity)">{{ getActivityToolName(activity) }}</span>
-                      <span v-if="getActivityToolCommand(activity)" class="agent-activity-item__tool-command">{{ getActivityToolCommand(activity) }}</span>
                       <span v-if="activityMetaTokens(activity)">{{ activityMetaTokens(activity) }}</span>
                       <span v-if="formatDuration(activity.duration_ms)">{{ formatDuration(activity.duration_ms) }}</span>
                     </div>
@@ -752,6 +739,21 @@ watch(
   flex: none;
 }
 
+.agent-activity-item__mark {
+  flex: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.agent-activity-item__mark--ok {
+  color: var(--good);
+}
+
+.agent-activity-item__mark--fail {
+  color: var(--danger, #f85149);
+}
+
 .agent-activity-item__title {
   flex: none;
   color: var(--text-strong);
@@ -806,12 +808,9 @@ watch(
   color: var(--muted);
 }
 
-.agent-activity-item__tool-command {
-  max-width: 28rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.agent-activity-item__summary--code {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.75rem;
 }
 
 .agent-activity-item__error {
