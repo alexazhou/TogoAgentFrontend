@@ -60,7 +60,9 @@ function isDeptRoom(room: RoomState): boolean {
               <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
             </div>
             <div class="room-head-right">
-              <span v-if="isDeptRoom(room)" class="room-tag room-tag-dept">部门群</span>
+              <span v-if="isDeptRoom(room)" class="room-tag room-tag-dept">
+                <span class="room-tag-dept__label">部门群</span>
+              </span>
               <div class="room-meta">{{ room.agents.length }} 人</div>
             </div>
           </div>
@@ -187,6 +189,11 @@ function isDeptRoom(room: RoomState): boolean {
   border: 1px solid rgba(47, 127, 102, 0.24);
   background: rgba(47, 127, 102, 0.12);
   color: #2f7f66;
+}
+
+.room-tag-dept__label {
+  display: inline-block;
+  line-height: normal;
 }
 
 .room-meta {

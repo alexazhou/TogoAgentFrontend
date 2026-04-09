@@ -57,7 +57,7 @@ function closeMembers(): void {
           <span
             class="chat-head-pill"
             :class="isScheduling ? 'chat-head-pill-scheduling' : 'chat-head-pill-idle'"
-            :data-tooltip="isScheduling && currentSpeaker ? `等待${currentSpeaker}发言` : ''"
+            :data-tooltip="isScheduling && currentSpeaker ? `等待 ${currentSpeaker} 发言` : ''"
           >
             {{ isScheduling ? '活跃中' : '空闲' }}
           </span>
@@ -196,7 +196,7 @@ function closeMembers(): void {
 .chat-head-pill {
   position: relative;
   min-height: 28px;
-  padding: 3px 12px;
+  padding: 4px 12px 2px;
   border-radius: 8px;
   font-weight: 600;
 }
@@ -241,7 +241,7 @@ function closeMembers(): void {
 
 .chat-members-button {
   min-height: 28px;
-  padding: 3px 12px;
+  padding: 4px 12px 2px;
   border-radius: 8px;
   cursor: pointer;
   transition:
