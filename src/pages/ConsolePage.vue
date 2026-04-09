@@ -1,36 +1,25 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState } from '../appUiState';
-import { postRoomMessage } from '../api';
 import AgentActivityDialog from '../components/AgentActivityDialog.vue';
 import ConsoleAgentListPanel from '../components/ConsoleAgentListPanel.vue';
 import ConsoleChatPanel from '../components/ConsoleChatPanel.vue';
 import ConsoleRoomListPanel from '../components/ConsoleRoomListPanel.vue';
 import CreateRoomDialog from '../components/CreateRoomDialog.vue';
 import { useAgentActivityDialogState } from '../composables/useAgentActivityDialogState';
-import { useConsoleMessageScroll } from '../composables/useConsoleMessageScroll';
 import { useConsoleRuntimeState } from '../composables/useConsoleRuntimeState';
 import { useConsoleSidebarLayout } from '../composables/useConsoleSidebarLayout';
 import { loadDeptTree, loadRoleTemplates } from '../realtime/runtimeStore';
 import { useDeptTree, useRoleTemplates } from '../realtime/selectors';
 import { findTeamById } from '../teamStore';
-import type {
-  AgentInfo,
-  DeptTreeNode,
-  MessageInfo,
-  RoomMemberProfile,
-  RoomState,
-} from '../types';
 
 const route = useRoute();
 const router = useRouter();
 
-const draft = ref('');
 const loading = ref(true);
 const reloadingMessages = ref(false);
 const errorMessage = ref('');
-const messageViewport = useTemplateRef('messageViewport');
 const createRoomDialogOpen = ref(false);
 const leftStack = useTemplateRef('leftStack');
 
@@ -69,18 +58,6 @@ const {
 });
 const deptTree = useDeptTree(teamId);
 const roleTemplates = useRoleTemplates();
-const composerNotice = computed(() => {
-  if (!currentRoom.value || currentRoom.value.room_type === 'private') {
-    return '';
-  }
-  return '当前为观察模式，请在私聊房间向对应 Agent 发送消息。';
-});
-const {
-  shouldFollowMessages,
-  bindMessageScrollListener,
-  scrollMessagesToBottom,
-  cleanupMessageScroll,
-} = useConsoleMessageScroll(messageViewport);
 const {
   leftStackStyle,
   sidebarDividerDragging,
@@ -101,97 +78,6 @@ const visibleAgents = computed(() =>
   ),
 );
 
-function isDeptRoom(room: RoomState | null): boolean {
-  return Boolean(room && Array.isArray(room.tags) && room.tags.includes('DEPT'));
-}
-
-function parseDeptIdFromBizId(bizId: string | null | undefined): number | null {
-  const matched = String(bizId ?? '').match(/^DEPT:(\d+)$/);
-  if (!matched) {
-    return null;
-  }
-
-  const deptId = Number(matched[1]);
-  return Number.isFinite(deptId) ? deptId : null;
-}
-
-function findDeptNodeById(tree: DeptTreeNode | null, deptId: number): DeptTreeNode | null {
-  if (!tree) {
-    return null;
-  }
-  if (tree.id === deptId) {
-    return tree;
-  }
-  for (const child of tree.children) {
-    const matched = findDeptNodeById(child, deptId);
-    if (matched) {
-      return matched;
-    }
-  }
-  return null;
-}
-
-function findDeptNodeByName(tree: DeptTreeNode | null, deptName: string): DeptTreeNode | null {
-  if (!tree) {
-    return null;
-  }
-  if (tree.name === deptName) {
-    return tree;
-  }
-  for (const child of tree.children) {
-    const matched = findDeptNodeByName(child, deptName);
-    if (matched) {
-      return matched;
-    }
-  }
-  return null;
-}
-
-const currentDeptLeaderName = computed<string | null>(() => {
-  const room = currentRoom.value;
-  if (!room || !isDeptRoom(room)) {
-    return null;
-  }
-
-  const deptId = parseDeptIdFromBizId(room.biz_id);
-  const deptNode = deptId !== null
-    ? findDeptNodeById(deptTree.value, deptId)
-    : findDeptNodeByName(deptTree.value, room.room_name);
-  if (!deptNode || typeof deptNode.manager_id !== 'number') {
-    return null;
-  }
-
-  const leader = agents.value.find((agent) => agent.id === deptNode.manager_id);
-  return leader?.name ?? null;
-});
-
-const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
-  if (!currentRoom.value) {
-    return [];
-  }
-
-  const agentMap = new Map(agents.value.map((agent) => [agent.id, agent]));
-  const templateMap = new Map(roleTemplates.value.map((template) => [template.id, template.name]));
-  const memberAgents: AgentInfo[] = [];
-
-  for (const agentId of currentRoom.value.agents) {
-    const agent = agentMap.get(agentId);
-    if (agent) {
-      memberAgents.push(agent);
-    }
-  }
-
-  return memberAgents.map((agent) => {
-    const templateName = agent.role_template_id ? (templateMap.get(agent.role_template_id) ?? null) : null;
-    return {
-      name: agent.name,
-      employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
-      role_template_name: templateName,
-      is_leader: agent.name === currentDeptLeaderName.value,
-    };
-  });
-});
-
 async function loadRoomMessages(
   roomId: number,
   options?: { force?: boolean; replaceRoute?: boolean; syncRoute?: boolean },
@@ -205,9 +91,6 @@ async function loadRoomMessages(
 
   try {
     await loadRuntimeRoomMessages(roomId, options);
-    await nextTick();
-    bindMessageScrollListener();
-    await scrollMessagesToBottom();
   } catch (error) {
     errorMessage.value = '加载消息失败，请检查网络或后端状态。';
     console.error(error);
@@ -252,25 +135,6 @@ async function refreshAll(): Promise<void> {
   } finally {
     loading.value = false;
   }
-}
-
-async function handleSubmit(): Promise<void> {
-  const content = draft.value.trim();
-  if (!content || !currentRoom.value || currentRoom.value.room_type !== 'private') {
-    return;
-  }
-
-  try {
-    await postRoomMessage(currentRoom.value.room_id, content);
-    draft.value = '';
-  } catch (error) {
-    errorMessage.value = '消息发送失败。';
-    console.error(error);
-  }
-}
-
-function updateDraft(value: string): void {
-  draft.value = value;
 }
 
 function openCreateRoomDialog(): void {
@@ -326,11 +190,9 @@ onMounted(async () => {
   if (currentTeam.value) {
     await refreshAll();
   }
-  bindMessageScrollListener();
 });
 
 onBeforeUnmount(() => {
-  cleanupMessageScroll();
   clearRuntimeContext();
 });
 </script>
@@ -360,17 +222,16 @@ onBeforeUnmount(() => {
       <ConsoleAgentListPanel :agents="visibleAgents" @select-agent="openAgent" />
     </div>
 
-    <div ref="messageViewport" class="chat-shell">
+    <div class="chat-shell">
       <ConsoleChatPanel
         :current-room="currentRoom"
-        :member-profiles="roomMemberProfiles"
+        :agents="agents"
+        :dept-tree="deptTree"
+        :role-templates="roleTemplates"
         :messages="messages"
         :error-message="errorMessage"
         :reloading-messages="reloadingMessages"
-        :draft="draft"
-        :composer-notice="composerNotice"
-        @update-draft="updateDraft"
-        @submit="handleSubmit"
+        @update-error="errorMessage = $event"
       />
     </div>
 

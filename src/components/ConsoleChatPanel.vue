@@ -1,25 +1,188 @@
 <script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
+import { postRoomMessage } from '../api';
+import { useConsoleMessageScroll } from '../composables/useConsoleMessageScroll';
 import ChatPanel from './ChatPanel.vue';
-import type { MessageInfo, RoomMemberProfile, RoomState } from '../types';
+import type {
+  AgentInfo,
+  DeptTreeNode,
+  MessageInfo,
+  RoleTemplateSummary,
+  RoomMemberProfile,
+  RoomState,
+} from '../types';
 
-defineProps<{
+const props = defineProps<{
   currentRoom: RoomState | null;
-  memberProfiles: RoomMemberProfile[];
+  agents: AgentInfo[];
+  deptTree: DeptTreeNode | null;
+  roleTemplates: RoleTemplateSummary[];
   messages: MessageInfo[];
   errorMessage: string;
   reloadingMessages: boolean;
-  draft: string;
-  composerNotice: string;
 }>();
 
 const emit = defineEmits<{
-  updateDraft: [value: string];
-  submit: [];
+  updateError: [value: string];
 }>();
+
+const messageViewport = useTemplateRef('messageViewport');
+const draft = defineModel<string>('draft', { default: '' });
+
+const {
+  shouldFollowMessages,
+  bindMessageScrollListener,
+  scrollMessagesToBottom,
+  cleanupMessageScroll,
+} = useConsoleMessageScroll(messageViewport);
+
+const composerNotice = computed(() => {
+  if (!props.currentRoom || props.currentRoom.room_type === 'private') {
+    return '';
+  }
+  return '当前为观察模式，请在私聊房间向对应 Agent 发送消息。';
+});
+
+function isDeptRoom(room: RoomState | null): boolean {
+  return Boolean(room && Array.isArray(room.tags) && room.tags.includes('DEPT'));
+}
+
+function parseDeptIdFromBizId(bizId: string | null | undefined): number | null {
+  const matched = String(bizId ?? '').match(/^DEPT:(\d+)$/);
+  if (!matched) {
+    return null;
+  }
+
+  const deptId = Number(matched[1]);
+  return Number.isFinite(deptId) ? deptId : null;
+}
+
+function findDeptNodeById(tree: DeptTreeNode | null, deptId: number): DeptTreeNode | null {
+  if (!tree) {
+    return null;
+  }
+  if (tree.id === deptId) {
+    return tree;
+  }
+  for (const child of tree.children) {
+    const matched = findDeptNodeById(child, deptId);
+    if (matched) {
+      return matched;
+    }
+  }
+  return null;
+}
+
+function findDeptNodeByName(tree: DeptTreeNode | null, deptName: string): DeptTreeNode | null {
+  if (!tree) {
+    return null;
+  }
+  if (tree.name === deptName) {
+    return tree;
+  }
+  for (const child of tree.children) {
+    const matched = findDeptNodeByName(child, deptName);
+    if (matched) {
+      return matched;
+    }
+  }
+  return null;
+}
+
+const currentDeptLeaderName = computed<string | null>(() => {
+  const room = props.currentRoom;
+  if (!room || !isDeptRoom(room)) {
+    return null;
+  }
+
+  const deptId = parseDeptIdFromBizId(room.biz_id);
+  const deptNode = deptId !== null
+    ? findDeptNodeById(props.deptTree, deptId)
+    : findDeptNodeByName(props.deptTree, room.room_name);
+  if (!deptNode || typeof deptNode.manager_id !== 'number') {
+    return null;
+  }
+
+  const leader = props.agents.find((agent) => agent.id === deptNode.manager_id);
+  return leader?.name ?? null;
+});
+
+const memberProfiles = computed<RoomMemberProfile[]>(() => {
+  if (!props.currentRoom) {
+    return [];
+  }
+
+  const agentMap = new Map(props.agents.map((agent) => [agent.id, agent]));
+  const templateMap = new Map(props.roleTemplates.map((template) => [template.id, template.name]));
+  const memberAgents: AgentInfo[] = [];
+
+  for (const agentId of props.currentRoom.agents) {
+    const agent = agentMap.get(agentId);
+    if (agent) {
+      memberAgents.push(agent);
+    }
+  }
+
+  return memberAgents.map((agent) => {
+    const templateName = agent.role_template_id ? (templateMap.get(agent.role_template_id) ?? null) : null;
+    return {
+      name: agent.name,
+      employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
+      role_template_name: templateName,
+      is_leader: agent.name === currentDeptLeaderName.value,
+    };
+  });
+});
+
+async function handleSubmit(): Promise<void> {
+  const content = draft.value.trim();
+  if (!content || !props.currentRoom || props.currentRoom.room_type !== 'private') {
+    return;
+  }
+
+  emit('updateError', '');
+
+  try {
+    await postRoomMessage(props.currentRoom.room_id, content);
+    draft.value = '';
+  } catch (error) {
+    emit('updateError', '消息发送失败。');
+    console.error(error);
+  }
+}
+
+watch(
+  () => props.currentRoom?.room_id ?? null,
+  async () => {
+    await nextTick();
+    bindMessageScrollListener();
+    await scrollMessagesToBottom();
+  },
+);
+
+watch(
+  () => props.messages.length,
+  async () => {
+    await nextTick();
+    bindMessageScrollListener();
+    if (!shouldFollowMessages.value) {
+      return;
+    }
+    await scrollMessagesToBottom();
+  },
+);
+
+onMounted(() => {
+  bindMessageScrollListener();
+});
+
+onBeforeUnmount(() => {
+  cleanupMessageScroll();
+});
 </script>
 
 <template>
-  <div class="chat-shell">
+  <div ref="messageViewport" class="chat-shell">
     <ChatPanel
       :current-room="currentRoom"
       :member-profiles="memberProfiles"
@@ -28,8 +191,8 @@ const emit = defineEmits<{
       :reloading-messages="reloadingMessages"
       :draft="draft"
       :composer-notice="composerNotice"
-      @update-draft="emit('updateDraft', $event)"
-      @submit="emit('submit')"
+      @update-draft="draft = $event"
+      @submit="handleSubmit"
     />
   </div>
 </template>
