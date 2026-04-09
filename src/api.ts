@@ -2,6 +2,7 @@ import type {
   AgentActivity,
   AgentActivityStatus,
   AgentActivityType,
+  AgentSnapshot,
   AgentStatus,
   AgentDetail,
   AgentInfo,
@@ -30,7 +31,7 @@ type RawRoomInfo = {
   };
   team_name?: string;
   state?: string;
-  current_turn_agent?: { id: number; name: string } | null;
+  current_turn_agent?: AgentSnapshot | null;
   agents?: unknown;
 };
 

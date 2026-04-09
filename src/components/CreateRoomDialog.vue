@@ -201,7 +201,7 @@ watch(
 
 <template>
   <Teleport to="body">
-    <div v-if="open && !confirmOpen" class="create-room-overlay" @click.self="requestClose">
+    <div v-if="open && !confirmOpen" class="create-room-overlay" @click.self="() => requestClose()">
       <section class="create-room-dialog panel">
         <div class="create-room-head">
           <p class="create-room-eyebrow">Create Room</p>
@@ -260,7 +260,7 @@ watch(
         </section>
 
         <div class="create-room-actions">
-          <button type="button" class="ghost-button" @click="requestClose">取消</button>
+          <button type="button" class="ghost-button" @click="() => requestClose()">取消</button>
           <button
             type="button"
             class="secondary-button"
