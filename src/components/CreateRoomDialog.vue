@@ -2,10 +2,10 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getAgentAvatarUrl } from '../avatar';
-import { createTeamRoom, getRoleTemplates } from '../api';
+import { createTeamRoom } from '../api';
 import { showGlobalSuccessToast } from '../appUiState';
-import { loadTeamAgents, loadTeamRooms } from '../realtime/runtimeStore';
-import { useTeamAgents } from '../realtime/selectors';
+import { loadRoleTemplates, loadTeamAgents, loadTeamRooms } from '../realtime/runtimeStore';
+import { useRoleTemplates, useTeamAgents } from '../realtime/selectors';
 import ConfirmDialog from './ConfirmDialog.vue';
 
 type CreateRoomMemberOption = {
@@ -32,7 +32,6 @@ const loadingMembers = ref(false);
 const submitting = ref(false);
 const confirmOpen = ref(false);
 const errorMessage = ref('');
-const roleTemplateNameMap = ref<Record<number, string>>({});
 
 const teamId = computed<number | null>(() => {
   const raw = route.params.teamId;
@@ -45,6 +44,10 @@ const teamId = computed<number | null>(() => {
 });
 
 const agents = useTeamAgents(teamId);
+const roleTemplates = useRoleTemplates();
+const roleTemplateNameMap = computed<Record<number, string>>(() =>
+  Object.fromEntries(roleTemplates.value.map((template) => [template.id, template.name])),
+);
 
 const members = computed<CreateRoomMemberOption[]>(() =>
   agents.value
@@ -94,7 +97,6 @@ function resetDialogState(): void {
   submitting.value = false;
   confirmOpen.value = false;
   errorMessage.value = '';
-  roleTemplateNameMap.value = {};
 }
 
 async function loadDialogData(): Promise<void> {
@@ -106,14 +108,10 @@ async function loadDialogData(): Promise<void> {
   errorMessage.value = '';
 
   try {
-    const [loadedTemplates] = await Promise.all([
-      getRoleTemplates(),
+    await Promise.all([
+      loadRoleTemplates(),
       loadTeamAgents(teamId.value, { includeSpecial: true }),
     ]);
-
-    roleTemplateNameMap.value = Object.fromEntries(
-      loadedTemplates.map((template) => [template.id, template.name]),
-    );
   } catch (error) {
     errorMessage.value = '可选成员加载失败。';
     console.error(error);

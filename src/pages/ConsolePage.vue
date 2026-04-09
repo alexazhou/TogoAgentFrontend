@@ -2,11 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState } from '../appUiState';
-import {
-  getDeptTree,
-  getRoleTemplates,
-  postRoomMessage,
-} from '../api';
+import { postRoomMessage } from '../api';
 import AgentActivityDialog from '../components/AgentActivityDialog.vue';
 import ConsoleAgentListPanel from '../components/ConsoleAgentListPanel.vue';
 import ConsoleChatPanel from '../components/ConsoleChatPanel.vue';
@@ -16,12 +12,13 @@ import { useAgentActivityDialogState } from '../composables/useAgentActivityDial
 import { useConsoleMessageScroll } from '../composables/useConsoleMessageScroll';
 import { useConsoleRuntimeState } from '../composables/useConsoleRuntimeState';
 import { useConsoleSidebarLayout } from '../composables/useConsoleSidebarLayout';
+import { loadDeptTree, loadRoleTemplates } from '../realtime/runtimeStore';
+import { useDeptTree, useRoleTemplates } from '../realtime/selectors';
 import { findTeamById } from '../teamStore';
 import type {
   AgentInfo,
   DeptTreeNode,
   MessageInfo,
-  RoleTemplateSummary,
   RoomMemberProfile,
   RoomState,
 } from '../types';
@@ -29,8 +26,6 @@ import type {
 const route = useRoute();
 const router = useRouter();
 
-const deptTree = ref<DeptTreeNode | null>(null);
-const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const draft = ref('');
 const loading = ref(true);
 const reloadingMessages = ref(false);
@@ -72,6 +67,8 @@ const {
   routeRoomId,
   navigateToRoom,
 });
+const deptTree = useDeptTree(teamId);
+const roleTemplates = useRoleTemplates();
 const composerNotice = computed(() => {
   if (!currentRoom.value || currentRoom.value.room_type === 'private') {
     return '';
@@ -228,13 +225,11 @@ async function refreshAll(): Promise<void> {
   errorMessage.value = '';
 
   try {
-    const [{ rooms: nextRooms }, nextRoleTemplates, nextDeptTree] = await Promise.all([
+    const [{ rooms: nextRooms }] = await Promise.all([
       refreshRuntimeState(),
-      getRoleTemplates(),
-      getDeptTree(teamId.value),
+      loadRoleTemplates(),
+      loadDeptTree(teamId.value),
     ]);
-    roleTemplates.value = nextRoleTemplates;
-    deptTree.value = nextDeptTree;
 
     const fallbackRoomId = nextRooms[0]?.room_id ?? null;
     const targetRoomId =
@@ -254,7 +249,6 @@ async function refreshAll(): Promise<void> {
   } catch (error) {
     errorMessage.value = '无法连接到后端服务，请确认服务已启动。';
     console.error(error);
-    deptTree.value = null;
   } finally {
     loading.value = false;
   }

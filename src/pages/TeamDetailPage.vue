@@ -2,17 +2,18 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';
-import { getAgentsByTeamId, getRoleTemplates, getTeamDetail } from '../api';
+import { getAgentsByTeamId, getTeamDetail } from '../api';
 import AgentActivityDialog from '../components/AgentActivityDialog.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
 import TeamMembersCard from '../components/TeamMembersCard.vue';
-import type { AgentInfo, AgentStatus, RoleTemplateSummary, TeamDetail } from '../types';
+import { loadRoleTemplates } from '../realtime/runtimeStore';
+import { useRoleTemplates } from '../realtime/selectors';
+import type { AgentInfo, AgentStatus, TeamDetail } from '../types';
 
 const route = useRoute();
 const router = useRouter();
 
 const team = ref<TeamDetail | null>(null);
-const roleTemplates = ref<RoleTemplateSummary[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
 const agentDetailOpen = ref(false);
@@ -21,6 +22,7 @@ const selectedAgentId = ref<number | null>(null);
 const selectedAgentName = ref<string | null>(null);
 
 const teamId = computed(() => Number(route.params.teamId));
+const roleTemplates = useRoleTemplates();
 const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
 const selectedAgentStatus = computed<AgentStatus | null>(() =>
   teamAgents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
@@ -45,14 +47,13 @@ async function loadDetail(): Promise<void> {
   totalMessageCount.value = 0;
 
   try {
-    const [detail, nextAgents, templates] = await Promise.all([
+    const [detail, nextAgents] = await Promise.all([
       getTeamDetail(teamId.value),
       getAgentsByTeamId(teamId.value),
-      getRoleTemplates(),
+      loadRoleTemplates(),
     ]);
     team.value = detail;
     teamAgents.value = nextAgents;
-    roleTemplates.value = templates;
   } catch (error) {
     errorMessage.value = '团队详情加载失败。';
     console.error(error);
