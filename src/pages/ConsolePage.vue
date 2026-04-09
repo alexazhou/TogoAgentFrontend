@@ -12,12 +12,13 @@ import ConsoleAgentListPanel from '../components/ConsoleAgentListPanel.vue';
 import ConsoleChatPanel from '../components/ConsoleChatPanel.vue';
 import ConsoleRoomListPanel from '../components/ConsoleRoomListPanel.vue';
 import CreateRoomDialog from '../components/CreateRoomDialog.vue';
+import { useAgentActivityDialogState } from '../composables/useAgentActivityDialogState';
 import { useConsoleMessageScroll } from '../composables/useConsoleMessageScroll';
 import { useConsoleRuntimeState } from '../composables/useConsoleRuntimeState';
+import { useConsoleSidebarLayout } from '../composables/useConsoleSidebarLayout';
 import { findTeamById } from '../teamStore';
 import type {
   AgentInfo,
-  AgentStatus,
   DeptTreeNode,
   MessageInfo,
   RoleTemplateSummary,
@@ -36,18 +37,7 @@ const reloadingMessages = ref(false);
 const errorMessage = ref('');
 const messageViewport = useTemplateRef('messageViewport');
 const createRoomDialogOpen = ref(false);
-const agentDetailOpen = ref(false);
-const selectedAgentId = ref<number | null>(null);
-const selectedAgentName = ref<string | null>(null);
 const leftStack = useTemplateRef('leftStack');
-const leftStackHeight = ref(0);
-const sidebarDividerDragging = ref(false);
-const sidebarTopRatio = ref(0.62);
-
-const splitterHeightPx = 8;
-const sidebarTopRatioStorageKey = 'console-left-stack-top-ratio';
-
-let leftStackResizeObserver: ResizeObserver | null = null;
 
 const teamId = computed(() => Number(route.params.teamId));
 const routeRoomId = computed<number | null>(() => {
@@ -94,59 +84,25 @@ const {
   scrollMessagesToBottom,
   cleanupMessageScroll,
 } = useConsoleMessageScroll(messageViewport);
-const leftStackStyle = computed(() => {
-  if (leftStackHeight.value <= splitterHeightPx) {
-    return {};
-  }
-
-  const availableHeight = leftStackHeight.value - splitterHeightPx;
-  const minTopHeight = Math.min(220, Math.max(120, Math.round(availableHeight * 0.28)));
-  const minBottomHeight = Math.min(180, Math.max(108, Math.round(availableHeight * 0.22)));
-  const maxTopHeight = Math.max(minTopHeight, availableHeight - minBottomHeight);
-  const topHeight = Math.round(Math.min(maxTopHeight, Math.max(minTopHeight, availableHeight * sidebarTopRatio.value)));
-
-  return {
-    gridTemplateRows: `${topHeight}px ${splitterHeightPx}px minmax(${minBottomHeight}px, 1fr)`,
-  };
-});
+const {
+  leftStackStyle,
+  sidebarDividerDragging,
+  startSidebarResize,
+} = useConsoleSidebarLayout(leftStack);
+const {
+  open: agentDetailOpen,
+  selectedAgentId,
+  selectedAgentName,
+  selectedAgentStatus,
+  selectedAgentTemplateName,
+  openAgent,
+  closeAgentDetail,
+} = useAgentActivityDialogState(agents, roleTemplates);
 const visibleAgents = computed(() =>
   agents.value.filter((agent) =>
     !agent.special && String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD',
   ),
 );
-const selectedAgentStatus = computed<AgentStatus | null>(() =>
-  agents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
-);
-const selectedAgentTemplateName = computed<string | null>(() => {
-  const roleTemplateId = agents.value.find((agent) => agent.id === selectedAgentId.value)?.role_template_id;
-  if (typeof roleTemplateId !== 'number') {
-    return null;
-  }
-  return roleTemplateNameMap.value.get(roleTemplateId) ?? `模板 #${roleTemplateId}`;
-});
-
-function persistSidebarTopRatio(): void {
-  try {
-    localStorage.setItem(sidebarTopRatioStorageKey, String(sidebarTopRatio.value));
-  } catch {
-    // ignore localStorage failures
-  }
-}
-
-function restoreSidebarTopRatio(): void {
-  try {
-    const raw = localStorage.getItem(sidebarTopRatioStorageKey);
-    if (!raw) {
-      return;
-    }
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed) && parsed >= 0.2 && parsed <= 0.8) {
-      sidebarTopRatio.value = parsed;
-    }
-  } catch {
-    // ignore localStorage failures
-  }
-}
 
 function isDeptRoom(room: RoomState | null): boolean {
   return Boolean(room && Array.isArray(room.tags) && room.tags.includes('DEPT'));
@@ -238,55 +194,6 @@ const roomMemberProfiles = computed<RoomMemberProfile[]>(() => {
     };
   });
 });
-const roleTemplateNameMap = computed(() => new Map(roleTemplates.value.map((template) => [template.id, template.name])));
-
-function refreshLeftStackHeight(): void {
-  leftStackHeight.value = leftStack.value?.clientHeight ?? 0;
-}
-
-function startSidebarResize(event: PointerEvent): void {
-  const container = leftStack.value;
-  if (!container) {
-    return;
-  }
-
-  event.preventDefault();
-
-  const availableHeight = container.getBoundingClientRect().height - splitterHeightPx;
-  if (availableHeight <= 0) {
-    return;
-  }
-
-  const minTopHeight = Math.min(220, Math.max(120, Math.round(availableHeight * 0.28)));
-  const minBottomHeight = Math.min(180, Math.max(108, Math.round(availableHeight * 0.22)));
-  const maxTopHeight = Math.max(minTopHeight, availableHeight - minBottomHeight);
-  const startTopHeight = Math.min(maxTopHeight, Math.max(minTopHeight, availableHeight * sidebarTopRatio.value));
-  const startY = event.clientY;
-
-  sidebarDividerDragging.value = true;
-  document.body.style.cursor = 'row-resize';
-  document.body.style.userSelect = 'none';
-
-  const stopResize = (): void => {
-    sidebarDividerDragging.value = false;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    window.removeEventListener('pointermove', handlePointerMove);
-    window.removeEventListener('pointerup', stopResize);
-  };
-
-  const handlePointerMove = (moveEvent: PointerEvent): void => {
-    const nextTopHeight = Math.min(
-      maxTopHeight,
-      Math.max(minTopHeight, startTopHeight + moveEvent.clientY - startY),
-    );
-    sidebarTopRatio.value = nextTopHeight / availableHeight;
-    persistSidebarTopRatio();
-  };
-
-  window.addEventListener('pointermove', handlePointerMove);
-  window.addEventListener('pointerup', stopResize, { once: true });
-}
 
 async function loadRoomMessages(
   roomId: number,
@@ -383,18 +290,6 @@ function closeCreateRoomDialog(): void {
   createRoomDialogOpen.value = false;
 }
 
-function openAgent(agentName: string): void {
-  selectedAgentId.value = agents.value.find((agent) => agent.name === agentName)?.id ?? null;
-  selectedAgentName.value = agentName;
-  agentDetailOpen.value = true;
-}
-
-function closeAgentDetail(): void {
-  agentDetailOpen.value = false;
-  selectedAgentId.value = null;
-  selectedAgentName.value = null;
-}
-
 watch(
   () => currentTeam.value?.name,
   (teamName, previousTeamName) => {
@@ -434,14 +329,6 @@ watch(
 );
 
 onMounted(async () => {
-  restoreSidebarTopRatio();
-  refreshLeftStackHeight();
-  if (leftStack.value) {
-    leftStackResizeObserver = new ResizeObserver(() => {
-      refreshLeftStackHeight();
-    });
-    leftStackResizeObserver.observe(leftStack.value);
-  }
   if (currentTeam.value) {
     await refreshAll();
   }
@@ -449,11 +336,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  leftStackResizeObserver?.disconnect();
-  leftStackResizeObserver = null;
   cleanupMessageScroll();
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
   clearRuntimeContext();
 });
 </script>
