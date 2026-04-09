@@ -51,20 +51,24 @@ function closeMembers(): void {
     <div class="chat-head">
       <div class="chat-head-title">
         <h2>{{ currentRoom?.room_name ?? '暂无房间' }}</h2>
-        <template v-if="currentRoom">
-          <span v-if="isScheduling" class="room-badge scheduling">调度中</span>
-          <span v-else class="room-badge idle">空闲</span>
-          <span v-if="isScheduling && currentSpeaker" class="current-speaker">🎤 {{ currentSpeaker }}</span>
-        </template>
       </div>
       <div class="chat-side-info">
+        <template v-if="currentRoom">
+          <span
+            class="chat-head-pill"
+            :class="isScheduling ? 'chat-head-pill-scheduling' : 'chat-head-pill-idle'"
+            :data-tooltip="isScheduling && currentSpeaker ? `等待${currentSpeaker}发言` : ''"
+          >
+            {{ isScheduling ? '活跃中' : '空闲' }}
+          </span>
+        </template>
         <button
           type="button"
           class="chat-members-button"
           :disabled="!currentRoom"
           @click="toggleMembers"
         >
-          成员列表 {{ currentMembers.length }}
+          成员{{ currentMembers.length }}
         </button>
       </div>
     </div>
@@ -150,7 +154,7 @@ function closeMembers(): void {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  align-items: flex-end;
+  align-items: center;
   padding: 0 2px 8px;
   border-bottom: 1px solid var(--chat-divider);
 }
@@ -165,36 +169,6 @@ function closeMembers(): void {
 .chat-head-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.room-badge {
-  font-size: 0.68rem;
-  line-height: 1;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.room-badge.scheduling {
-  background: color-mix(in srgb, #3fb950 18%, transparent);
-  color: #3fb950;
-  border: 1px solid color-mix(in srgb, #3fb950 30%, transparent);
-}
-
-.room-badge.idle {
-  background: color-mix(in srgb, var(--muted) 12%, transparent);
-  color: var(--muted);
-  border: 1px solid color-mix(in srgb, var(--muted) 20%, transparent);
-}
-
-.current-speaker {
-  font-size: 0.74rem;
-  color: #3fb950;
-  white-space: nowrap;
 }
 
 .chat-side-info {
@@ -203,16 +177,72 @@ function closeMembers(): void {
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
+  margin-left: auto;
 }
 
+.chat-head-pill,
 .chat-members-button {
   border: 1px solid var(--panel-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-bg) 86%, var(--surface-soft) 14%);
+  background: color-mix(in srgb, var(--panel-bg) 88%, var(--surface-soft) 12%);
   color: var(--muted);
   font-size: 0.76rem;
   line-height: 1;
-  padding: 7px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.chat-head-pill {
+  position: relative;
+  min-height: 28px;
+  padding: 3px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.chat-head-pill-scheduling {
+  color: #3fb950;
+  border-color: color-mix(in srgb, #3fb950 35%, var(--panel-border) 65%);
+  background: color-mix(in srgb, #3fb950 14%, var(--panel-bg) 86%);
+}
+
+.chat-head-pill-idle {
+  color: var(--muted);
+}
+
+.chat-head-pill[data-tooltip]:not([data-tooltip=''])::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-soft) 78%, var(--panel-bg) 22%);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  color: var(--text-strong);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.chat-head-pill[data-tooltip]:not([data-tooltip='']):hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chat-members-button {
+  min-height: 28px;
+  padding: 3px 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition:
     border-color 140ms ease,
