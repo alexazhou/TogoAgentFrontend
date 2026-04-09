@@ -707,8 +707,8 @@ watch(
   gap: 4px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid color-mix(in srgb, var(--panel-border) 78%, white 22%);
+  background: var(--surface-soft);
+  border: 1px solid var(--panel-border);
 }
 
 .agent-activity-item[data-status='started'] {
@@ -718,8 +718,8 @@ watch(
 }
 
 .agent-activity-item[data-status='failed'] {
-  border-color: color-mix(in srgb, var(--danger, #f85149) 35%, white 65%);
-  background: color-mix(in srgb, var(--danger, #f85149) 5%, white 95%);
+  border-color: color-mix(in srgb, var(--danger, #f85149) 30%, var(--panel-border));
+  background: color-mix(in srgb, var(--danger, #f85149) 10%, var(--surface-soft));
 }
 
 .agent-activity-item__row {
