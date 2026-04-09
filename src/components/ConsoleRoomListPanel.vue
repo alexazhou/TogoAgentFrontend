@@ -1,18 +1,22 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useTeamAgents, useTeamRooms } from '../realtime/selectors';
 import RoomListSection from './RoomListSection.vue';
-import type { RoomState } from '../types';
-
-defineProps<{
-  loading: boolean;
-  rooms: RoomState[];
-  currentRoomId: number | null;
-  createDisabled?: boolean;
-}>();
 
 const emit = defineEmits<{
   selectRoom: [roomId: number];
   createRoom: [];
 }>();
+
+const props = defineProps<{
+  teamId: number | null;
+  loading: boolean;
+  currentRoomId: number | null;
+}>();
+
+const rooms = useTeamRooms(() => props.teamId);
+const agents = useTeamAgents(() => props.teamId);
+const createDisabled = computed(() => props.loading || !agents.value.length);
 </script>
 
 <template>

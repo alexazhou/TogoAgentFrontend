@@ -72,11 +72,6 @@ const {
   openAgent,
   closeAgentDetail,
 } = useAgentActivityDialogState(agents, roleTemplates);
-const visibleAgents = computed(() =>
-  agents.value.filter((agent) =>
-    !agent.special && String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD',
-  ),
-);
 
 async function loadRoomMessages(
   roomId: number,
@@ -201,10 +196,9 @@ onBeforeUnmount(() => {
   <div class="workspace-grid">
     <div ref="leftStack" class="left-stack" :style="leftStackStyle">
       <ConsoleRoomListPanel
+        :team-id="teamId"
         :loading="loading"
-        :rooms="rooms"
         :current-room-id="selectedRoomId"
-        :create-disabled="loading || !agents.length"
         @select-room="loadRoomMessages($event, { force: true })"
         @create-room="openCreateRoomDialog"
       />
@@ -219,10 +213,10 @@ onBeforeUnmount(() => {
         <span class="splitter-grip"></span>
       </button>
 
-      <ConsoleAgentListPanel :agents="visibleAgents" @select-agent="openAgent" />
+      <ConsoleAgentListPanel :team-id="teamId" @select-agent="openAgent" />
     </div>
 
-    <div class="chat-shell">
+    <div class="chat-pane">
       <ConsoleChatPanel
         :current-room="currentRoom"
         :agents="agents"
@@ -295,9 +289,11 @@ onBeforeUnmount(() => {
   transform: scaleY(1.2);
 }
 
-.chat-shell {
+.chat-pane {
   min-height: 0;
   min-width: 0;
+  height: 100%;
+  display: flex;
   overflow: hidden;
 }
 
