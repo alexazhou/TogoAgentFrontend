@@ -1,20 +1,28 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useTeamAgents } from '../realtime/selectors';
 import AgentListSection from './AgentListSection.vue';
-import type { AgentInfo } from '../types';
 
-defineProps<{
-  agents: AgentInfo[];
+const props = defineProps<{
+  teamId: number | null;
 }>();
 
 const emit = defineEmits<{
   selectAgent: [agentName: string];
 }>();
+
+const agents = useTeamAgents(() => props.teamId);
+const visibleAgents = computed(() =>
+  agents.value.filter((agent) =>
+    !agent.special && String(agent.employ_status ?? '').toUpperCase() !== 'OFF_BOARD',
+  ),
+);
 </script>
 
 <template>
   <div class="console-panel">
     <AgentListSection
-      :agents="agents"
+      :agents="visibleAgents"
       @select-agent="emit('selectAgent', $event)"
     />
   </div>
