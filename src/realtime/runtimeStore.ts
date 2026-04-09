@@ -3,10 +3,20 @@ import { totalMessageCount } from '../appUiState';
 import {
   getAgentActivities as fetchAgentActivities,
   getAgentsByTeamId as fetchAgentsByTeamId,
+  getDeptTree as fetchDeptTree,
+  getRoleTemplates as fetchRoleTemplates,
   getRoomMessages as fetchRoomMessages,
   getRooms as fetchRooms,
 } from '../api';
-import type { AgentActivity, AgentInfo, AgentStatus, MessageInfo, RoomState } from '../types';
+import type {
+  AgentActivity,
+  AgentInfo,
+  AgentStatus,
+  DeptTreeNode,
+  MessageInfo,
+  RoleTemplateSummary,
+  RoomState,
+} from '../types';
 import { formatPreview } from '../utils';
 import type { FrontendRealtimeEvent } from './eventNormalizer';
 import { subscribeRealtimeEvents } from './wsClient';
@@ -16,6 +26,8 @@ const teamRoomsState = ref<Record<number, RoomState[]>>({});
 const roomMessagesState = ref<Record<number, MessageInfo[]>>({});
 const agentActivitiesState = ref<Record<number, AgentActivity[]>>({});
 const agentStatusState = ref<Record<number, AgentStatus>>({});
+const teamDeptTreeState = ref<Record<number, DeptTreeNode | null>>({});
+const roleTemplatesState = ref<RoleTemplateSummary[]>([]);
 
 const activeTeamId = ref<number | null>(null);
 const activeRoomId = ref<number | null>(null);
@@ -177,6 +189,29 @@ export async function loadAgentActivities(agentId: number): Promise<AgentActivit
   return activities;
 }
 
+export function seedDeptTree(teamId: number, deptTree: DeptTreeNode | null): void {
+  teamDeptTreeState.value = {
+    ...teamDeptTreeState.value,
+    [teamId]: deptTree,
+  };
+}
+
+export async function loadDeptTree(teamId: number): Promise<DeptTreeNode | null> {
+  const deptTree = await fetchDeptTree(teamId);
+  seedDeptTree(teamId, deptTree);
+  return deptTree;
+}
+
+export function seedRoleTemplates(roleTemplates: RoleTemplateSummary[]): void {
+  roleTemplatesState.value = [...roleTemplates];
+}
+
+export async function loadRoleTemplates(): Promise<RoleTemplateSummary[]> {
+  const roleTemplates = await fetchRoleTemplates();
+  seedRoleTemplates(roleTemplates);
+  return roleTemplates;
+}
+
 export function setActiveRealtimeContext(teamId: number | null, roomId: number | null): void {
   activeTeamId.value = teamId;
   activeRoomId.value = roomId;
@@ -221,6 +256,17 @@ export function getAgentStatus(agentId: number | null): AgentStatus | null {
     return null;
   }
   return agentStatusState.value[agentId] ?? null;
+}
+
+export function getDeptTreeState(teamId: number | null): DeptTreeNode | null {
+  if (teamId === null) {
+    return null;
+  }
+  return teamDeptTreeState.value[teamId] ?? null;
+}
+
+export function getRoleTemplatesState(): RoleTemplateSummary[] {
+  return roleTemplatesState.value;
 }
 
 export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
