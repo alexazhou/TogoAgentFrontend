@@ -8,7 +8,9 @@ import GeneralSettingsSection from '../components/settings/GeneralSettingsSectio
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
 import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
+import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
 import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
+import { settingsNavItems } from '../components/settings/settingsNavItems';
 import { loadTeams, teams, teamsLoadFailed } from '../teamStore';
 import type { AgentInfo, DeptTreeNode, DirectoriesConfig, TeamDetail } from '../types';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
@@ -84,13 +86,7 @@ const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
 let uptimeTimer: number | null = null;
 
-const navItems = [
-  { id: 'general', label: '系统状态', note: '系统概览与基础状态' },
-  { id: 'teams', label: '团队管理', note: '团队信息与组织结构' },
-  { id: 'roles', label: '角色管理', note: '角色模板与职责分配' },
-  { id: 'models', label: '大模型服务管理', note: '模型服务与调用策略' },
-  { id: 'runtime', label: '运行与存储', note: '日志、数据与工作目录' },
-];
+const navItems = settingsNavItems;
 
 const defaultSectionId = navItems[0].id;
 const validSectionIds = new Set(navItems.map((item) => item.id));
@@ -625,26 +621,11 @@ function handleTeamTreeSaved(): void {
     </header>
 
     <div class="settings-layout">
-      <aside class="settings-sidebar">
-        <div class="sidebar-card">
-          <div class="sidebar-card-head">
-            <span>导航菜单</span>
-          </div>
-          <nav class="settings-nav" aria-label="设置导航">
-            <button
-              v-for="item in navItems"
-              :key="item.id"
-              type="button"
-              class="nav-link"
-              :class="{ active: item.id === currentSectionId }"
-              @click="openSection(item.id)"
-            >
-              <strong>{{ item.label }}</strong>
-              <span>{{ item.note }}</span>
-            </button>
-          </nav>
-        </div>
-      </aside>
+      <SettingsNavSidebar
+        :items="navItems"
+        :active-id="currentSectionId"
+        @select="openSection"
+      />
 
       <main
         ref="settingsMainRef"

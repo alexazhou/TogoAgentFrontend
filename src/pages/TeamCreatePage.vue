@@ -4,20 +4,16 @@ import { useRouter } from 'vue-router';
 import { showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import { createTeam } from '../api';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
+import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
+import { settingsNavItems } from '../components/settings/settingsNavItems';
 import SettingsBreadcrumb from '../components/settings/SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
 import { firstTeamId, loadTeams, preferredTeamId } from '../teamStore';
 
 const router = useRouter();
 
-const navItems = [
-  { id: 'general', label: '系统状态', note: '系统概览与基础状态' },
-  { id: 'teams', label: '团队管理', note: '团队信息与组织结构' },
-  { id: 'roles', label: '角色管理', note: '角色模板与职责分配' },
-  { id: 'models', label: '大模型服务管理', note: '模型服务与调用策略' },
-  { id: 'runtime', label: '运行与存储', note: '日志、数据与工作目录' },
-];
+const navItems = settingsNavItems;
 
 const name = ref('');
 const workingDirectory = ref('');
@@ -161,27 +157,12 @@ onMounted(() => {
     </header>
 
     <div class="settings-layout">
-      <aside class="settings-sidebar">
-        <div class="sidebar-card">
-          <div class="sidebar-card-head">
-            <span>导航菜单</span>
-            <small>{{ navItems.length }} 项</small>
-          </div>
-          <nav class="settings-nav" aria-label="设置导航">
-            <button
-              v-for="item in navItems"
-              :key="item.id"
-              type="button"
-              class="nav-link"
-              :class="{ active: item.id === 'teams' }"
-              @click="openSection(item.id)"
-            >
-              <strong>{{ item.label }}</strong>
-              <span>{{ item.note }}</span>
-            </button>
-          </nav>
-        </div>
-      </aside>
+      <SettingsNavSidebar
+        :items="navItems"
+        active-id="teams"
+        :count-label="`${navItems.length} 项`"
+        @select="openSection"
+      />
 
       <main class="settings-main">
         <section class="config-section">
