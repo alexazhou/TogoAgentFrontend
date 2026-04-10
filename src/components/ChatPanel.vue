@@ -44,6 +44,12 @@ function toggleMembers(): void {
 function closeMembers(): void {
   membersOpen.value = false;
 }
+
+function handleEnterKey(e: KeyboardEvent): void {
+  if (e.isComposing) return;
+  e.preventDefault();
+  emit('submit');
+}
 </script>
 
 <template>
@@ -87,7 +93,7 @@ function closeMembers(): void {
           placeholder="在此输入消息..."
           rows="2"
           @input="emit('updateDraft', ($event.target as HTMLTextAreaElement).value)"
-          @keydown.enter.exact.prevent="emit('submit')"
+          @keydown.enter.exact="handleEnterKey"
         ></textarea>
         <div class="composer-foot">
           <span>按 Enter 发送，Shift + Enter 换行</span>
