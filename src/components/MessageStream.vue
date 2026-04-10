@@ -48,17 +48,31 @@ function updateScrollbarState(): void {
   hasScrollbar.value = stream.scrollHeight - stream.clientHeight > 1;
 }
 
+function isAtBottom(): boolean {
+  const stream = streamRef.value;
+  if (!stream) return true;
+  return stream.scrollTop + stream.clientHeight >= stream.scrollHeight - 2;
+}
+
+function scrollToBottom(): void {
+  const stream = streamRef.value;
+  if (stream) stream.scrollTop = stream.scrollHeight;
+}
+
 watch(
   () => props.messages,
   async () => {
+    const shouldScroll = isAtBottom();
     await nextTick();
     updateScrollbarState();
+    if (shouldScroll) scrollToBottom();
   },
   { deep: true },
 );
 
 onMounted(() => {
   updateScrollbarState();
+  scrollToBottom();
   if (typeof ResizeObserver === 'undefined' || !streamRef.value) {
     return;
   }
