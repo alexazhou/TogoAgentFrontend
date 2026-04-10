@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue';
 import { getAgentDetail, resumeAgent } from '../api';
 import { connectionState, showGlobalSuccessToast } from '../appUiState';
+import { formatConnectionState } from '../utils';
 import { loadAgentActivities } from '../realtime/runtimeStore';
 import { useAgentActivities, useAgentStatus } from '../realtime/selectors';
 import AgentCardBase from './AgentCardBase.vue';
@@ -104,6 +105,9 @@ const displayEmployeeNumber = computed(() => String(displayAgent.value?.employee
 const activityRealtimeState = computed(() => connectionState.value);
 const activityRealtimePulse = computed(
   () => activityRealtimeState.value !== 'disconnected',
+);
+const activityBadgeLabel = computed(() =>
+  activityRealtimeState.value === 'connected' ? '实时更新' : formatConnectionState(activityRealtimeState.value),
 );
 
 const visibleActivities = computed(() => activities.value.slice(-30));
@@ -419,7 +423,7 @@ watch(
                       class="agent-activity-panel__badge-dot"
                       :class="{ 'agent-activity-panel__badge-dot--pulse': activityRealtimePulse }"
                     ></span>
-                    实时更新
+                    {{ activityBadgeLabel }}
                   </span>
                 </div>
 
