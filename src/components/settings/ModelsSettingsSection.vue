@@ -881,7 +881,8 @@ onMounted(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--text-strong);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   transition: transform 160ms ease;
 }
 
