@@ -12,6 +12,9 @@ import type {
   FrontendConfig,
   FrontendDriverType,
   FrontendModelOption,
+  LlmServiceInfo,
+  LlmServiceListResponse,
+  LlmServiceTestResult,
   MessageInfo,
   RoleTemplateDetail,
   RoleTemplateSummary,
@@ -584,4 +587,51 @@ export async function postRoomMessage(roomId: number, content: string): Promise<
 
 export function createEventsSocket(): WebSocket {
   return new WebSocket(makeWsUrl('/ws/events.json'));
+}
+
+// ── LLM Service Config (V12) ──
+
+export async function getLlmServices(): Promise<LlmServiceListResponse> {
+  return requestJson<LlmServiceListResponse>('/config/llm_services/list.json');
+}
+
+export async function createLlmService(payload: Partial<LlmServiceInfo>): Promise<{ status: string; index: number }> {
+  return requestJson('/config/llm_services/create.json', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function modifyLlmService(index: number, payload: Record<string, unknown>): Promise<{ status: string }> {
+  return requestJson(`/config/llm_services/${index}/modify.json`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteLlmService(index: number): Promise<{ status: string; deleted_name: string }> {
+  return requestJson(`/config/llm_services/${index}/delete.json`, {
+    method: 'POST',
+  });
+}
+
+export async function setDefaultLlmService(index: number): Promise<{ status: string; default_llm_server: string }> {
+  return requestJson(`/config/llm_services/${index}/set_default.json`, {
+    method: 'POST',
+  });
+}
+
+export async function testLlmService(payload: {
+  mode: 'saved' | 'temp';
+  index?: number;
+  base_url?: string;
+  api_key?: string;
+  type?: string;
+  model?: string;
+  extra_headers?: Record<string, string>;
+}): Promise<LlmServiceTestResult> {
+  return requestJson('/config/llm_services/test.json', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

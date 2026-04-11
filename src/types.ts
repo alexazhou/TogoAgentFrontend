@@ -218,3 +218,37 @@ export interface RoleTemplateDetail extends RoleTemplateSummary {
   soul: string;
   allowed_tools: string[] | null;
 }
+
+export type LlmServiceType = 'openai-compatible' | 'anthropic' | 'google' | 'deepseek';
+
+export interface LlmServiceInfo {
+  name: string;
+  base_url: string;
+  api_key: string;
+  type: LlmServiceType;
+  model: string;
+  enable: boolean;
+  extra_headers: Record<string, string>;
+  context_window_tokens: number;
+  reserve_output_tokens: number;
+  compact_trigger_ratio: number;
+  compact_summary_max_tokens: number;
+}
+
+export interface LlmServiceListResponse {
+  llm_services: LlmServiceInfo[];
+  default_llm_server: string | null;
+}
+
+export interface LlmServiceTestResult {
+  status: 'ok' | 'error';
+  message: string;
+  detail?: {
+    model?: string;
+    response_text?: string;
+    duration_ms?: number;
+    usage?: Record<string, unknown>;
+    error_type?: string;
+    raw_error?: string;
+  };
+}
