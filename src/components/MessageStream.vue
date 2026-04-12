@@ -6,6 +6,7 @@ import { bubbleSide, formatTime } from '../utils';
 
 const props = defineProps<{
   messages: MessageInfo[];
+  workingAgentName?: string | null;
 }>();
 
 const streamRef = useTemplateRef('streamRef');
@@ -70,6 +71,16 @@ watch(
   { deep: true },
 );
 
+watch(
+  () => props.workingAgentName,
+  async () => {
+    const shouldScroll = isAtBottom();
+    await nextTick();
+    updateScrollbarState();
+    if (shouldScroll) scrollToBottom();
+  },
+);
+
 onMounted(() => {
   updateScrollbarState();
   scrollToBottom();
@@ -126,6 +137,20 @@ onBeforeUnmount(() => {
         </div>
         <div class="bubble">{{ message.content }}</div>
       </template>
+    </div>
+
+    <div v-if="workingAgentName" class="working-indicator">
+      <img
+        class="working-indicator-avatar"
+        :src="getAgentAvatarUrl(workingAgentName)"
+        :alt="`${workingAgentName} avatar`"
+      />
+      <span class="working-indicator-text">{{ workingAgentName }} 处理中</span>
+      <span class="working-indicator-dots">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </span>
     </div>
   </div>
 </template>
@@ -251,5 +276,62 @@ onBeforeUnmount(() => {
   .system-note {
     max-width: 100%;
   }
+}
+
+.working-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  animation: fade-in 0.25s ease-out;
+}
+
+.working-indicator-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
+  background: color-mix(in srgb, var(--panel-bg-elevated) 84%, var(--panel-border) 16%);
+}
+
+.working-indicator-text {
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+.working-indicator-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.working-indicator-dots .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: dot-pulse 1.4s infinite ease-in-out;
+}
+
+.working-indicator-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.working-indicator-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

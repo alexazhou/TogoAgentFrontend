@@ -58,6 +58,7 @@ export interface RoomInfo {
   team_name: string;
   room_type: RoomType;
   state: string;
+  need_scheduling: boolean;
   agents: number[];
   tags?: string[];
   biz_id?: string | null;
