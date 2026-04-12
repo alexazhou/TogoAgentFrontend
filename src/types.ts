@@ -110,7 +110,13 @@ export interface WsRoomStatusEvent {
   need_scheduling: boolean;
 }
 
-export type WsEvent = WsMessageEvent | WsAgentStatusEvent | WsAgentActivityEvent | WsRoomStatusEvent;
+export interface WsScheduleStateEvent {
+  event: 'schedule_state';
+  schedule_state: 'STOPPED' | 'BLOCKED' | 'RUNNING';
+  not_running_reason?: string;
+}
+
+export type WsEvent = WsMessageEvent | WsAgentStatusEvent | WsAgentActivityEvent | WsRoomStatusEvent | WsScheduleStateEvent;
 
 export interface RoomState extends RoomInfo {
   preview: string;

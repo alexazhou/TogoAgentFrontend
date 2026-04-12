@@ -7,8 +7,11 @@ import {
   globalRequestErrors,
   globalSuccessToasts,
   reconnectProgress,
+  scheduleNotRunningReason,
+  scheduleState,
   showQuickInit,
   totalMessageCount,
+  updateScheduleState,
 } from './appUiState';
 import { getSystemStatus } from './api';
 import QuickInitModal from './components/QuickInitModal.vue';
@@ -51,9 +54,11 @@ async function checkSystemStatus(): Promise<void> {
   try {
     const status = await getSystemStatus();
     showQuickInit.value = !status.initialized;
+    updateScheduleState(status.schedule_state ?? '', '');
   } catch {
     // Backend unreachable — don't show init modal
     showQuickInit.value = false;
+    updateScheduleState('', '');
   }
 }
 
@@ -63,6 +68,7 @@ function handleInitSkip(): void {
 
 function handleInitDone(): void {
   showQuickInit.value = false;
+  // scheduleState will be updated via WebSocket event
 }
 
 function applyTheme(mode: ThemeMode): void {
@@ -156,6 +162,8 @@ onBeforeUnmount(() => {
       :active-team-id="activeTeamId"
       :active-team-enabled="showTeamDisabledPill ? activeTeamEnabled : true"
       :show-connection-status="showTopbarConnectionStatus"
+      :schedule-state="scheduleState"
+      :schedule-not-running-reason="scheduleNotRunningReason"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @open-settings="openSettings"

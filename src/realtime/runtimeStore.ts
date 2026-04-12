@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { totalMessageCount } from '../appUiState';
+import { totalMessageCount, updateScheduleState } from '../appUiState';
 import {
   getAgentActivities as fetchAgentActivities,
   getAgentsByTeamId as fetchAgentsByTeamId,
@@ -347,6 +347,11 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
           : room,
       ),
     );
+    return;
+  }
+
+  if (event.type === 'schedule_state') {
+    updateScheduleState(event.scheduleState, event.notRunningReason);
     return;
   }
 
