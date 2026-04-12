@@ -40,6 +40,8 @@ export default defineConfig({
       '/config/frontend.json': createApiProxy(backendTarget),
       '/config/directories.json': createApiProxy(backendTarget),
       '/config/llm_services/': createApiProxy(backendTarget),
+      '/config/quick_init.json': createApiProxy(backendTarget),
+      '/system/status.json': createApiProxy(backendTarget),
       '/role_templates/list.json': createApiProxy(backendTarget),
       '/role_templates/': createApiProxy(backendTarget),
       '/agents/list.json': createApiProxy(backendTarget),

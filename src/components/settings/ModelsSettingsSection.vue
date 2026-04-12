@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import {
   createLlmService,
   deleteLlmService,
@@ -8,7 +8,7 @@ import {
   setDefaultLlmService,
   testLlmService,
 } from '../../api';
-import { showGlobalSuccessToast } from '../../appUiState';
+import { showGlobalSuccessToast, showQuickInit } from '../../appUiState';
 import ConfirmDialog from '../ConfirmDialog.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from './types';
@@ -372,6 +372,10 @@ async function handleTest(): Promise<void> {
 onMounted(() => {
   loadAll().catch(console.error);
 });
+
+watch(showQuickInit, (val) => {
+  if (!val) loadServices().catch(console.error);
+});
 </script>
 
 <template>
@@ -385,6 +389,7 @@ onMounted(() => {
       </div>
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
+        <button type="button" class="secondary-button" @click="showQuickInit = true">快速初始化</button>
         <button type="button" class="secondary-button" @click="startCreate">新增服务</button>
       </div>
     </div>
