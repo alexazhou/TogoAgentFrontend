@@ -11,6 +11,7 @@ export const reconnectProgress = ref(0);
 export const totalMessageCount = ref(0);
 export const globalRequestErrors = ref<GlobalToastItem[]>([]);
 export const globalSuccessToasts = ref<GlobalToastItem[]>([]);
+export const showQuickInit = ref(false);
 
 let nextGlobalToastId = 1;
 const globalSuccessToastTimers = new Map<number, number>();

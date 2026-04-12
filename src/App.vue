@@ -7,8 +7,11 @@ import {
   globalRequestErrors,
   globalSuccessToasts,
   reconnectProgress,
+  showQuickInit,
   totalMessageCount,
 } from './appUiState';
+import { getSystemStatus } from './api';
+import QuickInitModal from './components/QuickInitModal.vue';
 import TopBar from './components/TopBar.vue';
 import { startRealtimeClient, stopRealtimeClient } from './realtime/wsClient';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
@@ -41,6 +44,26 @@ const showTeamDisabledPill = computed(() => route.name === 'console' && !activeT
 const showTopbarConnectionStatus = computed(() => route.name === 'console');
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
+
+// ── V13: Quick Init Modal ──
+
+async function checkSystemStatus(): Promise<void> {
+  try {
+    const status = await getSystemStatus();
+    showQuickInit.value = !status.initialized;
+  } catch {
+    // Backend unreachable — don't show init modal
+    showQuickInit.value = false;
+  }
+}
+
+function handleInitSkip(): void {
+  showQuickInit.value = false;
+}
+
+function handleInitDone(): void {
+  showQuickInit.value = false;
+}
 
 function applyTheme(mode: ThemeMode): void {
   document.documentElement.dataset.theme = mode;
@@ -110,7 +133,7 @@ watch(
 onMounted(async () => {
   applyTheme(themeMode.value);
   startRealtimeClient();
-  await loadTeams();
+  await Promise.all([loadTeams(), checkSystemStatus()]);
 });
 
 onBeforeUnmount(() => {
@@ -171,6 +194,12 @@ onBeforeUnmount(() => {
     <main class="workspace">
       <RouterView />
     </main>
+
+    <QuickInitModal
+      v-if="showQuickInit"
+      @skip="handleInitSkip"
+      @done="handleInitDone"
+    />
   </div>
 </template>
 

@@ -589,7 +589,29 @@ export function createEventsSocket(): WebSocket {
   return new WebSocket(makeWsUrl('/ws/events.json'));
 }
 
-// ── LLM Service Config (V12) ──
+// ── System Status & Quick Init (V13) ──
+
+export interface SystemStatus {
+  initialized: boolean;
+  default_llm_server?: string;
+  message?: string;
+}
+
+export async function getSystemStatus(): Promise<SystemStatus> {
+  return requestJson<SystemStatus>('/system/status.json');
+}
+
+export async function quickInit(payload: {
+  base_url: string;
+  api_key: string;
+  model: string;
+  type?: string;
+}): Promise<{ status: string; message: string; detail?: { name: string; model: string } }> {
+  return requestJson('/config/quick_init.json', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
 
 export async function getLlmServices(): Promise<LlmServiceListResponse> {
   return requestJson<LlmServiceListResponse>('/config/llm_services/list.json');
