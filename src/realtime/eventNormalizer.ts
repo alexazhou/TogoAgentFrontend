@@ -33,6 +33,7 @@ export type FrontendRealtimeEvent =
     teamId: number;
     roomId: number;
     state: string;
+    needScheduler: boolean;
     currentTurnAgent: AgentSnapshot | null;
   }
   | {
@@ -188,6 +189,7 @@ export function normalizeWsEventPayload(payload: unknown): FrontendRealtimeEvent
       teamId,
       roomId,
       state: String(raw.state ?? '').trim().toLowerCase(),
+      needScheduler: Boolean(raw.need_scheduling),
       currentTurnAgent: normalizeAgentSnapshot(raw.current_turn_agent),
     };
   }

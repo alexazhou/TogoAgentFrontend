@@ -342,6 +342,7 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
           ? {
             ...room,
             state: event.state,
+            need_scheduling: event.needScheduler,
             current_turn_agent: event.currentTurnAgent,
           }
           : room,

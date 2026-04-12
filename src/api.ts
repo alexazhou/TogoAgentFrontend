@@ -34,6 +34,7 @@ type RawRoomInfo = {
   };
   team_name?: string;
   state?: string;
+  need_scheduling?: boolean;
   current_turn_agent?: AgentSnapshot | null;
   agents?: unknown;
 };
@@ -208,6 +209,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
     team_name: teamName,
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
+    need_scheduling: Boolean(room.need_scheduling),
     agents: Array.isArray(room.agents)
       ? room.agents
         .map((agent) => typeof agent === 'number' ? agent : Number(agent))

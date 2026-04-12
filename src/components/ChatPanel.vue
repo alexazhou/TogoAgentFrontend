@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { getAgentAvatarUrl } from '../avatar';
 import type { MessageInfo, RoomMemberProfile, RoomState } from '../types';
+import { useAgentStatus } from '../realtime/selectors';
 import MessageStream from './MessageStream.vue';
 
 const props = defineProps<{
@@ -26,6 +27,21 @@ const currentMembers = computed(() => props.memberProfiles);
 
 const isScheduling = computed(() => props.currentRoom?.state === 'scheduling');
 const currentSpeaker = computed(() => props.currentRoom?.current_turn_agent?.name ?? null);
+
+const currentTurnAgentId = computed(() => props.currentRoom?.current_turn_agent?.id ?? null);
+const turnAgentStatus = useAgentStatus(currentTurnAgentId);
+
+const workingAgentName = computed<string | null>(() => {
+  if (
+    props.currentRoom?.need_scheduling
+    && isScheduling.value
+    && currentSpeaker.value
+    && turnAgentStatus.value === 'active'
+  ) {
+    return currentSpeaker.value;
+  }
+  return null;
+});
 
 watch(
   () => props.currentRoom?.room_id ?? null,
@@ -83,7 +99,7 @@ function handleEnterKey(e: KeyboardEvent): void {
     <div v-else-if="reloadingMessages" class="banner">正在加载消息…</div>
 
     <div class="message-viewport">
-      <MessageStream :messages="messages" />
+      <MessageStream :messages="messages" :working-agent-name="workingAgentName" />
     </div>
 
     <form v-if="isPrivateRoom" class="composer active" @submit.prevent="emit('submit')">
