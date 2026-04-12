@@ -23,6 +23,7 @@ const emit = defineEmits<{
 const isPrivateRoom = computed(() => props.currentRoom?.room_type === 'private');
 const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMessages));
 const membersOpen = ref(false);
+const isDraftComposing = ref(false);
 const currentMembers = computed(() => props.memberProfiles);
 
 const isScheduling = computed(() => props.currentRoom?.state === 'scheduling');
@@ -61,8 +62,17 @@ function closeMembers(): void {
   membersOpen.value = false;
 }
 
+function handleComposerSubmit(): void {
+  if (isDraftComposing.value) {
+    return;
+  }
+  emit('submit');
+}
+
 function handleEnterKey(e: KeyboardEvent): void {
-  if (e.isComposing) return;
+  if (isDraftComposing.value || e.isComposing || e.keyCode === 229) {
+    return;
+  }
   e.preventDefault();
   emit('submit');
 }
@@ -102,13 +112,15 @@ function handleEnterKey(e: KeyboardEvent): void {
       <MessageStream :messages="messages" :working-agent-name="workingAgentName" />
     </div>
 
-    <form v-if="isPrivateRoom" class="composer active" @submit.prevent="emit('submit')">
+    <form v-if="isPrivateRoom" class="composer active" @submit.prevent="handleComposerSubmit">
       <div class="composer-editor">
         <textarea
           :value="draft"
           placeholder="在此输入消息..."
           rows="2"
           @input="emit('updateDraft', ($event.target as HTMLTextAreaElement).value)"
+          @compositionstart="isDraftComposing = true"
+          @compositionend="isDraftComposing = false"
           @keydown.enter.exact="handleEnterKey"
         ></textarea>
         <div class="composer-foot">
