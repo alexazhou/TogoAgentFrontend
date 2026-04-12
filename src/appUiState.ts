@@ -12,6 +12,8 @@ export const totalMessageCount = ref(0);
 export const globalRequestErrors = ref<GlobalToastItem[]>([]);
 export const globalSuccessToasts = ref<GlobalToastItem[]>([]);
 export const showQuickInit = ref(false);
+export const scheduleState = ref<'stopped' | 'blocked' | 'running' | ''>('');
+export const scheduleNotRunningReason = ref('');
 
 let nextGlobalToastId = 1;
 const globalSuccessToastTimers = new Map<number, number>();
@@ -53,4 +55,9 @@ export function clearGlobalSuccessToast(toastId?: number): void {
     return;
   }
   removeGlobalSuccessToast(toastId);
+}
+
+export function updateScheduleState(state: 'stopped' | 'blocked' | 'running' | '', reason?: string): void {
+  scheduleState.value = state;
+  scheduleNotRunningReason.value = reason ?? '';
 }

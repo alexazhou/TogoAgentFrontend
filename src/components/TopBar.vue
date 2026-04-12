@@ -13,6 +13,8 @@ const props = defineProps<{
   activeTeamId: number | null;
   activeTeamEnabled: boolean;
   showConnectionStatus?: boolean;
+  scheduleState?: string;
+  scheduleNotRunningReason?: string;
 }>();
 
 const emit = defineEmits<{
@@ -33,6 +35,19 @@ const disabledTeams = computed(() => props.teams
   .filter((team) => !team.enabled)
   .slice()
   .sort((left, right) => left.id - right.id));
+const scheduleLabel = computed(() => {
+  switch (props.scheduleState) {
+    case 'blocked': return '调度阻塞';
+    case 'stopped': return '调度停止';
+    default: return '';
+  }
+});
+const scheduleTooltip = computed(() => {
+  if (!props.scheduleState || props.scheduleState === 'running') {
+    return '';
+  }
+  return props.scheduleNotRunningReason || (props.scheduleState === 'blocked' ? '未配置大模型服务' : '调度已停止');
+});
 
 function selectTeam(teamId: number): void {
   teamMenuOpen.value = false;
@@ -219,6 +234,19 @@ function optionLabel(team: TeamSummary): string {
 
     <div class="status-group">
       <div v-if="!activeTeamEnabled" class="team-disabled-pill">本团队已停用</div>
+      <div
+        v-if="scheduleLabel"
+        class="schedule-state-pill-wrapper"
+      >
+        <div
+          class="schedule-state-pill"
+          :data-state="scheduleState"
+        >
+          <span class="schedule-dot"></span>
+          {{ scheduleLabel }}
+        </div>
+        <div v-if="scheduleTooltip" class="schedule-tooltip">{{ scheduleTooltip }}</div>
+      </div>
       <div v-if="showConnectionStatus" class="status-pill" :data-state="connectionState">
         <span
           v-if="connectionState === 'waiting_reconnect'"
@@ -505,7 +533,8 @@ function optionLabel(team: TeamSummary): string {
 
 .team-disabled-pill,
 .status-pill,
-.metric-pill {
+.metric-pill,
+.schedule-state-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -521,6 +550,59 @@ function optionLabel(team: TeamSummary): string {
   border-color: color-mix(in srgb, var(--warn) 28%, var(--panel-border) 72%);
   background: color-mix(in srgb, var(--warn) 16%, var(--pill-bg) 84%);
   color: color-mix(in srgb, var(--warn) 82%, var(--text-strong) 18%);
+}
+
+.schedule-state-pill-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.schedule-state-pill {
+  border-color: color-mix(in srgb, var(--warn) 28%, var(--panel-border) 72%);
+  background: color-mix(in srgb, var(--warn) 12%, var(--pill-bg) 88%);
+  color: color-mix(in srgb, var(--warn) 82%, var(--text-strong) 18%);
+}
+
+.schedule-state-pill[data-state='stopped'] {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--panel-border) 72%);
+  background: color-mix(in srgb, var(--danger) 12%, var(--pill-bg) 88%);
+  color: color-mix(in srgb, var(--danger) 82%, var(--text-strong) 18%);
+}
+
+.schedule-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+.schedule-state-pill-wrapper:hover .schedule-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) scale(1);
+}
+
+.schedule-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--warn);
+}
+
+.schedule-state-pill[data-state='stopped'] .schedule-dot {
+  background: var(--danger);
 }
 
 .status-pill[data-state='connected'] {

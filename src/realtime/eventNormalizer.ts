@@ -34,6 +34,11 @@ export type FrontendRealtimeEvent =
     roomId: number;
     state: string;
     currentTurnAgent: AgentSnapshot | null;
+  }
+  | {
+    type: 'schedule_state';
+    scheduleState: 'stopped' | 'blocked' | 'running';
+    notRunningReason: string;
   };
 
 type RawRecord = Record<string, unknown>;
@@ -184,6 +189,18 @@ export function normalizeWsEventPayload(payload: unknown): FrontendRealtimeEvent
       roomId,
       state: String(raw.state ?? '').trim().toLowerCase(),
       currentTurnAgent: normalizeAgentSnapshot(raw.current_turn_agent),
+    };
+  }
+
+  if (eventType === 'schedule_state') {
+    const scheduleState = String(raw.schedule_state ?? '').trim().toLowerCase();
+    if (scheduleState !== 'stopped' && scheduleState !== 'blocked' && scheduleState !== 'running') {
+      return null;
+    }
+    return {
+      type: 'schedule_state',
+      scheduleState,
+      notRunningReason: String(raw.not_running_reason ?? ''),
     };
   }
 
