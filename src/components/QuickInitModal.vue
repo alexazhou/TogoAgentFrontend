@@ -117,7 +117,7 @@ async function handleSave(): Promise<void> {
           </label>
 
           <label class="form-label">
-            <span class="label-text">服务类型</span>
+            <span class="label-text">服务接口类型</span>
             <select v-model="serviceType" class="form-input form-select" :disabled="isSaving">
               <option v-for="t in SERVICE_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
             </select>
@@ -150,7 +150,7 @@ async function handleSave(): Promise<void> {
               v-model="model"
               type="text"
               class="form-input"
-              placeholder="gpt-4o / deepseek-chat / qwen-plus"
+              placeholder="使用的模型名称，例如: gpt-4o, deepseek-chat, qwen-plus..."
               :disabled="isSaving"
             />
           </label>
