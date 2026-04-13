@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { getAgentAvatarUrl } from '../avatar';
 import { createTeamRoom } from '../api';
@@ -25,6 +26,7 @@ const emit = defineEmits<{
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const roomName = ref('');
 const selectedMemberIds = ref<number[]>([]);
@@ -62,9 +64,9 @@ const members = computed<CreateRoomMemberOption[]>(() =>
       id: agent.id,
       name: agent.name,
       subtitle: agent.special === 'operator'
-        ? '人类操作者'
+        ? t('createRoom.operator')
         : agent.special === 'system'
-          ? '系统消息发送者'
+          ? t('createRoom.systemSender')
           : (agent.role_template_id ? (roleTemplateNameMap.value[agent.role_template_id] ?? null) : null),
       status: agent.status,
     })),
@@ -83,7 +85,10 @@ const confirmMessage = computed(() => {
     .map((memberId) => memberNameMap.get(memberId))
     .filter((name): name is string => Boolean(name));
 
-  return `确认创建聊天室“${roomName.value.trim()}”吗？\n成员：${selectedNames.join('、') || '无'}`;
+  return t('createRoom.confirmMessage', {
+    name: roomName.value.trim(),
+    members: selectedNames.join('、') || t('createRoom.noMembersLabel'),
+  });
 });
 
 function isSelected(memberId: number): boolean {
@@ -113,7 +118,7 @@ async function loadDialogData(): Promise<void> {
       loadTeamAgents(teamId.value, { includeSpecial: true }),
     ]);
   } catch (error) {
-    errorMessage.value = '可选成员加载失败。';
+    errorMessage.value = t('createRoom.loadFailed');
     console.error(error);
   } finally {
     loadingMembers.value = false;
@@ -166,7 +171,7 @@ async function confirmCreateRoom(): Promise<void> {
     const createdRoom = nextRooms.find((room) => room.room_name === result.room_name) ?? null;
 
     confirmOpen.value = false;
-    showGlobalSuccessToast('聊天室已创建');
+    showGlobalSuccessToast(t('createRoom.createSuccess'));
 
     if (createdRoom) {
       await router.push({
@@ -177,7 +182,7 @@ async function confirmCreateRoom(): Promise<void> {
 
     requestClose(true);
   } catch (error) {
-    errorMessage.value = '聊天室创建失败。';
+    errorMessage.value = t('createRoom.createFailed');
     console.error(error);
   } finally {
     submitting.value = false;
@@ -203,29 +208,29 @@ watch(
       <section class="create-room-dialog panel">
         <div class="create-room-head">
           <p class="create-room-eyebrow">Create Room</p>
-          <h3>新建聊天室</h3>
+          <h3>{{ t('createRoom.title') }}</h3>
         </div>
 
         <div v-if="errorMessage" class="create-room-error">{{ errorMessage }}</div>
 
         <label class="create-room-field">
-          <span>房间名称</span>
+          <span>{{ t('createRoom.nameLabel') }}</span>
           <input
             v-model="roomName"
             type="text"
             maxlength="64"
-            placeholder="例如：项目同步群"
+            :placeholder="t('createRoom.namePlaceholder')"
           />
         </label>
 
         <section class="create-room-members">
           <div class="create-room-members-head">
-            <span>选择成员</span>
-            <small>已选 {{ selectedMemberIds.length }} 人</small>
+            <span>{{ t('createRoom.selectMembers') }}</span>
+            <small>{{ t('createRoom.selectedCount', { count: selectedMemberIds.length }) }}</small>
           </div>
 
           <div v-if="loadingMembers" class="create-room-empty">
-            正在加载可选成员…
+            {{ t('createRoom.loadingMembers') }}
           </div>
 
           <div v-else-if="members.length" class="create-room-members-grid">
@@ -247,25 +252,25 @@ watch(
                 <div class="create-room-member-head">
                   <strong>{{ member.name }}</strong>
                 </div>
-                <p>{{ member.subtitle || '未配置角色' }}</p>
+                <p>{{ member.subtitle || t('createRoom.noRole') }}</p>
               </div>
             </button>
           </div>
 
           <div v-else class="create-room-empty">
-            当前团队没有可选成员。
+            {{ t('createRoom.noAvailableMembers') }}
           </div>
         </section>
 
         <div class="create-room-actions">
-          <button type="button" class="ghost-button" @click="() => requestClose()">取消</button>
+          <button type="button" class="ghost-button" @click="() => requestClose()">{{ t('common.cancel') }}</button>
           <button
             type="button"
             class="secondary-button"
             :disabled="submitting || !canSubmit"
             @click="requestConfirm"
           >
-            提交
+            {{ t('common.create') }}
           </button>
         </div>
       </section>
@@ -274,10 +279,10 @@ watch(
 
   <ConfirmDialog
     :open="open && confirmOpen"
-    title="确认创建聊天室"
+    :title="t('createRoom.confirmTitle')"
     :message="confirmMessage"
-    confirm-label="确认创建"
-    cancel-label="返回编辑"
+    :confirm-label="t('createRoom.confirmButton')"
+    :cancel-label="t('createRoom.backButton')"
     @close="closeConfirm"
     @confirm="confirmCreateRoom"
   />

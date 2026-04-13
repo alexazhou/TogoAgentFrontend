@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import TeamMemberTreeNode from './TeamMemberTreeNode.vue';
 import type { TeamGraphNode } from './teamGraphTypes';
 import { useTeamGraphLayout } from './useTeamGraphLayout';
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   removePendingSlot: [slotId: string];
 }>();
 
+const { t } = useI18n();
 const readonly = computed(() => !!props.readonly);
 const memberTemplates = computed(() => props.memberTemplates ?? {});
 
@@ -34,7 +36,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
   }
 
   const buildMemberAvatarSeed = (memberName: string): string => `${props.teamName}::${memberName}`;
-  const resolveMemberSubtitle = (memberName: string): string => memberTemplates.value[memberName] || '未配置模板';
+  const resolveMemberSubtitle = (memberName: string): string => memberTemplates.value[memberName] || t('teamTree.noTemplate');
 
   return {
     id: leaderName,
@@ -111,8 +113,8 @@ const {
     @wheel="handleWheelZoom"
   >
     <div v-if="!graphRootNode" class="member-empty-state">
-      <strong>当前还没有成员</strong>
-      <p>{{ props.readonly ? '点击“编辑团队组织”后添加第一个成员。' : '请先添加第一个成员。' }}</p>
+      <strong>{{ t('teamTree.noMembers') }}</strong>
+      <p>{{ props.readonly ? t('teamTree.noMembersHintReadonly') : t('teamTree.noMembersHint') }}</p>
     </div>
 
     <div v-else ref="canvasRef" class="member-canvas" :style="canvasStyle">

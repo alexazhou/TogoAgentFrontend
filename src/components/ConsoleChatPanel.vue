@@ -37,12 +37,13 @@ const {
   scrollMessagesToBottom,
   cleanupMessageScroll,
 } = useConsoleMessageScroll(messageViewport);
+const { t } = useI18n();
 
 const composerNotice = computed(() => {
   if (!props.currentRoom || props.currentRoom.room_type === 'private') {
     return '';
   }
-  return '当前为观察模式，请在私聊房间向对应 Agent 发送消息。';
+  return t('chat.observeMode');
 });
 
 function isDeptRoom(room: RoomState | null): boolean {

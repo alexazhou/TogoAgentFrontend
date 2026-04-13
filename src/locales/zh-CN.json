@@ -24,6 +24,7 @@
     "use": "使用"
   },
   "language": {
+    "switcher": "切换语言",
     "zhCN": "中文",
     "en": "English"
   },
@@ -74,6 +75,12 @@
       "completed": "完成",
       "failed": "失败",
       "cancelled": "取消"
+    },
+    "activityType": {
+      "agentState": "状态变更",
+      "llmInfer": "模型推理",
+      "toolCall": "工具调用",
+      "compact": "上下文压缩"
     },
     "tokenEstimate": "估算 {count}",
     "noTemplate": "未配置模板",
@@ -132,7 +139,7 @@
   },
   "teamTree": {
     "noMembers": "当前还没有成员",
-    "noMembersHintReadonly": "点击"编辑团队组织"后添加第一个成员。",
+    "noMembersHintReadonly": "点击“编辑团队组织”后添加第一个成员。",
     "noMembersHint": "请先添加第一个成员。",
     "noTemplate": "未配置模板",
     "editMember": "编辑成员",
@@ -153,9 +160,9 @@
     "editTeamOrg": "编辑团队组织",
     "newDeptPrefix": "新部门",
     "removeMemberTitle": "移除成员",
-    "removeMemberConfirm": "确认移除成员"{name}"吗？",
+    "removeMemberConfirm": "确认移除成员“{name}”吗？",
     "emptyNameError": "成员名称不能为空",
-    "duplicateNameError": "成员名称"{name}"已存在",
+    "duplicateNameError": "成员名称“{name}”已存在",
     "emptyDeptNameError": "部门名称不能为空",
     "subtitle": "成员"
   },
@@ -201,7 +208,7 @@
     "backButton": "返回编辑",
     "operator": "人类操作者",
     "systemSender": "系统消息发送者",
-    "confirmMessage": "确认创建聊天室"{name}"吗？\n成员：{members}",
+    "confirmMessage": "确认创建聊天室“{name}”吗？\n成员：{members}",
     "noMembersLabel": "无",
     "noRole": "未配置角色"
   },
@@ -338,7 +345,7 @@
       "createSuccess": "角色模板已创建",
       "saveSuccess": "角色模板已保存",
       "deleteConfirmTitle": "删除角色模板",
-      "deleteConfirmMsg": "确认删除模板"{name}"？删除后无法恢复。",
+      "deleteConfirmMsg": "确认删除模板“{name}”？删除后无法恢复。",
       "deleteConfirmBtn": "删除"
     },
     "nav": {
@@ -378,7 +385,7 @@
       "noTeamsMsg": "先创建一个团队，再继续配置成员、角色和模型服务。"
     },
     "page": {
-      "clearDataSuccess": "已清空团队"{name}"：{tasks}个任务，{histories}条历史，{messages}条消息",
+      "clearDataSuccess": "已清空团队“{name}”：{tasks}个任务，{histories}条历史，{messages}条消息",
       "teamSaved": "团队信息已保存",
       "teamSaveFailed": "保存失败",
       "teamSavedStatus": "已保存",
@@ -409,7 +416,7 @@
     "success": "团队创建成功，请添加成员",
     "failed": "创建团队失败，请检查名称是否重复。",
     "confirmTitle": "确认创建团队",
-    "confirmMsg": "确认创建团队"{name}"吗？创建后会进入团队详情页。",
+    "confirmMsg": "确认创建团队“{name}”吗？创建后会进入团队详情页。",
     "confirmBtn": "创建",
     "newTeamName": "新建团队",
     "navSettings": "系统设置",

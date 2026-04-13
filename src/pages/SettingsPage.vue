@@ -11,7 +11,7 @@ import RolesSettingsSection from '../components/settings/RolesSettingsSection.vu
 import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
 import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
 import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
-import { settingsNavItems } from '../components/settings/settingsNavItems';
+import { useSettingsNavItems } from '../components/settings/settingsNavItems';
 import { loadTeams, teams, teamsLoadFailed } from '../teamStore';
 import type { AgentInfo, DeptTreeNode, DirectoriesConfig, TeamDetail } from '../types';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
@@ -88,10 +88,10 @@ const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
 let uptimeTimer: number | null = null;
 
-const navItems = settingsNavItems;
+const navItems = useSettingsNavItems();
 
-const defaultSectionId = navItems[0].id;
-const validSectionIds = new Set(navItems.map((item) => item.id));
+const defaultSectionId = 'teams';
+const validSectionIds = new Set(['teams', 'roles', 'models']);
 
 const routeSection = computed(() =>
   typeof route.params.section === 'string' ? route.params.section : '',
@@ -100,7 +100,7 @@ const currentSectionId = computed(() =>
   validSectionIds.has(routeSection.value) ? routeSection.value : defaultSectionId,
 );
 const currentNavItem = computed(() =>
-  navItems.find((item) => item.id === currentSectionId.value) ?? navItems[0],
+  navItems.value.find((item) => item.id === currentSectionId.value) ?? navItems.value[0],
 );
 const isTeamDetailView = computed(() => currentSectionId.value === 'teams' && detailTeamId.value !== null);
 const topbarBackLabel = computed(() => isTeamDetailView.value ? t('settings.backToTeams') : t('settings.back'));

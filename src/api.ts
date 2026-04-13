@@ -24,6 +24,7 @@ import type {
 } from './types';
 import { showGlobalRequestError } from './appUiState';
 import { t } from './i18n';
+import type { AppLocale } from './i18n';
 
 type RawRoomInfo = {
   gt_room?: {
@@ -668,9 +669,9 @@ export async function testLlmService(payload: {
   });
 }
 
-export async function setLanguage(language: string): Promise<{ language: string }> {
-  return requestJson("/config/language.json", {
-    method: "POST",
+export async function setLanguage(language: AppLocale): Promise<{ language: AppLocale }> {
+  return requestJson('/config/language.json', {
+    method: 'POST',
     body: JSON.stringify({ language }),
   });
 }

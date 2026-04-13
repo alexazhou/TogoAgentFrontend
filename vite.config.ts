@@ -39,6 +39,7 @@ export default defineConfig({
     proxy: {
       '/config/frontend.json': createApiProxy(backendTarget),
       '/config/directories.json': createApiProxy(backendTarget),
+      '/config/language.json': createApiProxy(backendTarget),
       '/config/llm_services/': createApiProxy(backendTarget),
       '/config/quick_init.json': createApiProxy(backendTarget),
       '/system/status.json': createApiProxy(backendTarget),

@@ -2,10 +2,17 @@ import { createI18n } from 'vue-i18n';
 import zhCN from './locales/zh-CN.json';
 import en from './locales/en.json';
 
+export const supportedLocales = ['zh-CN', 'en'] as const;
+export type AppLocale = (typeof supportedLocales)[number];
+
+export function isAppLocale(value: string): value is AppLocale {
+  return supportedLocales.includes(value as AppLocale);
+}
+
 const i18n = createI18n({
   legacy: false,
-  locale: 'zh-CN',
-  fallbackLocale: 'zh-CN',
+  locale: 'zh-CN' as AppLocale,
+  fallbackLocale: 'zh-CN' as AppLocale,
   messages: { 'zh-CN': zhCN, en },
 });
 
@@ -21,7 +28,7 @@ export async function syncLanguageFromBackend(): Promise<void> {
     const resp = await fetch('/system/status.json');
     if (resp.ok) {
       const data = await resp.json() as { language?: string };
-      if (data.language) {
+      if (data.language && isAppLocale(data.language)) {
         i18n.global.locale.value = data.language;
       }
     }
