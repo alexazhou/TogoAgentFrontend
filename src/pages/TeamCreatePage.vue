@@ -6,14 +6,14 @@ import { createTeam } from '../api';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
 import TeamInfoCard from '../components/TeamInfoCard.vue';
-import { settingsNavItems } from '../components/settings/settingsNavItems';
+import { useSettingsNavItems } from '../components/settings/settingsNavItems';
 import SettingsBreadcrumb from '../components/settings/SettingsBreadcrumb.vue';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
 import { firstTeamId, loadTeams, preferredTeamId } from '../teamStore';
 
 const router = useRouter();
 
-const navItems = settingsNavItems;
+const navItems = useSettingsNavItems();
 
 const name = ref('');
 const workingDirectory = ref('');

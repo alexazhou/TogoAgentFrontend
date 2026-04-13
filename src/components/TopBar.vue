@@ -5,6 +5,7 @@ import i18n from '../i18n';
 import { setLanguage } from '../api';
 import type { TeamSummary } from '../types';
 import type { ConnectionState } from '../utils';
+import type { AppLocale } from '../i18n';
 
 const { t } = useI18n();
 
@@ -30,7 +31,7 @@ const emit = defineEmits<{
 
 const teamMenuOpen = ref(false);
 const languageMenuOpen = ref(false);
-const currentLocale = computed(() => i18n.global.locale.value as string);
+const currentLocale = computed<AppLocale>(() => i18n.global.locale.value);
 
 const activeTeamName = computed(() => (
   props.teams.find((team) => team.id === props.activeTeamId)?.name ?? t('topbar.selectTeam')
@@ -132,7 +133,7 @@ function toggleLanguageMenu(): void {
   languageMenuOpen.value = !languageMenuOpen.value;
 }
 
-async function handleSetLanguage(lang: string): Promise<void> {
+async function handleSetLanguage(lang: AppLocale): Promise<void> {
   try {
     await setLanguage(lang);
     i18n.global.locale.value = lang;
@@ -336,10 +337,17 @@ function optionLabel(team: TeamSummary): string {
           class="lang-button"
           :aria-expanded="languageMenuOpen"
           aria-haspopup="listbox"
+          :aria-label="t('language.switcher')"
+          :title="t('language.switcher')"
           @click="toggleLanguageMenu"
         >
-          {{ currentLocale === 'zh-CN' ? t('language.zhCN') : t('language.en') }}
-          <svg class="lang-button__icon" viewBox="0 0 16 16" aria-hidden="true">
+          <svg class="lang-button__globe" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18Z" />
+            <path d="M3.6 9h16.8" />
+            <path d="M3.6 15h16.8" />
+            <path d="M12 3c2.3 2.2 3.6 5.3 3.6 9s-1.3 6.8-3.6 9c-2.3-2.2-3.6-5.3-3.6-9s1.3-6.8 3.6-9Z" />
+          </svg>
+          <svg class="lang-button__chevron" viewBox="0 0 16 16" aria-hidden="true">
             <path d="m4 6 4 4 4-4" />
           </svg>
         </button>
@@ -356,6 +364,7 @@ function optionLabel(team: TeamSummary): string {
             :aria-selected="currentLocale === 'zh-CN'"
             @click="handleSetLanguage('zh-CN')"
           >
+            <span class="lang-option__check" aria-hidden="true">{{ currentLocale === 'zh-CN' ? '✓' : '' }}</span>
             {{ t('language.zhCN') }}
           </button>
           <button
@@ -366,6 +375,7 @@ function optionLabel(team: TeamSummary): string {
             :aria-selected="currentLocale === 'en'"
             @click="handleSetLanguage('en')"
           >
+            <span class="lang-option__check" aria-hidden="true">{{ currentLocale === 'en' ? '✓' : '' }}</span>
             {{ t('language.en') }}
           </button>
         </div>
@@ -829,13 +839,11 @@ function optionLabel(team: TeamSummary): string {
   align-items: center;
   gap: 4px;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 6px;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   background: var(--pill-bg);
   color: var(--text-strong);
-  font-size: 0.72rem;
-  font-weight: 500;
   cursor: pointer;
   outline: none;
   transition: border-color 140ms ease, background 140ms ease;
@@ -850,14 +858,23 @@ function optionLabel(team: TeamSummary): string {
   box-shadow: 0 0 0 2px var(--focus-glow);
 }
 
-.lang-button__icon {
-  width: 10px;
-  height: 10px;
+.lang-button__globe,
+.lang-button__chevron {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 1.8;
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.lang-button__globe {
+  width: 14px;
+  height: 14px;
+}
+
+.lang-button__chevron {
+  width: 10px;
+  height: 10px;
 }
 
 .lang-menu {
@@ -880,7 +897,10 @@ function optionLabel(team: TeamSummary): string {
 }
 
 .lang-option {
-  display: block;
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   min-height: 28px;
   padding: 0 10px;
@@ -892,6 +912,13 @@ function optionLabel(team: TeamSummary): string {
   text-align: left;
   cursor: pointer;
   outline: none;
+}
+
+.lang-option__check {
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .lang-option:hover,

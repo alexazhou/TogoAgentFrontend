@@ -371,62 +371,62 @@ onMounted(() => {
           </label>
         </div>
 
-        <section class=”advanced-card”>
+        <section class="advanced-card">
           <button
-            type=”button”
-            class=”advanced-toggle”
-            :aria-expanded=”advancedOpen”
-            @click=”toggleAdvanced”
+            type="button"
+            class="advanced-toggle"
+            :aria-expanded="advancedOpen"
+            @click="toggleAdvanced"
           >
             <div>
-              <p class=”section-eyebrow”>Advanced</p>
+              <p class="section-eyebrow">Advanced</p>
               <strong>{{ t('settings.roles.advanced') }}</strong>
             </div>
-            <span class=”advanced-toggle__state”>{{ advancedOpen ? t('common.collapse') : t('common.expand') }}</span>
+            <span class="advanced-toggle__state">{{ advancedOpen ? t('common.collapse') : t('common.expand') }}</span>
           </button>
 
-          <div v-if=”advancedOpen” class=”advanced-grid”>
-            <label class=”role-field”>
+          <div v-if="advancedOpen" class="advanced-grid">
+            <label class="role-field">
               <span>{{ t('settings.roles.modelLabel') }}</span>
               <input
-                v-model=”form.model”
-                type=”text”
-                class=”role-input”
-                :class=”{ 'role-input--readonly': isSystemReadonlyFields }”
-                :placeholder=”t('settings.roles.modelPlaceholder')”
-                :readonly=”isSystemReadonlyFields”
+                v-model="form.model"
+                type="text"
+                class="role-input"
+                :class="{ 'role-input--readonly': isSystemReadonlyFields }"
+                :placeholder="t('settings.roles.modelPlaceholder')"
+                :readonly="isSystemReadonlyFields"
               />
             </label>
 
-            <label class=”role-field role-field--wide”>
+            <label class="role-field role-field--wide">
               <span>{{ t('settings.roles.toolsLabel') }}</span>
               <input
-                v-model=”form.allowedToolsText”
-                type=”text”
-                class=”role-input”
-                :class=”{ 'role-input--readonly': isSystemReadonlyFields }”
-                :placeholder=”t('settings.roles.toolsPlaceholder')”
-                :readonly=”isSystemReadonlyFields”
+                v-model="form.allowedToolsText"
+                type="text"
+                class="role-input"
+                :class="{ 'role-input--readonly': isSystemReadonlyFields }"
+                :placeholder="t('settings.roles.toolsPlaceholder')"
+                :readonly="isSystemReadonlyFields"
               />
             </label>
           </div>
         </section>
 
-        <div class=”role-editor-actions”>
+        <div class="role-editor-actions">
           <button
-            v-if=”canDelete”
-            type=”button”
-            class=”secondary-button secondary-button--danger”
-            :disabled=”isDeleting”
-            @click=”requestDelete”
+            v-if="canDelete"
+            type="button"
+            class="secondary-button secondary-button--danger"
+            :disabled="isDeleting"
+            @click="requestDelete"
           >
             {{ isDeleting ? t('settings.roles.deleting') : t('settings.roles.deleteBtn') }}
           </button>
           <button
-            type=”button”
-            class=”secondary-button”
-            :disabled=”!canSave”
-            @click=”saveCurrentTemplate”
+            type="button"
+            class="secondary-button"
+            :disabled="!canSave"
+            @click="saveCurrentTemplate"
           >
             {{ isSaving ? t('settings.roles.saving') : (isCreating ? t('settings.roles.createBtn') : t('settings.roles.saveBtn')) }}
           </button>
@@ -435,13 +435,13 @@ onMounted(() => {
     </div>
 
     <ConfirmDialog
-      :open=”deleteConfirmOpen”
-      :title=”t('settings.roles.deleteConfirmTitle')”
-      :message=”t('settings.roles.deleteConfirmMsg', { name: currentDetail?.name || '' })”
-      :confirm-label=”t('settings.roles.deleteConfirmBtn')”
+      :open="deleteConfirmOpen"
+      :title="t('settings.roles.deleteConfirmTitle')"
+      :message="t('settings.roles.deleteConfirmMsg', { name: currentDetail?.name || '' })"
+      :confirm-label="t('settings.roles.deleteConfirmBtn')"
       danger
-      @close=”closeDeleteConfirm”
-      @confirm=”confirmDelete”
+      @close="closeDeleteConfirm"
+      @confirm="confirmDelete"
     />
   </section>
 </template>

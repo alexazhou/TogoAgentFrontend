@@ -24,6 +24,7 @@
     "use": "Use"
   },
   "language": {
+    "switcher": "Switch language",
     "zhCN": "中文",
     "en": "English"
   },
@@ -74,6 +75,12 @@
       "completed": "Completed",
       "failed": "Failed",
       "cancelled": "Cancelled"
+    },
+    "activityType": {
+      "agentState": "State Change",
+      "llmInfer": "LLM Inference",
+      "toolCall": "Tool Call",
+      "compact": "Context Compact"
     },
     "tokenEstimate": "Est. {count}",
     "noTemplate": "No template configured",

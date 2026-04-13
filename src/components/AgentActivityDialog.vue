@@ -129,6 +129,21 @@ function activityStatusLabel(status: AgentActivityStatus): string {
   return t('agent.activityState.cancelled');
 }
 
+function activityTitle(activity: AgentActivity): string {
+  switch (activity.activity_type) {
+    case 'agent_state':
+      return t('agent.activityType.agentState');
+    case 'llm_infer':
+      return t('agent.activityType.llmInfer');
+    case 'tool_call':
+      return t('agent.activityType.toolCall');
+    case 'compact':
+      return t('agent.activityType.compact');
+    default:
+      return activity.title;
+  }
+}
+
 function activitySummary(activity: AgentActivity): string {
   const command = getActivityToolCommand(activity);
   if (command) {
@@ -478,7 +493,7 @@ watch(
                       <span v-if="activity.status === 'started'" class="agent-activity-item__dot"></span>
                       <span v-else-if="activity.status === 'succeeded'" class="agent-activity-item__mark agent-activity-item__mark--ok">✓</span>
                       <span v-else-if="activity.status === 'failed' || activity.status === 'cancelled'" class="agent-activity-item__mark agent-activity-item__mark--fail">✗</span>
-                      <strong class="agent-activity-item__title">{{ activity.title }}</strong>
+                      <strong class="agent-activity-item__title">{{ activityTitle(activity) }}</strong>
                       <span class="agent-activity-item__summary" :class="{ 'agent-activity-item__summary--code': !!getActivityToolCommand(activity) }">{{ activitySummary(activity) }}</span>
                       <span class="agent-activity-item__status">{{ activityStatusLabel(activity.status) }}</span>
                       <span v-if="formatActivityTime(activity.started_at)">{{ formatActivityTime(activity.started_at) }}</span>

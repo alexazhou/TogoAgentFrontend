@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, saveMembersByTeamId, setDeptTree } from '../api';
 import { showGlobalSuccessToast } from '../appUiState';
 import {
@@ -40,6 +41,7 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
+const { t } = useI18n();
 const driverCatalog = ref<MemberDriverOption[]>([]);
 const modelCatalog = ref<MemberModelOption[]>([]);
 const roleTemplateCatalog = ref<MemberTemplateOption[]>([]);
@@ -66,7 +68,7 @@ const confirmState = ref<{
 }>({
   title: '',
   message: '',
-  confirmLabel: '确认',
+  confirmLabel: t('common.confirm'),
   danger: true,
   action: null,
 });
@@ -654,15 +656,15 @@ const departmentEditorOpen = computed(() => !!editingDepartmentMemberName.value)
 const memberPanelActions = computed(() => {
   if (isReadonly.value) {
     return [
-      { key: 'edit', label: '编辑团队组织', primary: true, disabled: isLoading.value },
+      { key: 'edit', label: t('teamTree.editTeamOrg'), primary: true, disabled: isLoading.value },
     ];
   }
 
   return [
-    { key: 'cancel', label: '取消', disabled: isSavingTeamMembers.value },
+    { key: 'cancel', label: t('common.cancel'), disabled: isSavingTeamMembers.value },
     {
       key: 'save',
-      label: isSavingTeamMembers.value ? '保存中...' : '保存',
+      label: isSavingTeamMembers.value ? t('teamTree.saving') : t('common.save'),
       disabled: !hasTeamMemberChanges.value || isSavingTeamMembers.value || treeHasPendingNode(draftOrgTree.value),
       primary: true,
     },
@@ -1024,9 +1026,9 @@ function removePendingSlot(slotId: string): void {
 
 function requestRemoveMember(agentName: string): void {
   confirmState.value = {
-    title: '移除成员',
-    message: `确认移除成员“${agentName}”吗？`,
-    confirmLabel: '移除',
+    title: t('teamTree.removeMemberTitle'),
+    message: t('teamTree.removeMemberConfirm', { name: agentName }),
+    confirmLabel: t('teamTree.removeMember'),
     danger: true,
     action: {
       type: 'remove-member',
@@ -1039,7 +1041,7 @@ function closeConfirmDialog(): void {
   confirmState.value = {
     title: '',
     message: '',
-    confirmLabel: '确认',
+    confirmLabel: t('common.confirm'),
     danger: true,
     action: null,
   };

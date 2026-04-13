@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 export interface SettingsNavItem {
   id: string;
   label: string;
@@ -14,16 +16,18 @@ defineProps<{
 const emit = defineEmits<{
   select: [sectionId: string];
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
   <aside class="settings-sidebar">
     <div class="sidebar-card">
       <div class="sidebar-card-head">
-        <span>导航菜单</span>
+        <span>{{ t('settings.nav.label') }}</span>
         <small v-if="countLabel">{{ countLabel }}</small>
       </div>
-      <nav class="settings-nav" aria-label="设置导航">
+      <nav class="settings-nav" :aria-label="t('settings.nav.ariaLabel')">
         <button
           v-for="item in items"
           :key="item.id"
