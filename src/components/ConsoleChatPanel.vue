@@ -24,6 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   updateError: [value: string];
+  clickWorkingAgent: [agentName: string];
 }>();
 
 const messageViewport = useTemplateRef('messageViewport');
@@ -193,6 +194,7 @@ onBeforeUnmount(() => {
       :composer-notice="composerNotice"
       @update-draft="draft = $event"
       @submit="handleSubmit"
+      @click-working-agent="emit('clickWorkingAgent', $event)"
     />
   </div>
 </template>

@@ -226,6 +226,7 @@ onBeforeUnmount(() => {
         :error-message="errorMessage"
         :reloading-messages="reloadingMessages"
         @update-error="errorMessage = $event"
+        @click-working-agent="openAgent"
       />
     </div>
 

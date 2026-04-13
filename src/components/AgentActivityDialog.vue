@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
-import { getAgentDetail, resumeAgent } from '../api';
+import { getAgentDetail, resumeAgent, stopAgent } from '../api';
 import { connectionState, showGlobalSuccessToast } from '../appUiState';
 import { formatConnectionState } from '../utils';
 import { loadAgentActivities } from '../realtime/runtimeStore';
@@ -30,6 +30,7 @@ const activityListRef = ref<HTMLElement | null>(null);
 const loading = ref(false);
 const activitiesLoading = ref(false);
 const resuming = ref(false);
+const stopping = ref(false);
 const errorMessage = ref('');
 const activitiesErrorMessage = ref('');
 const shouldFollowActivities = ref(true);
@@ -272,6 +273,23 @@ async function handleResume(): Promise<void> {
   }
 }
 
+async function handleStop(): Promise<void> {
+  if (props.agentId === null || currentStatus.value !== 'active' || stopping.value) {
+    return;
+  }
+
+  stopping.value = true;
+
+  try {
+    await stopAgent(props.agentId);
+    showGlobalSuccessToast('已停止当前任务');
+  } catch (error) {
+    console.error(error);
+  } finally {
+    stopping.value = false;
+  }
+}
+
 async function copyFailureMessage(): Promise<void> {
   if (!failureMessage.value) {
     return;
@@ -401,6 +419,15 @@ watch(
                     @click="handleResume"
                   >
                     {{ resuming ? '重试中…' : '重试' }}
+                  </button>
+                  <button
+                    v-if="currentStatus === 'active'"
+                    type="button"
+                    class="agent-status-panel__action agent-status-panel__action--stop"
+                    :disabled="stopping"
+                    @click="handleStop"
+                  >
+                    {{ stopping ? '停止中…' : '停止' }}
                   </button>
                 </div>
                 <div v-if="failureMessage" class="agent-error-panel">
@@ -615,6 +642,11 @@ watch(
 .agent-status-panel__action:disabled {
   opacity: 0.7;
   cursor: wait;
+}
+
+.agent-status-panel__action--stop {
+  color: var(--danger, #f85149);
+  border-color: var(--danger, #f85149);
 }
 
 .agent-status-panel[data-status='failed'] {
