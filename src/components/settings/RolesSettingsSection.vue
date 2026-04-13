@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   createRoleTemplate,
   deleteRoleTemplate,
@@ -20,6 +21,8 @@ defineProps<{
 const emit = defineEmits<{
   navigateBreadcrumb: [key: string];
 }>();
+
+const { t } = useI18n();
 
 const templates = ref<RoleTemplateSummary[]>([]);
 const selectedTemplateId = ref<number | null>(null);
@@ -55,12 +58,12 @@ function isSystemType(type: string | null | undefined): boolean {
 
 const currentTypeLabel = computed(() => {
   if (isSystemType(currentDetail.value?.type)) {
-    return '系统模板';
+    return t('settings.roles.systemTemplate');
   }
   if (equalsIgnoreCase(currentDetail.value?.type, 'user')) {
-    return '用户模板';
+    return t('settings.roles.userTemplate');
   }
-  return '未定义';
+  return t('settings.roles.undefined');
 });
 
 const isSystemTemplate = computed(() => isSystemType(currentDetail.value?.type));
@@ -108,7 +111,7 @@ function buildSoulPreview(soul: string | undefined): string {
     .replace(/\s+/g, ' ')
     .trim();
   if (!normalized) {
-    return '暂无 Soul 预览';
+    return t('settings.roles.noSoul');
   }
   return normalized.length > 72 ? `${normalized.slice(0, 72)}...` : normalized;
 }
@@ -167,7 +170,7 @@ async function loadRoleSettings(preferredId?: number | null): Promise<void> {
     await loadTemplateList(preferredId);
   } catch (error) {
     console.error(error);
-    statusText.value = '加载失败';
+    statusText.value = t('settings.roles.loadFailed');
   } finally {
     isLoading.value = false;
   }
@@ -212,7 +215,7 @@ async function saveCurrentTemplate(): Promise<void> {
         allowed_tools: parseAllowedTools(),
       });
       await loadRoleSettings(created.id);
-      showGlobalSuccessToast('角色模板已创建');
+      showGlobalSuccessToast(t('settings.roles.createSuccess'));
     } else if (selectedTemplateId.value !== null) {
       const updated = await updateRoleTemplate(selectedTemplateId.value, {
         name: form.value.name.trim(),
@@ -223,12 +226,12 @@ async function saveCurrentTemplate(): Promise<void> {
       currentDetail.value = updated;
       resetForm(updated);
       await loadTemplateList(updated.id);
-      showGlobalSuccessToast('角色模板已保存');
+      showGlobalSuccessToast(t('settings.roles.saveSuccess'));
     }
-    statusText.value = '已保存';
+    statusText.value = t('settings.roles.saved');
   } catch (error) {
     console.error(error);
-    statusText.value = '保存失败';
+    statusText.value = t('settings.roles.saveFailed');
   } finally {
     isSaving.value = false;
   }
@@ -257,11 +260,11 @@ async function confirmDelete(): Promise<void> {
     await deleteRoleTemplate(selectedTemplateId.value);
     closeDeleteConfirm();
     await loadRoleSettings(null);
-    showGlobalSuccessToast('角色模板已删除');
-    statusText.value = '已删除';
+    showGlobalSuccessToast(t('settings.roles.deleteSuccess'));
+    statusText.value = t('settings.roles.deleted');
   } catch (error) {
     console.error(error);
-    statusText.value = '删除失败';
+    statusText.value = t('settings.roles.deleteFailed');
   } finally {
     isDeleting.value = false;
   }
@@ -279,22 +282,22 @@ onMounted(() => {
     <div class="section-head">
       <div>
         <p class="section-eyebrow">Roles</p>
-        <h3>角色管理</h3>
+        <h3>{{ t('settings.roles.title') }}</h3>
       </div>
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
-        <button type="button" class="secondary-button" @click="startCreate">新建模板</button>
+        <button type="button" class="secondary-button" @click="startCreate">{{ t('settings.roles.newTemplate') }}</button>
       </div>
     </div>
 
     <div class="roles-layout">
       <aside class="roles-list-card">
         <div class="roles-list-head">
-          <strong>模板列表</strong>
-          <span>{{ templates.length }} 个</span>
+          <strong>{{ t('settings.roles.templateList') }}</strong>
+          <span>{{ t('settings.roles.count', { count: templates.length }) }}</span>
         </div>
 
-        <p v-if="isLoading" class="roles-empty">正在加载模板...</p>
+        <p v-if="isLoading" class="roles-empty">{{ t('settings.roles.loading') }}</p>
 
         <div v-else-if="templates.length" class="roles-list">
           <button
@@ -315,7 +318,7 @@ onMounted(() => {
                   class="role-chip"
                   :class="isSystemType(template.type) ? 'role-chip--system' : 'role-chip--user'"
                 >
-                  {{ isSystemType(template.type) ? '系统模板' : '用户模板' }}
+                  {{ isSystemType(template.type) ? t('settings.roles.systemTemplate') : t('settings.roles.userTemplate') }}
                 </span>
               </div>
               <p class="role-row-preview">{{ buildSoulPreview(template.soul) }}</p>
@@ -323,34 +326,34 @@ onMounted(() => {
           </button>
         </div>
 
-        <p v-else class="roles-empty">当前没有角色模板。</p>
+        <p v-else class="roles-empty">{{ t('settings.roles.empty') }}</p>
       </aside>
 
       <section class="role-editor-card">
         <div class="role-editor-head">
           <div>
             <p class="section-eyebrow">{{ isCreating ? 'Create Template' : 'Template Detail' }}</p>
-            <h4>{{ isCreating ? '新建角色模板' : (form.name || '角色模板详情') }}</h4>
+            <h4>{{ isCreating ? t('settings.roles.newTitle') : (form.name || t('settings.roles.detailFallback')) }}</h4>
           </div>
           <div class="role-editor-meta">
             <span
               class="role-chip"
               :class="isCreating ? 'role-chip--draft' : (isSystemTemplate ? 'role-chip--system' : 'role-chip--user')"
             >
-              {{ isCreating ? '未保存' : currentTypeLabel }}
+              {{ isCreating ? t('settings.roles.unsaved') : currentTypeLabel }}
             </span>
           </div>
         </div>
 
         <div class="role-form-grid">
           <label class="role-field">
-            <span>模板名称</span>
+            <span>{{ t('settings.roles.nameLabel') }}</span>
             <input
               v-model="form.name"
               type="text"
               class="role-input"
               :class="{ 'role-input--readonly': isNameReadonly }"
-              placeholder="例如：custom_writer"
+              :placeholder="t('settings.roles.namePlaceholder')"
               :readonly="isNameReadonly"
             />
           </label>
@@ -362,83 +365,83 @@ onMounted(() => {
               class="role-textarea"
               :class="{ 'role-input--readonly': isSystemReadonlyFields }"
               rows="12"
-              placeholder="输入角色 Soul"
+              :placeholder="t('settings.roles.soulPlaceholder')"
               :readonly="isSystemReadonlyFields"
             ></textarea>
           </label>
         </div>
 
-        <section class="advanced-card">
+        <section class=”advanced-card”>
           <button
-            type="button"
-            class="advanced-toggle"
-            :aria-expanded="advancedOpen"
-            @click="toggleAdvanced"
+            type=”button”
+            class=”advanced-toggle”
+            :aria-expanded=”advancedOpen”
+            @click=”toggleAdvanced”
           >
             <div>
-              <p class="section-eyebrow">Advanced</p>
-              <strong>高级设置</strong>
+              <p class=”section-eyebrow”>Advanced</p>
+              <strong>{{ t('settings.roles.advanced') }}</strong>
             </div>
-            <span class="advanced-toggle__state">{{ advancedOpen ? '收起' : '展开' }}</span>
+            <span class=”advanced-toggle__state”>{{ advancedOpen ? t('common.collapse') : t('common.expand') }}</span>
           </button>
 
-          <div v-if="advancedOpen" class="advanced-grid">
-            <label class="role-field">
-              <span>模型</span>
+          <div v-if=”advancedOpen” class=”advanced-grid”>
+            <label class=”role-field”>
+              <span>{{ t('settings.roles.modelLabel') }}</span>
               <input
-                v-model="form.model"
-                type="text"
-                class="role-input"
-                :class="{ 'role-input--readonly': isSystemReadonlyFields }"
-                placeholder="为空则使用默认模型"
-                :readonly="isSystemReadonlyFields"
+                v-model=”form.model”
+                type=”text”
+                class=”role-input”
+                :class=”{ 'role-input--readonly': isSystemReadonlyFields }”
+                :placeholder=”t('settings.roles.modelPlaceholder')”
+                :readonly=”isSystemReadonlyFields”
               />
             </label>
 
-            <label class="role-field role-field--wide">
-              <span>允许工具</span>
+            <label class=”role-field role-field--wide”>
+              <span>{{ t('settings.roles.toolsLabel') }}</span>
               <input
-                v-model="form.allowedToolsText"
-                type="text"
-                class="role-input"
-                :class="{ 'role-input--readonly': isSystemReadonlyFields }"
-                placeholder="使用英文逗号分隔，例如 Read, Bash, Edit"
-                :readonly="isSystemReadonlyFields"
+                v-model=”form.allowedToolsText”
+                type=”text”
+                class=”role-input”
+                :class=”{ 'role-input--readonly': isSystemReadonlyFields }”
+                :placeholder=”t('settings.roles.toolsPlaceholder')”
+                :readonly=”isSystemReadonlyFields”
               />
             </label>
           </div>
         </section>
 
-        <div class="role-editor-actions">
+        <div class=”role-editor-actions”>
           <button
-            v-if="canDelete"
-            type="button"
-            class="secondary-button secondary-button--danger"
-            :disabled="isDeleting"
-            @click="requestDelete"
+            v-if=”canDelete”
+            type=”button”
+            class=”secondary-button secondary-button--danger”
+            :disabled=”isDeleting”
+            @click=”requestDelete”
           >
-            {{ isDeleting ? '删除中...' : '删除模板' }}
+            {{ isDeleting ? t('settings.roles.deleting') : t('settings.roles.deleteBtn') }}
           </button>
           <button
-            type="button"
-            class="secondary-button"
-            :disabled="!canSave"
-            @click="saveCurrentTemplate"
+            type=”button”
+            class=”secondary-button”
+            :disabled=”!canSave”
+            @click=”saveCurrentTemplate”
           >
-            {{ isSaving ? '保存中...' : (isCreating ? '创建模板' : '保存修改') }}
+            {{ isSaving ? t('settings.roles.saving') : (isCreating ? t('settings.roles.createBtn') : t('settings.roles.saveBtn')) }}
           </button>
         </div>
       </section>
     </div>
 
     <ConfirmDialog
-      :open="deleteConfirmOpen"
-      title="删除角色模板"
-      :message="`确认删除模板“${currentDetail?.name || ''}”？删除后无法恢复。`"
-      confirm-label="删除"
+      :open=”deleteConfirmOpen”
+      :title=”t('settings.roles.deleteConfirmTitle')”
+      :message=”t('settings.roles.deleteConfirmMsg', { name: currentDetail?.name || '' })”
+      :confirm-label=”t('settings.roles.deleteConfirmBtn')”
       danger
-      @close="closeDeleteConfirm"
-      @confirm="confirmDelete"
+      @close=”closeDeleteConfirm”
+      @confirm=”confirmDelete”
     />
   </section>
 </template>

@@ -134,6 +134,7 @@ export interface RoomMemberProfile {
 export interface TeamSummary {
   id: number;
   name: string;
+  display_name?: string;
   working_directory: string;
   config: Record<string, unknown>;
   max_function_calls: number | null;

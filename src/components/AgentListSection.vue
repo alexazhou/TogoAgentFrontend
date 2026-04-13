@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { getAgentAvatarUrl } from '../avatar';
 import type { AgentInfo } from '../types';
 
@@ -10,21 +11,23 @@ const emit = defineEmits<{
   selectAgent: [agentName: string];
 }>();
 
+const { t } = useI18n();
+
 function statusLabel(status: AgentInfo['status']): string {
   if (status === 'active') {
-    return '忙碌';
+    return t('agent.status.active');
   }
   if (status === 'failed') {
-    return '失败';
+    return t('agent.status.failed');
   }
-  return '空闲';
+  return t('agent.status.idle');
 }
 </script>
 
 <template>
   <section class="sidebar-card panel">
     <div class="block-head">
-      <h2>团队成员</h2>
+      <h2>{{ t('agent.teamMembersLabel') }}</h2>
       <span>{{ agents.length }}</span>
     </div>
 

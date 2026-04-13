@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import AgentTemplateCard from './AgentTemplateCard.vue';
 
 defineProps<{
@@ -11,17 +12,19 @@ const emit = defineEmits<{
   'update:keyword': [value: string];
   toggleAgent: [agentName: string];
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
   <section class="library-panel">
     <div class="library-head">
-      <span class="panel-label">备选Agent</span>
+      <span class="panel-label">{{ t('agent.backupLabel') }}</span>
       <label class="search-box">
         <input
           :value="keyword"
           type="text"
-          placeholder="搜索Agent"
+          :placeholder="t('agent.searchPlaceholder')"
           @input="emit('update:keyword', ($event.target as HTMLInputElement).value)"
         />
       </label>
@@ -37,7 +40,7 @@ const emit = defineEmits<{
       />
 
       <div v-if="!filteredAgents.length" class="empty-state">
-        Agent 加载失败
+        {{ t('agent.agentLoadFailed') }}
       </div>
     </div>
   </section>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { getAgentDetail, resumeAgent, stopAgent } from '../api';
 import { connectionState, showGlobalSuccessToast } from '../appUiState';
 import { formatConnectionState } from '../utils';
@@ -12,6 +13,8 @@ import type {
   AgentDetail,
   AgentStatus,
 } from '../types';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   open: boolean;
@@ -60,12 +63,12 @@ const statusLabel = computed(() => {
     return '';
   }
   if (currentStatus.value === 'active') {
-    return '忙碌';
+    return t('agent.status.active');
   }
   if (currentStatus.value === 'failed') {
-    return '失败';
+    return t('agent.status.failed');
   }
-  return '空闲';
+  return t('agent.status.idle');
 });
 
 const failureMessage = computed(() => {
@@ -92,12 +95,12 @@ const agentTemplateLabel = computed(() => {
     return props.roleTemplateName.trim();
   }
   if (!displayAgent.value) {
-    return '未配置模板';
+    return t('agent.noTemplate');
   }
   if (typeof displayAgent.value.role_template_id === 'number' && displayAgent.value.role_template_id > 0) {
-    return `模板 #${displayAgent.value.role_template_id}`;
+    return t('agent.templateFallback', { id: displayAgent.value.role_template_id });
   }
-  return '未配置模板';
+  return t('agent.noTemplate');
 });
 
 const displayAgentName = computed(() => displayAgent.value?.name ?? props.agentName ?? 'Agent');
@@ -108,22 +111,22 @@ const activityRealtimePulse = computed(
   () => activityRealtimeState.value !== 'disconnected',
 );
 const activityBadgeLabel = computed(() =>
-  activityRealtimeState.value === 'connected' ? '实时更新' : formatConnectionState(activityRealtimeState.value),
+  activityRealtimeState.value === 'connected' ? t('agent.realtimeConnected') : formatConnectionState(activityRealtimeState.value),
 );
 
 const visibleActivities = computed(() => activities.value.slice(-30));
 
 function activityStatusLabel(status: AgentActivityStatus): string {
   if (status === 'started') {
-    return '进行中';
+    return t('agent.activityState.running');
   }
   if (status === 'succeeded') {
-    return '完成';
+    return t('agent.activityState.completed');
   }
   if (status === 'failed') {
-    return '失败';
+    return t('agent.activityState.failed');
   }
-  return '取消';
+  return t('agent.activityState.cancelled');
 }
 
 function activitySummary(activity: AgentActivity): string {
@@ -172,7 +175,7 @@ function activityMetaTokens(activity: AgentActivity): string {
   }
   if (estimated !== null) {
     const runningTotal = estimated + (currentCompletion ?? 0);
-    return `估算 ${runningTotal}`;
+    return t('agent.tokenEstimate', { count: runningTotal });
   }
   return '';
 }
@@ -228,7 +231,7 @@ async function loadActivities(): Promise<void> {
     await loadAgentActivities(props.agentId);
     await scrollActivitiesToBottom();
   } catch (error) {
-    activitiesErrorMessage.value = 'Agent 活动加载失败。';
+    activitiesErrorMessage.value = t('agent.loadFailed');
     console.error(error);
   } finally {
     activitiesLoading.value = false;
@@ -249,7 +252,7 @@ async function loadDetail(): Promise<void> {
   try {
     agent.value = await getAgentDetail(props.agentId);
   } catch (error) {
-    errorMessage.value = 'Agent 信息加载失败。';
+    errorMessage.value = t('agent.infoLoadFailed');
     console.error(error);
   } finally {
     loading.value = false;
@@ -265,7 +268,7 @@ async function handleResume(): Promise<void> {
 
   try {
     await resumeAgent(props.agentId);
-    showGlobalSuccessToast('已触发重试');
+    showGlobalSuccessToast(t('agent.resumeSuccess'));
   } catch (error) {
     console.error(error);
   } finally {
@@ -282,7 +285,7 @@ async function handleStop(): Promise<void> {
 
   try {
     await stopAgent(props.agentId);
-    showGlobalSuccessToast('已停止当前任务');
+    showGlobalSuccessToast(t('agent.stopSuccess'));
   } catch (error) {
     console.error(error);
   } finally {
@@ -297,7 +300,7 @@ async function copyFailureMessage(): Promise<void> {
 
   try {
     await navigator.clipboard.writeText(failureMessage.value);
-    showGlobalSuccessToast('已复制完整报错');
+    showGlobalSuccessToast(t('agent.copiedError'));
   } catch (error) {
     console.error(error);
   }
@@ -389,11 +392,11 @@ watch(
             <p class="agent-detail-eyebrow">Agent Card</p>
             <h3>{{ displayAgentName }}</h3>
           </div>
-          <button type="button" class="agent-detail-close" aria-label="关闭" @click="emit('close')">×</button>
+          <button type="button" class="agent-detail-close" :aria-label="t('common.close')" @click="emit('close')">×</button>
         </div>
 
         <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
-        <div v-else-if="loading && !displayAgent && !agentName" class="loading-card">正在加载 Agent 信息…</div>
+        <div v-else-if="loading && !displayAgent && !agentName" class="loading-card">{{ t('agent.loadingInfo') }}</div>
 
         <template v-else-if="displayAgent || agentName">
           <section class="agent-detail-stage">
@@ -418,7 +421,7 @@ watch(
                     :disabled="resuming"
                     @click="handleResume"
                   >
-                    {{ resuming ? '重试中…' : '重试' }}
+                    {{ resuming ? t('agent.resuming') : t('agent.resume') }}
                   </button>
                   <button
                     v-if="currentStatus === 'active'"
@@ -427,13 +430,13 @@ watch(
                     :disabled="stopping"
                     @click="handleStop"
                   >
-                    {{ stopping ? '停止中…' : '停止' }}
+                    {{ stopping ? t('agent.stopping') : t('agent.stop') }}
                   </button>
                 </div>
                 <div v-if="failureMessage" class="agent-error-panel">
                   <p class="agent-error-message">{{ failurePreview }}</p>
                   <button type="button" class="agent-error-panel__copy" @click="copyFailureMessage">
-                    复制全部
+                    {{ t('agent.copyAll') }}
                   </button>
                 </div>
               </div>
@@ -442,7 +445,7 @@ watch(
               <section class="agent-activity-panel">
                 <div class="agent-activity-panel__head">
                   <div class="agent-activity-panel__title-line">
-                    <h4>运行活动</h4>
+                    <h4>{{ t('agent.activities') }}</h4>
                     <p class="agent-activity-panel__eyebrow">Activity</p>
                   </div>
                   <span class="agent-activity-panel__badge" :data-state="activityRealtimeState">
@@ -455,9 +458,9 @@ watch(
                 </div>
 
                 <div v-if="activitiesErrorMessage" class="error-banner">{{ activitiesErrorMessage }}</div>
-                <div v-else-if="activitiesLoading && !visibleActivities.length" class="loading-card">正在加载 Agent 活动…</div>
+                <div v-else-if="activitiesLoading && !visibleActivities.length" class="loading-card">{{ t('agent.loadingActivities') }}</div>
                 <div v-else-if="!activitiesLoading && !visibleActivities.length" class="agent-activity-empty">
-                  暂无活动记录。
+                  {{ t('agent.noActivities') }}
                 </div>
                 <div
                   v-else

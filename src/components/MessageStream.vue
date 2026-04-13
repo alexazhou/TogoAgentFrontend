@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getAgentAvatarUrl } from '../avatar';
 import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { MessageInfo } from '../types';
 import { bubbleSide, formatTime } from '../utils';
 
@@ -12,6 +13,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   clickWorkingAgent: [agentName: string];
 }>();
+
+const { t } = useI18n();
 
 const streamRef = useTemplateRef('streamRef');
 const hasScrollbar = ref(false);
@@ -156,7 +159,7 @@ onBeforeUnmount(() => {
         :src="getAgentAvatarUrl(workingAgentName)"
         :alt="`${workingAgentName} avatar`"
       />
-      <span class="working-indicator-text">{{ workingAgentName }} 处理中</span>
+      <span class="working-indicator-text">{{ t('chat.processing', { name: workingAgentName }) }}</span>
       <span class="working-indicator-dots">
         <span class="dot"></span>
         <span class="dot"></span>

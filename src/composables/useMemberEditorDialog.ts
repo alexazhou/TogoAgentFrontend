@@ -1,4 +1,5 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { getAgentDetail } from '../api';
 
 export type MemberEditorMode = 'view' | 'edit';
@@ -33,6 +34,7 @@ type UseMemberEditorDialogOptions = {
 };
 
 export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
+  const { t } = useI18n();
   const memberEditorOpen = ref(false);
   const editingMemberName = ref('');
   const memberEditorName = ref('');
@@ -151,11 +153,12 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
     void loadMemberDriver(agentName);
   }
 
-  function openPendingMemberEditor(displayName = '新成员'): void {
+  function openPendingMemberEditor(displayName?: string): void {
+    const name = displayName ?? t('member.newMember');
     memberEditorOpen.value = true;
     memberEditorMode.value = 'edit';
-    editingMemberName.value = displayName;
-    memberEditorName.value = displayName;
+    editingMemberName.value = name;
+    memberEditorName.value = name;
     memberEditorKeyword.value = '';
     memberEditorTemplateId.value = null;
     memberEditorModel.value = '';

@@ -23,6 +23,7 @@ import type {
   TeamSummary,
 } from './types';
 import { showGlobalRequestError } from './appUiState';
+import { t } from './i18n';
 
 type RawRoomInfo = {
   gt_room?: {
@@ -171,13 +172,13 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
         || response.headers.get('x-proxy-error') === 'backend-unavailable';
 
       if (isProxyConnectionFailure) {
-        showGlobalRequestError(`无法连接后端：${path}`);
+        showGlobalRequestError(t('error.cannotConnect', { path }));
         throw new Error('Backend unavailable');
       }
 
       const message = errorDetail
-        ? `请求失败：${response.status} ${path}\n${errorDetail}`
-        : `请求失败：${response.status} ${path}`;
+        ? t('error.requestFailedDetail', { status: response.status, path, detail: errorDetail })
+        : t('error.requestFailed', { status: response.status, path });
       showGlobalRequestError(message);
       throw new Error(
         errorDetail
@@ -192,7 +193,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
       throw error;
     }
 
-    showGlobalRequestError(`无法连接后端：${path}`);
+    showGlobalRequestError(t('error.cannotConnect', { path }));
     throw error;
   }
 }
@@ -664,5 +665,12 @@ export async function testLlmService(payload: {
   return requestJson('/config/llm_services/test.json', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function setLanguage(language: string): Promise<{ language: string }> {
+  return requestJson("/config/language.json", {
+    method: "POST",
+    body: JSON.stringify({ language }),
   });
 }

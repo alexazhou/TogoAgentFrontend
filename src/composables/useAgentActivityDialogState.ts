@@ -1,10 +1,12 @@
 import { computed, ref, type Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { AgentInfo, AgentStatus, RoleTemplateSummary } from '../types';
 
 export function useAgentActivityDialogState(
   agents: Ref<AgentInfo[]>,
   roleTemplates: Ref<RoleTemplateSummary[]>,
 ) {
+  const { t } = useI18n();
   const open = ref(false);
   const selectedAgentId = ref<number | null>(null);
   const selectedAgentName = ref<string | null>(null);
@@ -23,7 +25,7 @@ export function useAgentActivityDialogState(
       return null;
     }
 
-    return roleTemplateNameMap.value.get(roleTemplateId) ?? `模板 #${roleTemplateId}`;
+    return roleTemplateNameMap.value.get(roleTemplateId) ?? t('agent.templateFallback', { id: roleTemplateId });
   });
 
   function openAgent(agentName: string): void {

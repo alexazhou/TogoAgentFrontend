@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 const props = withDefaults(defineProps<{
   name: string;
   workingDirectory: string;
@@ -20,37 +22,39 @@ const emit = defineEmits<{
   'update:rules': [value: string];
 }>();
 
-function displayValue(value: string, fallback = '未设置'): string {
-  return value.trim() || fallback;
+const { t } = useI18n();
+
+function displayValue(value: string, fallback?: string): string {
+  return value.trim() || (fallback ?? t('common.notSet'));
 }
 </script>
 
 <template>
   <section class="name-panel" :class="{ readonly: props.readonly }">
     <div class="panel-head">
-      <span class="panel-title">团队信息</span>
-      <span v-if="props.readonly" class="panel-badge">只读</span>
+      <span class="panel-title">{{ t('team.info') }}</span>
+      <span v-if="props.readonly" class="panel-badge">{{ t('team.readonly') }}</span>
     </div>
 
     <template v-if="props.readonly">
       <div class="info-table">
         <div class="info-row">
-          <span class="info-key">团队名称</span>
+          <span class="info-key">{{ t('team.name') }}</span>
           <div class="info-value">{{ displayValue(name) }}</div>
         </div>
 
         <div v-if="props.showWorkingDirectory" class="info-row">
-          <span class="info-key">工作目录</span>
+          <span class="info-key">{{ t('team.workDir') }}</span>
           <div class="info-value info-value-path">{{ displayValue(workingDirectory) }}</div>
         </div>
 
         <div class="info-row">
-          <span class="info-key">团队口号</span>
+          <span class="info-key">{{ t('team.slogan') }}</span>
           <div class="info-value">{{ displayValue(slogan) }}</div>
         </div>
 
         <div class="info-row info-row-multiline">
-          <span class="info-key">团队职责</span>
+          <span class="info-key">{{ t('team.responsibility') }}</span>
           <div class="info-value info-value-multiline">{{ displayValue(rules) }}</div>
         </div>
       </div>
@@ -59,42 +63,42 @@ function displayValue(value: string, fallback = '未设置'): string {
     <template v-else>
       <div class="edit-grid">
         <label class="edit-field">
-          <span class="field-label">团队名称</span>
+          <span class="field-label">{{ t('team.name') }}</span>
           <input
             :value="name"
             type="text"
-            placeholder="例如：alpha-delivery"
+            :placeholder="t('team.namePlaceholder')"
             :disabled="!props.editableName"
             @input="emit('update:name', ($event.target as HTMLInputElement).value)"
           />
         </label>
 
         <label v-if="props.showWorkingDirectory" class="edit-field">
-          <span class="field-label">工作目录</span>
+          <span class="field-label">{{ t('team.workDir') }}</span>
           <input
             :value="workingDirectory"
             type="text"
-            placeholder="例如：/workspace/alpha-delivery"
+            :placeholder="t('team.workDirPlaceholder')"
             @input="emit('update:workingDirectory', ($event.target as HTMLInputElement).value)"
           />
         </label>
 
         <label class="edit-field">
-          <span class="field-label">团队口号</span>
+          <span class="field-label">{{ t('team.slogan') }}</span>
           <input
             :value="slogan"
             type="text"
-            placeholder="例如：硅基动力，优秀实力"
+            :placeholder="t('team.sloganPlaceholder')"
             @input="emit('update:slogan', ($event.target as HTMLInputElement).value)"
           />
         </label>
 
         <label class="edit-field edit-field-wide">
-          <span class="field-label">团队职责</span>
+          <span class="field-label">{{ t('team.responsibility') }}</span>
           <textarea
             :value="rules"
             rows="3"
-            placeholder="例如：1. 负责核心业务开发 2. 提升系统可用性"
+            :placeholder="t('team.responsibilityPlaceholder')"
             @input="emit('update:rules', ($event.target as HTMLTextAreaElement).value)"
           ></textarea>
         </label>

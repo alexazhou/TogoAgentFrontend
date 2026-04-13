@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { RouterView, useRoute, useRouter } from 'vue-router';
 import {
   clearGlobalRequestError,
@@ -24,6 +25,7 @@ type ThemeMode = 'dark' | 'light';
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 const themeMode = ref<ThemeMode>((localStorage.getItem('theme-mode') as ThemeMode) || 'dark');
 
@@ -178,7 +180,7 @@ onBeforeUnmount(() => {
           role="alert"
         >
           <span>{{ toast.message }}</span>
-          <button type="button" aria-label="关闭提醒" @click="clearGlobalRequestError(toast.id)">
+          <button type="button" :aria-label="t('common.closeAlert')" @click="clearGlobalRequestError(toast.id)">
             ×
           </button>
         </div>

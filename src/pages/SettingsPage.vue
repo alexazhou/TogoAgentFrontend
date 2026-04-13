@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { deleteTeam, clearTeamData, getAgents, getAgentsByTeamId, getDeptTree, getDirectories, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
@@ -17,6 +18,7 @@ import type { SettingsBreadcrumbItem } from '../components/settings/types';
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 
 totalMessageCount.value = 0;
 
@@ -25,8 +27,8 @@ const startedAt = Date.now();
 const uptimeLabel = ref('00:00:00');
 const systemVersion = 'Web Console v0.1.0';
 const driverStates = [
-  { key: 'claude', label: 'Claude', available: false, note: '待接入检测' },
-  { key: 'tps', label: 'TPS', available: false, note: '待接入检测' },
+  { key: 'claude', label: 'Claude', available: false, note: t('settings.pendingDetection') },
+  { key: 'tps', label: 'TPS', available: false, note: t('settings.pendingDetection') },
 ];
 const agents = ref<AgentInfo[]>([]);
 const settingsMainRef = ref<HTMLElement | null>(null);
@@ -101,7 +103,7 @@ const currentNavItem = computed(() =>
   navItems.find((item) => item.id === currentSectionId.value) ?? navItems[0],
 );
 const isTeamDetailView = computed(() => currentSectionId.value === 'teams' && detailTeamId.value !== null);
-const topbarBackLabel = computed(() => isTeamDetailView.value ? '返回团队管理' : '返回主界面');
+const topbarBackLabel = computed(() => isTeamDetailView.value ? t('settings.backToTeams') : t('settings.back'));
 const detailTeamId = computed(() => {
   const raw = route.query.detailTeamId;
   if (typeof raw !== 'string') {
@@ -133,7 +135,7 @@ const hasTeamInfoChanges = computed(() => {
 });
 const breadcrumbItems = computed<SettingsBreadcrumbItem[]>(() => {
   const items: SettingsBreadcrumbItem[] = [
-    { key: 'settings', label: '系统设置', current: false },
+    { key: 'settings', label: t('settings.title'), current: false },
     {
       key: `section-${currentNavItem.value.id}`,
       label: currentNavItem.value.label,
@@ -145,7 +147,7 @@ const breadcrumbItems = computed<SettingsBreadcrumbItem[]>(() => {
     items[items.length - 1].current = false;
     items.push({
       key: 'team-detail',
-      label: '团队详情',
+      label: selectedTeamDetail.value.name,
       current: true,
     });
   }
@@ -327,11 +329,11 @@ async function saveTeamInfo(): Promise<void> {
       loadTeamSummaries(),
       loadTeams(),
     ]);
-    teamInfoStatus.value = '已保存';
-    showGlobalSuccessToast('团队信息已保存');
+    teamInfoStatus.value = t('settings.page.teamSavedStatus');
+    showGlobalSuccessToast(t('settings.page.teamSaved'));
   } catch (error) {
     console.error(error);
-    teamInfoStatus.value = '保存失败';
+    teamInfoStatus.value = t('settings.page.teamSaveFailed');
   } finally {
     isSavingTeamInfo.value = false;
   }
@@ -356,7 +358,7 @@ async function updateTeamEnabledState(teamIdToUpdate: number, enabled: boolean):
         ? loadSelectedTeamDetail(teamIdToUpdate)
         : Promise.resolve(),
     ]);
-    showGlobalSuccessToast(enabled ? '团队已启用' : '团队已停用');
+    showGlobalSuccessToast(enabled ? t('settings.page.teamEnabled') : t('settings.page.teamDisabled'));
   } catch (error) {
     console.error(error);
   } finally {
@@ -438,7 +440,7 @@ async function confirmDeleteTeam(): Promise<void> {
       name: 'settings',
       params: { teamId: nextTeamId, section: 'teams' },
     }).catch(console.error);
-    showGlobalSuccessToast('团队已删除');
+    showGlobalSuccessToast(t('settings.page.teamDeleted'));
   } catch (error) {
     console.error(error);
   }
@@ -474,7 +476,12 @@ async function confirmClearTeamData(): Promise<void> {
   try {
     const result = await clearTeamData(targetTeamId);
     showGlobalSuccessToast(
-      `已清空团队"${teamName}"：${result.deleted.tasks}个任务，${result.deleted.histories}条历史，${result.deleted.messages}条消息`
+      t('settings.page.clearDataSuccess', {
+        name: teamName,
+        tasks: result.deleted.tasks,
+        histories: result.deleted.histories,
+        messages: result.deleted.messages,
+      })
     );
   } catch (error) {
     console.error(error);
@@ -500,7 +507,7 @@ function formatDuration(ms: number): string {
 
 function formatDateTime(value: string): string {
   if (!value) {
-    return '未知';
+    return t('common.unknown');
   }
 
   const normalized = value.includes('T') ? value : value.replace(' ', 'T');
@@ -613,7 +620,7 @@ function handleTeamTreeSaved(): void {
     <header class="settings-head">
       <div class="settings-head-main">
         <div class="settings-title-row">
-          <h2>系统设置</h2>
+          <h2>{{ t('settings.title') }}</h2>
           <p class="settings-eyebrow">Admin Console</p>
         </div>
       </div>
@@ -701,18 +708,18 @@ function handleTeamTreeSaved(): void {
 
     <ConfirmDialog
       :open="teamToggleConfirm.open"
-      :title="teamToggleConfirm.enabled ? '启用团队' : '停用团队'"
-      :message="teamToggleConfirm.enabled ? '确认启用团队？' : '确认停用团队？'"
-      :confirm-label="teamToggleConfirm.enabled ? '启用' : '停用'"
+      :title="teamToggleConfirm.enabled ? t('settings.page.toggleEnableTitle') : t('settings.page.toggleDisableTitle')"
+      :message="teamToggleConfirm.enabled ? t('settings.page.toggleEnableMsg') : t('settings.page.toggleDisableMsg')"
+      :confirm-label="teamToggleConfirm.enabled ? t('settings.page.toggleEnableBtn') : t('settings.page.toggleDisableBtn')"
       @close="closeTeamToggleConfirm"
       @confirm="confirmTeamToggle"
     />
 
     <ConfirmDialog
       :open="teamDeleteConfirm.open"
-      title="删除团队"
-      message="确认删除团队？删除后无法恢复。"
-      confirm-label="删除"
+      :title="t('settings.page.deleteTitle')"
+      :message="t('settings.page.deleteMsg')"
+      :confirm-label="t('settings.page.deleteBtn')"
       danger
       @close="closeTeamDeleteConfirm"
       @confirm="confirmDeleteTeam"
@@ -720,9 +727,9 @@ function handleTeamTreeSaved(): void {
 
     <ConfirmDialog
       :open="teamClearDataConfirm.open"
-      title="清空团队数据"
-      message="确认清空团队运行数据？此操作将删除所有任务记录、对话历史和房间消息，不可恢复。"
-      confirm-label="清空"
+      :title="t('settings.page.clearTitle')"
+      :message="t('settings.page.clearMsg')"
+      :confirm-label="t('settings.page.clearBtn')"
       danger
       @close="closeTeamClearDataConfirm"
       @confirm="confirmClearTeamData"

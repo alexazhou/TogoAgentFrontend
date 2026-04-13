@@ -8,6 +8,7 @@ import {
   getRoomMessages as fetchRoomMessages,
   getRooms as fetchRooms,
 } from '../api';
+import { t } from '../i18n';
 import type {
   AgentActivity,
   AgentInfo,
@@ -138,13 +139,13 @@ export async function loadTeamRooms(teamId: number): Promise<RoomState[]> {
         const lastMessage = roomMessages[roomMessages.length - 1];
         return {
           room_id: room.room_id,
-          preview: lastMessage ? formatPreview(lastMessage) : '暂无消息',
+          preview: lastMessage ? formatPreview(lastMessage) : t('message.noMessage'),
         };
       } catch (error) {
         console.error(error);
         return {
           room_id: room.room_id,
-          preview: '暂无消息',
+          preview: t('message.noMessage'),
         };
       }
     }),
@@ -153,7 +154,7 @@ export async function loadTeamRooms(teamId: number): Promise<RoomState[]> {
   const previewMap = new Map(previews.map((entry) => [entry.room_id, entry.preview]));
   const rooms: RoomState[] = baseRooms.map((room) => ({
     ...room,
-    preview: previewMap.get(room.room_id) ?? '暂无消息',
+    preview: previewMap.get(room.room_id) ?? t('message.noMessage'),
     unread: 0,
     current_turn_agent: room.current_turn_agent ?? null,
   }));

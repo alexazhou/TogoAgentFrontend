@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
+import i18n from '../i18n';
+import { setLanguage } from '../api';
 import type { TeamSummary } from '../types';
 import type { ConnectionState } from '../utils';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   connectionState: ConnectionState;
@@ -24,8 +29,11 @@ const emit = defineEmits<{
 }>();
 
 const teamMenuOpen = ref(false);
+const languageMenuOpen = ref(false);
+const currentLocale = computed(() => i18n.global.locale.value as string);
+
 const activeTeamName = computed(() => (
-  props.teams.find((team) => team.id === props.activeTeamId)?.name ?? '选择团队'
+  props.teams.find((team) => team.id === props.activeTeamId)?.name ?? t('topbar.selectTeam')
 ));
 const enabledTeams = computed(() => props.teams
   .filter((team) => team.enabled)
@@ -37,8 +45,8 @@ const disabledTeams = computed(() => props.teams
   .sort((left, right) => left.id - right.id));
 const scheduleLabel = computed(() => {
   switch (props.scheduleState) {
-    case 'blocked': return '调度阻塞';
-    case 'stopped': return '调度停止';
+    case 'blocked': return t('topbar.scheduleBlocked');
+    case 'stopped': return t('topbar.scheduleStopped');
     default: return '';
   }
 });
@@ -46,7 +54,7 @@ const scheduleTooltip = computed(() => {
   if (!props.scheduleState || props.scheduleState === 'running') {
     return '';
   }
-  return props.scheduleNotRunningReason || (props.scheduleState === 'blocked' ? '未配置大模型服务' : '调度已停止');
+  return props.scheduleNotRunningReason || (props.scheduleState === 'blocked' ? t('topbar.scheduleBlockedReason') : t('topbar.scheduleStoppedReason'));
 });
 
 function selectTeam(teamId: number): void {
@@ -70,11 +78,15 @@ function handleWindowPointerDown(event: PointerEvent): void {
   if (!target.closest('.team-switcher')) {
     teamMenuOpen.value = false;
   }
+  if (!target.closest('.language-switch')) {
+    languageMenuOpen.value = false;
+  }
 }
 
 function handleWindowKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape') {
     teamMenuOpen.value = false;
+    languageMenuOpen.value = false;
   }
 }
 
@@ -114,6 +126,20 @@ function isActiveTeam(teamId: number): boolean {
 
 function optionTabIndex(teamId: number): number {
   return isActiveTeam(teamId) ? 0 : -1;
+}
+
+function toggleLanguageMenu(): void {
+  languageMenuOpen.value = !languageMenuOpen.value;
+}
+
+async function handleSetLanguage(lang: string): Promise<void> {
+  try {
+    await setLanguage(lang);
+    i18n.global.locale.value = lang;
+    languageMenuOpen.value = false;
+  } catch (error) {
+    console.error('Failed to set language:', error);
+  }
 }
 
 function listboxId(): string {
@@ -170,8 +196,8 @@ function optionLabel(team: TeamSummary): string {
         >
           <section v-if="enabledTeams.length" class="team-switcher-group">
             <div class="team-switcher-group__head">
-              <span class="team-switcher-group__title">启用中</span>
-              <span class="team-switcher-group__count">{{ enabledTeams.length }} 团队</span>
+              <span class="team-switcher-group__title">{{ t('topbar.teamGroupEnabled') }}</span>
+              <span class="team-switcher-group__count">{{ t('topbar.teamsCount', { count: enabledTeams.length }) }}</span>
             </div>
             <button
               v-for="team in enabledTeams"
@@ -194,8 +220,8 @@ function optionLabel(team: TeamSummary): string {
 
           <section v-if="disabledTeams.length" class="team-switcher-group">
             <div class="team-switcher-group__head">
-              <span class="team-switcher-group__title">已停用</span>
-              <span class="team-switcher-group__count">{{ disabledTeams.length }} 团队</span>
+              <span class="team-switcher-group__title">{{ t('topbar.teamGroupDisabled') }}</span>
+              <span class="team-switcher-group__count">{{ t('topbar.teamsCount', { count: disabledTeams.length }) }}</span>
             </div>
             <button
               v-for="team in disabledTeams"
@@ -221,8 +247,8 @@ function optionLabel(team: TeamSummary): string {
         class="nav-action nav-icon-button"
         type="button"
         :disabled="activeTeamId === null"
-        title="系统设置"
-        aria-label="系统设置"
+        :title="t('topbar.settings')"
+        :aria-label="t('topbar.settings')"
         @click="emit('openSettings')"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -233,7 +259,7 @@ function optionLabel(team: TeamSummary): string {
     </div>
 
     <div class="status-group">
-      <div v-if="!activeTeamEnabled" class="team-disabled-pill">本团队已停用</div>
+      <div v-if="!activeTeamEnabled" class="team-disabled-pill">{{ t('topbar.teamDisabled') }}</div>
       <div
         v-if="scheduleLabel"
         class="schedule-state-pill-wrapper"
@@ -266,12 +292,12 @@ function optionLabel(team: TeamSummary): string {
         ></span>
         {{ statusLabel }}
       </div>
-      <div v-if="showConnectionStatus" class="metric-pill">{{ totalMessageCount }} 条消息</div>
+      <div v-if="showConnectionStatus" class="metric-pill">{{ t('topbar.messagesCount', { count: totalMessageCount }) }}</div>
       <button
         class="theme-switch"
         type="button"
         :aria-pressed="isLightMode"
-        :title="isLightMode ? '切换到暗色模式' : '切换到亮色模式'"
+        :title="isLightMode ? t('topbar.switchToDark') : t('topbar.switchToLight')"
         @click="emit('toggleTheme')"
       >
         <span
@@ -304,6 +330,46 @@ function optionLabel(team: TeamSummary): string {
           </svg>
         </span>
       </button>
+      <div class="language-switch">
+        <button
+          type="button"
+          class="lang-button"
+          :aria-expanded="languageMenuOpen"
+          aria-haspopup="listbox"
+          @click="toggleLanguageMenu"
+        >
+          {{ currentLocale === 'zh-CN' ? t('language.zhCN') : t('language.en') }}
+          <svg class="lang-button__icon" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m4 6 4 4 4-4" />
+          </svg>
+        </button>
+        <div
+          v-if="languageMenuOpen"
+          class="lang-menu"
+          role="listbox"
+        >
+          <button
+            type="button"
+            class="lang-option"
+            :class="{ 'is-active': currentLocale === 'zh-CN' }"
+            role="option"
+            :aria-selected="currentLocale === 'zh-CN'"
+            @click="handleSetLanguage('zh-CN')"
+          >
+            {{ t('language.zhCN') }}
+          </button>
+          <button
+            type="button"
+            class="lang-option"
+            :class="{ 'is-active': currentLocale === 'en' }"
+            role="option"
+            :aria-selected="currentLocale === 'en'"
+            @click="handleSetLanguage('en')"
+          >
+            {{ t('language.en') }}
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 </template>
@@ -750,6 +816,94 @@ function optionLabel(team: TeamSummary): string {
     transform: scale(1.35);
     opacity: 1;
   }
+}
+
+.language-switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lang-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--pill-bg);
+  color: var(--text-strong);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.lang-button:hover {
+  border-color: var(--focus-border);
+}
+
+.lang-button:focus-visible {
+  border-color: var(--focus-border);
+  box-shadow: 0 0 0 2px var(--focus-glow);
+}
+
+.lang-button__icon {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lang-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 24;
+  min-width: 100px;
+  padding: 4px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-bg) 96%, var(--surface-soft) 4%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+:root[data-theme='light'] .lang-menu {
+  background: #ffffff;
+}
+
+.lang-option {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+
+.lang-option:hover,
+.lang-option:focus-visible {
+  border-color: color-mix(in srgb, var(--focus-border) 42%, transparent);
+  background: color-mix(in srgb, var(--selected) 56%, var(--panel-bg) 44%);
+}
+
+.lang-option.is-active {
+  border-color: color-mix(in srgb, var(--focus-border) 56%, var(--panel-border) 44%);
+  background: color-mix(in srgb, var(--selected) 72%, var(--panel-bg) 28%);
+  font-weight: 600;
 }
 
 @media (max-width: 980px) {

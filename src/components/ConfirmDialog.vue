@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 defineProps<{
   open: boolean;
   title: string;
@@ -12,6 +14,8 @@ const emit = defineEmits<{
   close: [];
   confirm: [];
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -27,7 +31,7 @@ const emit = defineEmits<{
 
         <div class="confirm-actions">
           <button type="button" class="ghost-button" @click="emit('close')">
-            {{ cancelLabel || '取消' }}
+            {{ cancelLabel || t('common.cancel') }}
           </button>
           <button
             type="button"
@@ -35,7 +39,7 @@ const emit = defineEmits<{
             :class="{ 'secondary-button--danger': danger }"
             @click="emit('confirm')"
           >
-            {{ confirmLabel || '确认' }}
+            {{ confirmLabel || t('common.confirm') }}
           </button>
         </div>
       </section>

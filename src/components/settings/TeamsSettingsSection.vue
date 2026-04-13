@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import TeamInfoCard from '../TeamInfoCard.vue';
 import TeamTreeEditor from '../TeamTreeEditor.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
@@ -49,6 +50,8 @@ const emit = defineEmits<{
   'update:rules': [value: string];
 }>();
 
+const { t } = useI18n();
+
 const enabledTeams = computed(() => props.teams.filter((team) => team.enabled));
 const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled));
 </script>
@@ -74,8 +77,8 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
           >
             <span class="team-enabled-switch__label">
               {{ teamEnabledPending[selectedTeamDetail.id]
-                ? '切换中'
-                : (selectedTeamDetail.enabled ? '启用' : '停用') }}
+                ? t('settings.teams.switching')
+                : (selectedTeamDetail.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled')) }}
             </span>
             <span class="team-enabled-switch__track">
               <span
@@ -109,7 +112,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
               :disabled="isSavingTeamInfo"
               @click="emit('resetTeamInfoDraft')"
             >
-              重置
+              {{ t('settings.teams.reset') }}
             </button>
             <button
               type="button"
@@ -117,7 +120,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
               :disabled="!hasTeamInfoChanges || isSavingTeamInfo"
               @click="emit('saveTeamInfo')"
             >
-              {{ isSavingTeamInfo ? '保存中...' : '保存变更' }}
+              {{ isSavingTeamInfo ? t('settings.teams.saving') : t('settings.teams.saveBtn') }}
             </button>
           </template>
         </TeamInfoCard>
@@ -130,10 +133,10 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 
         <div class="team-detail-danger-actions">
           <button type="button" class="secondary-button team-delete-button" @click="emit('deleteTeam')">
-            删除团队
+            {{ t('settings.teams.deleteTeam') }}
           </button>
           <button type="button" class="secondary-button team-delete-button" @click="emit('clearTeamData')">
-            清空数据
+            {{ t('settings.teams.clearData') }}
           </button>
         </div>
       </div>
@@ -143,14 +146,14 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
       <div class="section-head teams-list-head">
         <div class="teams-list-title-group">
           <p class="section-eyebrow">Teams</p>
-          <h3>所有团队</h3>
+          <h3>{{ t('settings.teams.title') }}</h3>
         </div>
-        <button type="button" class="secondary-button" @click="emit('createTeam')">新建团队</button>
+        <button type="button" class="secondary-button" @click="emit('createTeam')">{{ t('settings.teams.newTeam') }}</button>
       </div>
       <section v-if="enabledTeams.length" class="team-group">
         <div class="team-group-head">
-          <span class="team-group-title">启用中</span>
-          <span class="team-group-count">{{ enabledTeams.length }} 个</span>
+          <span class="team-group-title">{{ t('settings.teams.enabledGroup') }}</span>
+          <span class="team-group-count">{{ t('settings.teams.count', { count: enabledTeams.length }) }}</span>
         </div>
         <div class="team-group-grid">
           <article v-for="team in enabledTeams" :key="team.id" class="team-card">
@@ -168,7 +171,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
                 @click="emit('toggleTeamEnabled', team.id, !team.enabled)"
               >
                 <span class="team-enabled-switch__label">
-                  {{ teamEnabledPending[team.id] ? '切换中' : (team.enabled ? '启用' : '停用') }}
+                  {{ teamEnabledPending[team.id] ? t('settings.teams.switching') : (team.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled')) }}
                 </span>
                 <span class="team-enabled-switch__track">
                   <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': team.enabled }"></span>
@@ -177,22 +180,22 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
             </div>
             <div class="team-card-summary">
               <div class="team-summary-row">
-                <span class="team-summary-chip">成员 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
-                <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
-                <span class="team-summary-chip">聊天室 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
-                <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.memberCount', { count: teamSummaries[team.id]?.activeMemberCount ?? 0 }) }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.deptCount', { count: teamSummaries[team.id]?.deptCount ?? 0 }) }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.roomCount', { count: teamSummaries[team.id]?.roomCount ?? 0 }) }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.hierarchyCount', { count: teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }) }}</span>
                 <span
                   v-if="(teamSummaries[team.id]?.offBoardMemberCount ?? 0) > 0"
                   class="team-summary-chip"
                 >
-                  离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}
+                  {{ t('settings.teams.offboardCount', { count: teamSummaries[team.id]?.offBoardMemberCount ?? 0 }) }}
                 </span>
               </div>
             </div>
             <div class="team-card-footer">
-              <span class="team-last-active">最后活跃 {{ formatDateTime(team.updated_at) }}</span>
+              <span class="team-last-active">{{ t('settings.teams.lastActive', { time: formatDateTime(team.updated_at) }) }}</span>
               <div class="team-card-actions">
-                <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">查看详情</button>
+                <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">{{ t('settings.teams.viewDetail') }}</button>
               </div>
             </div>
           </article>
@@ -201,8 +204,8 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 
       <section v-if="disabledTeams.length" class="team-group">
         <div class="team-group-head">
-          <span class="team-group-title">已停用</span>
-          <span class="team-group-count">{{ disabledTeams.length }} 个</span>
+          <span class="team-group-title">{{ t('settings.teams.disabledGroup') }}</span>
+          <span class="team-group-count">{{ t('settings.teams.count', { count: disabledTeams.length }) }}</span>
         </div>
         <div class="team-group-grid">
           <article v-for="team in disabledTeams" :key="team.id" class="team-card team-card--disabled">
@@ -220,7 +223,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
                 @click="emit('toggleTeamEnabled', team.id, !team.enabled)"
               >
                 <span class="team-enabled-switch__label">
-                  {{ teamEnabledPending[team.id] ? '切换中' : (team.enabled ? '启用' : '停用') }}
+                  {{ teamEnabledPending[team.id] ? t('settings.teams.switching') : (team.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled')) }}
                 </span>
                 <span class="team-enabled-switch__track">
                   <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': team.enabled }"></span>
@@ -229,22 +232,22 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
             </div>
             <div class="team-card-summary">
               <div class="team-summary-row">
-                <span class="team-summary-chip">成员 {{ teamSummaries[team.id]?.activeMemberCount ?? 0 }}</span>
-                <span class="team-summary-chip">部门 {{ teamSummaries[team.id]?.deptCount ?? 0 }}</span>
-                <span class="team-summary-chip">聊天室 {{ teamSummaries[team.id]?.roomCount ?? 0 }}</span>
-                <span class="team-summary-chip">组织层级 {{ teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.memberCount', { count: teamSummaries[team.id]?.activeMemberCount ?? 0 }) }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.deptCount', { count: teamSummaries[team.id]?.deptCount ?? 0 }) }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.roomCount', { count: teamSummaries[team.id]?.roomCount ?? 0 }) }}</span>
+                <span class="team-summary-chip">{{ t('settings.teams.hierarchyCount', { count: teamSummaries[team.id]?.hierarchyLevelCount ?? 0 }) }}</span>
                 <span
                   v-if="(teamSummaries[team.id]?.offBoardMemberCount ?? 0) > 0"
                   class="team-summary-chip"
                 >
-                  离职 {{ teamSummaries[team.id]?.offBoardMemberCount ?? 0 }}
+                  {{ t('settings.teams.offboardCount', { count: teamSummaries[team.id]?.offBoardMemberCount ?? 0 }) }}
                 </span>
               </div>
             </div>
             <div class="team-card-footer">
-              <span class="team-last-active">最后活跃 {{ formatDateTime(team.updated_at) }}</span>
+              <span class="team-last-active">{{ t('settings.teams.lastActive', { time: formatDateTime(team.updated_at) }) }}</span>
               <div class="team-card-actions">
-                <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">查看详情</button>
+                <button type="button" class="ghost-button" @click="emit('openTeamDetail', team.id)">{{ t('settings.teams.viewDetail') }}</button>
               </div>
             </div>
           </article>
@@ -252,13 +255,13 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
       </section>
 
       <article v-if="teamListLoadFailed" class="empty-card">
-        <strong>团队列表加载失败</strong>
-        <p>请检查后端服务或网络连接后重试。</p>
+        <strong>{{ t('settings.teams.loadFailed') }}</strong>
+        <p>{{ t('settings.teams.loadFailedMsg') }}</p>
       </article>
 
       <article v-else-if="teams.length === 0" class="empty-card">
-        <strong>当前没有团队</strong>
-        <p>先创建一个团队，再继续配置成员、角色和模型服务。</p>
+        <strong>{{ t('settings.teams.noTeams') }}</strong>
+        <p>{{ t('settings.teams.noTeamsMsg') }}</p>
       </article>
     </div>
   </section>
