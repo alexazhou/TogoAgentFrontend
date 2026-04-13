@@ -15,6 +15,8 @@ export const showQuickInit = ref(false);
 export const scheduleState = ref<'stopped' | 'blocked' | 'running' | ''>('');
 export const scheduleNotRunningReason = ref('');
 
+type ScheduleStateInput = 'stopped' | 'blocked' | 'running' | 'STOPPED' | 'BLOCKED' | 'RUNNING' | '';
+
 let nextGlobalToastId = 1;
 const globalSuccessToastTimers = new Map<number, number>();
 
@@ -57,7 +59,15 @@ export function clearGlobalSuccessToast(toastId?: number): void {
   removeGlobalSuccessToast(toastId);
 }
 
-export function updateScheduleState(state: 'stopped' | 'blocked' | 'running' | '', reason?: string): void {
-  scheduleState.value = state;
+function normalizeScheduleState(state: ScheduleStateInput): 'stopped' | 'blocked' | 'running' | '' {
+  const normalized = String(state).trim().toLowerCase();
+  if (normalized === 'stopped' || normalized === 'blocked' || normalized === 'running') {
+    return normalized;
+  }
+  return '';
+}
+
+export function updateScheduleState(state: ScheduleStateInput, reason?: string): void {
+  scheduleState.value = normalizeScheduleState(state);
   scheduleNotRunningReason.value = reason ?? '';
 }
