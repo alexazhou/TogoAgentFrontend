@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import type { RoomState } from '../types';
 
 defineProps<{
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   createRoom: [];
 }>();
 
+const { t } = useI18n();
+
 function isDeptRoom(room: RoomState): boolean {
   return Array.isArray(room.tags) && room.tags.includes('DEPT');
 }
@@ -21,14 +24,14 @@ function isDeptRoom(room: RoomState): boolean {
 <template>
   <section class="sidebar-card panel">
     <div class="block-head">
-      <h2>聊天室</h2>
+      <h2>{{ t('room.chatRooms') }}</h2>
       <div class="room-list-head-actions">
         <span>{{ loading ? 0 : rooms.length }}</span>
         <button
           type="button"
           class="room-add-button"
           :disabled="createDisabled"
-          aria-label="新建聊天室"
+          :aria-label="t('room.newRoom')"
           @click="emit('createRoom')"
         >
           +
@@ -37,7 +40,7 @@ function isDeptRoom(room: RoomState): boolean {
     </div>
 
     <div class="sidebar-scroll">
-      <div v-if="loading" class="placeholder">正在同步房间列表…</div>
+      <div v-if="loading" class="placeholder">{{ t('room.syncing') }}</div>
 
       <template v-else-if="rooms.length > 0">
         <button
@@ -54,23 +57,23 @@ function isDeptRoom(room: RoomState): boolean {
                 class="room-icon"
                 :class="room.room_type === 'private' ? 'room-icon-private' : 'room-icon-group'"
               >
-                {{ room.room_type === 'private' ? '单' : '群' }}
+                {{ room.room_type === 'private' ? t('room.private') : t('room.group') }}
               </span>
               <strong>{{ room.room_name }}</strong>
               <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
             </div>
             <div class="room-head-right">
               <span v-if="isDeptRoom(room)" class="room-tag room-tag-dept">
-                <span class="room-tag-dept__label">部门群</span>
+                <span class="room-tag-dept__label">{{ t('room.deptGroup') }}</span>
               </span>
-              <div class="room-meta">{{ room.agents.length }} 人</div>
+              <div class="room-meta">{{ t('room.membersCount', { count: room.agents.length }) }}</div>
             </div>
           </div>
           <p class="room-preview">{{ room.preview }}</p>
         </button>
       </template>
 
-      <div v-else class="placeholder">当前团队还没有聊天室。</div>
+      <div v-else class="placeholder">{{ t('room.noRooms') }}</div>
     </div>
   </section>
 </template>

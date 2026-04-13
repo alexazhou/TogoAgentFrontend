@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   createLlmService,
   deleteLlmService,
@@ -21,6 +22,8 @@ defineProps<{
 const emit = defineEmits<{
   navigateBreadcrumb: [key: string];
 }>();
+
+const { t } = useI18n();
 
 const SERVICE_TYPES: { value: LlmServiceType; label: string }[] = [
   { value: 'openai-compatible', label: 'OpenAI Compatible' },
@@ -205,7 +208,7 @@ async function loadAll(preferredIndex?: number | null): Promise<void> {
     await loadServices(preferredIndex);
   } catch (error) {
     console.error(error);
-    statusText.value = '加载失败';
+    statusText.value = t('settings.models.loadFailed');
   } finally {
     isLoading.value = false;
   }
@@ -261,7 +264,7 @@ async function saveService(): Promise<void> {
 
       const result = await createLlmService(payload);
       await loadServices(result.index);
-      showGlobalSuccessToast('服务已创建');
+      showGlobalSuccessToast(t('settings.models.createSuccess'));
     } else if (selectedIndex.value !== null && selectedService.value) {
       const current = selectedService.value;
       const updates: Record<string, unknown> = {};
@@ -284,13 +287,13 @@ async function saveService(): Promise<void> {
       if (Object.keys(updates).length > 0) {
         await modifyLlmService(selectedIndex.value, updates);
         await loadServices(selectedIndex.value);
-        showGlobalSuccessToast('服务已保存');
+        showGlobalSuccessToast(t('settings.models.saveSuccess'));
       }
     }
-    statusText.value = '已保存';
+    statusText.value = t('settings.models.saved');
   } catch (error) {
     console.error(error);
-    statusText.value = '保存失败';
+    statusText.value = t('settings.models.saveFailed');
   } finally {
     isSaving.value = false;
   }
@@ -312,10 +315,10 @@ async function confirmDelete(): Promise<void> {
     await deleteLlmService(selectedIndex.value);
     deleteConfirmOpen.value = false;
     await loadServices(null);
-    showGlobalSuccessToast('服务已删除');
+    showGlobalSuccessToast(t('settings.models.deleteSuccess'));
   } catch (error) {
     console.error(error);
-    statusText.value = '删除失败';
+    statusText.value = t('settings.models.deleteFailed');
   } finally {
     isDeleting.value = false;
   }
@@ -326,7 +329,7 @@ async function handleSetDefault(): Promise<void> {
   try {
     await setDefaultLlmService(selectedIndex.value);
     await loadServices(selectedIndex.value);
-    showGlobalSuccessToast('已设为默认服务');
+    showGlobalSuccessToast(t('settings.models.defaultSuccess'));
   } catch (error) {
     console.error(error);
   }
@@ -361,7 +364,7 @@ async function handleTest(): Promise<void> {
   } catch (error) {
     testResult.value = {
       status: 'error',
-      message: '测试请求异常',
+      message: t('settings.models.testError'),
       detail: String(error),
     };
   } finally {
@@ -385,12 +388,12 @@ watch(showQuickInit, (val) => {
     <div class="section-head">
       <div>
         <p class="section-eyebrow">Models</p>
-        <h3>大模型服务管理</h3>
+        <h3>{{ t('settings.models.title') }}</h3>
       </div>
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
-        <button type="button" class="secondary-button" @click="showQuickInit = true">快速初始化</button>
-        <button type="button" class="secondary-button" @click="startCreate">新增服务</button>
+        <button type="button" class="secondary-button" @click="showQuickInit = true">{{ t('settings.models.quickInit') }}</button>
+        <button type="button" class="secondary-button" @click="startCreate">{{ t('settings.models.addService') }}</button>
       </div>
     </div>
 
@@ -398,11 +401,11 @@ watch(showQuickInit, (val) => {
       <!-- 左侧 - 服务列表 -->
       <aside class="models-list-card">
         <div class="models-list-head">
-          <strong>服务列表</strong>
-          <span>{{ services.length }} 个</span>
+          <strong>{{ t('settings.models.serviceList') }}</strong>
+          <span>{{ t('settings.models.count', { count: services.length }) }}</span>
         </div>
 
-        <p v-if="isLoading" class="models-empty">正在加载...</p>
+        <p v-if="isLoading" class="models-empty">{{ t('settings.models.loading') }}</p>
 
         <div v-else-if="services.length" class="models-list">
           <button
@@ -417,8 +420,8 @@ watch(showQuickInit, (val) => {
               <div class="svc-row-title">
                 <div class="svc-row-name">
                   <strong>{{ svc.name }}</strong>
-                  <span v-if="svc.name === defaultServer" class="svc-chip svc-chip--default">默认</span>
-                  <span v-if="!svc.enable" class="svc-chip svc-chip--disabled">已禁用</span>
+                  <span v-if="svc.name === defaultServer" class="svc-chip svc-chip--default">{{ t('settings.models.defaultBadge') }}</span>
+                  <span v-if="!svc.enable" class="svc-chip svc-chip--disabled">{{ t('settings.models.disabledBadge') }}</span>
                 </div>
               </div>
               <p class="svc-row-meta">{{ svc.type }} · {{ svc.model }}</p>
@@ -426,7 +429,7 @@ watch(showQuickInit, (val) => {
           </button>
         </div>
 
-        <p v-else class="models-empty">尚未配置任何 LLM 服务。</p>
+        <p v-else class="models-empty">{{ t('settings.models.empty') }}</p>
       </aside>
 
       <!-- 右侧 - 编辑表单 -->
@@ -434,36 +437,36 @@ watch(showQuickInit, (val) => {
         <div class="svc-editor-head">
           <div>
             <p class="section-eyebrow">{{ isCreating ? 'New Service' : 'Service Detail' }}</p>
-            <h4>{{ isCreating ? '新增 LLM 服务' : (form.name || '服务详情') }}</h4>
+            <h4>{{ isCreating ? t('settings.models.newTitle') : (form.name || t('settings.models.detailFallback')) }}</h4>
           </div>
           <div class="svc-editor-badges">
             <span
               v-if="!isCreating && isDefault"
               class="svc-chip svc-chip--default"
-            >默认服务</span>
+            >{{ t('settings.models.defaultServiceBadge') }}</span>
             <span
               v-if="isCreating"
               class="svc-chip svc-chip--draft"
-            >未保存</span>
+            >{{ t('settings.models.unsavedBadge') }}</span>
           </div>
         </div>
 
         <!-- 基本字段 -->
         <div class="svc-form-grid">
           <label class="svc-field">
-            <span>服务名称</span>
+            <span>{{ t('settings.models.nameLabel') }}</span>
             <input
               v-model="form.name"
               type="text"
               class="svc-input"
               :class="{ 'svc-input--readonly': !isCreating }"
-              placeholder="例如：dashscope"
+              :placeholder="t('settings.models.namePlaceholder')"
               :readonly="!isCreating"
             />
           </label>
 
           <label class="svc-field">
-            <span>服务类型</span>
+            <span>{{ t('settings.models.typeLabel') }}</span>
             <select v-model="form.type" class="svc-input svc-select">
               <option v-for="t in SERVICE_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
             </select>
@@ -489,27 +492,27 @@ watch(showQuickInit, (val) => {
                 placeholder="sk-..."
               />
               <button type="button" class="ghost-button" @click="apiKeyVisible = !apiKeyVisible">
-                {{ apiKeyVisible ? '隐藏' : '显示' }}
+                {{ apiKeyVisible ? t('settings.models.apiKeyHide') : t('settings.models.apiKeyShow') }}
               </button>
             </div>
           </label>
 
           <label class="svc-field">
-            <span>模型名称</span>
+            <span>{{ t('settings.models.modelLabel') }}</span>
             <input
               v-model="form.model"
               type="text"
               class="svc-input"
-              placeholder="例如：qwen-plus"
+              :placeholder="t('settings.models.modelPlaceholder')"
             />
           </label>
 
           <label class="svc-field svc-field--toggle">
-            <span>启用状态</span>
+            <span>{{ t('settings.models.enableLabel') }}</span>
             <label class="toggle-switch">
               <input v-model="form.enable" type="checkbox" />
               <span class="toggle-track"></span>
-              <span class="toggle-label">{{ form.enable ? '已启用' : '已禁用' }}</span>
+              <span class="toggle-label">{{ form.enable ? t('settings.models.enabled') : t('settings.models.disabled') }}</span>
             </label>
           </label>
         </div>
@@ -524,34 +527,34 @@ watch(showQuickInit, (val) => {
           >
             <div>
               <p class="section-eyebrow">Advanced</p>
-              <strong>高级设置</strong>
+              <strong>{{ t('settings.models.advanced') }}</strong>
             </div>
-            <span class="advanced-toggle__state">{{ advancedOpen ? '收起' : '展开' }}</span>
+            <span class="advanced-toggle__state">{{ advancedOpen ? t('common.collapse') : t('common.expand') }}</span>
           </button>
 
           <div v-if="advancedOpen" class="advanced-grid">
             <label class="svc-field">
-              <span>上下文窗口 (tokens)</span>
+              <span>{{ t('settings.models.contextWindow') }}</span>
               <input v-model.number="form.context_window_tokens" type="number" class="svc-input" min="1024" />
             </label>
 
             <label class="svc-field">
-              <span>输出预留 (tokens)</span>
+              <span>{{ t('settings.models.outputReserved') }}</span>
               <input v-model.number="form.reserve_output_tokens" type="number" class="svc-input" min="256" />
             </label>
 
             <label class="svc-field">
-              <span>Compact 触发比例</span>
+              <span>{{ t('settings.models.compactRatio') }}</span>
               <input v-model.number="form.compact_trigger_ratio" type="number" class="svc-input" min="0" max="1" step="0.01" />
             </label>
 
             <label class="svc-field">
-              <span>摘要上限 (tokens)</span>
+              <span>{{ t('settings.models.summaryMax') }}</span>
               <input v-model.number="form.compact_summary_max_tokens" type="number" class="svc-input" min="256" />
             </label>
 
             <label class="svc-field svc-field--wide">
-              <span>Extra Headers（每行一条，格式 Key: Value）</span>
+              <span>{{ t('settings.models.extraHeaders') }}</span>
               <textarea
                 v-model="form.extra_headers"
                 class="svc-textarea"
@@ -570,7 +573,7 @@ watch(showQuickInit, (val) => {
             :disabled="isTesting || (!isCreating && selectedIndex === null)"
             @click="handleTest"
           >
-            {{ isTesting ? '测试中...' : '连通性测试' }}
+            {{ isTesting ? t('settings.models.testing') : t('settings.models.testBtn') }}
           </button>
           <div v-if="testResult" class="test-result" :class="testResult.status === 'ok' ? 'test-result--ok' : 'test-result--error'">
             <strong>{{ testResult.message }}</strong>
@@ -586,7 +589,7 @@ watch(showQuickInit, (val) => {
             class="ghost-button"
             @click="handleSetDefault"
           >
-            设为默认
+            {{ t('settings.models.setDefault') }}
           </button>
           <button
             v-if="canDelete"
@@ -595,7 +598,7 @@ watch(showQuickInit, (val) => {
             :disabled="isDeleting"
             @click="requestDelete"
           >
-            {{ isDeleting ? '删除中...' : '删除服务' }}
+            {{ isDeleting ? t('settings.models.deleting') : t('settings.models.deleteBtn') }}
           </button>
           <button
             type="button"
@@ -603,7 +606,7 @@ watch(showQuickInit, (val) => {
             :disabled="!canSave"
             @click="saveService"
           >
-            {{ isSaving ? '保存中...' : (isCreating ? '创建服务' : '保存修改') }}
+            {{ isSaving ? t('settings.models.saving') : (isCreating ? t('settings.models.createBtn') : t('settings.models.saveBtn')) }}
           </button>
         </div>
       </section>
@@ -611,9 +614,9 @@ watch(showQuickInit, (val) => {
 
     <ConfirmDialog
       :open="deleteConfirmOpen"
-      title="删除 LLM 服务"
-      :message="`确认删除服务「${selectedService?.name || ''}」？删除后无法恢复。`"
-      confirm-label="删除"
+      :title="t('settings.models.deleteConfirmTitle')"
+      :message="t('settings.models.deleteConfirmMsg', { name: selectedService?.name || '' })"
+      :confirm-label="t('settings.models.deleteConfirmBtn')"
       danger
       @close="deleteConfirmOpen = false"
       @confirm="confirmDelete"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import TeamMemberGraph from './TeamMemberGraph.vue';
 import type { TeamGraphNode } from './teamGraphTypes';
 
@@ -38,13 +39,15 @@ const emit = defineEmits<{
   removePendingSlot: [slotId: string];
   action: [key: string];
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
   <section class="member-panel">
     <div class="member-panel-head">
       <div class="member-panel-head-segment member-panel-head-segment--label">
-        <span class="panel-label">团队成员</span>
+        <span class="panel-label">{{ t('agent.teamMembersLabel') }}</span>
       </div>
     </div>
 

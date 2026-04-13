@@ -1,4 +1,5 @@
 import type { MessageInfo, RoomState } from './types';
+import { t } from './i18n';
 
 export type ConnectionState =
   | 'connecting'
@@ -52,16 +53,16 @@ export function bubbleSide(sender: string): BubbleSide {
 
 export function formatConnectionState(state: ConnectionState): string {
   if (state === 'connected') {
-    return '已连接';
+    return t('connection.connected');
   }
   if (state === 'waiting_reconnect') {
-    return '等待重连';
+    return t('connection.waitReconnect');
   }
   if (state === 'reconnecting') {
-    return '重连中';
+    return t('connection.reconnecting');
   }
   if (state === 'disconnected') {
-    return '已断开';
+    return t('connection.disconnected');
   }
-  return '连接中';
+  return t('connection.connecting');
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { getAgentAvatarUrl } from '../avatar';
 import type { MessageInfo, RoomMemberProfile, RoomState } from '../types';
 import { useAgentStatus } from '../realtime/selectors';
@@ -20,6 +21,8 @@ const emit = defineEmits<{
   submit: [];
   clickWorkingAgent: [agentName: string];
 }>();
+
+const { t } = useI18n();
 
 const isPrivateRoom = computed(() => props.currentRoom?.room_type === 'private');
 const hasBanner = computed(() => Boolean(props.errorMessage || props.reloadingMessages));
@@ -83,16 +86,16 @@ function handleEnterKey(e: KeyboardEvent): void {
   <section class="chat panel" :class="{ 'has-banner': hasBanner, 'no-banner': !hasBanner }">
     <div class="chat-head">
       <div class="chat-head-title">
-        <h2>{{ currentRoom?.room_name ?? '暂无房间' }}</h2>
+        <h2>{{ currentRoom?.room_name ?? t('chat.noRoom') }}</h2>
       </div>
       <div class="chat-side-info">
         <template v-if="currentRoom">
           <span
             class="chat-head-pill"
             :class="isScheduling ? 'chat-head-pill-scheduling' : 'chat-head-pill-idle'"
-            :data-tooltip="isScheduling && currentSpeaker ? `等待 ${currentSpeaker} 发言` : ''"
+            :data-tooltip="isScheduling && currentSpeaker ? t('chat.waitingSpeaker', { name: currentSpeaker }) : ''"
           >
-            {{ isScheduling ? '活跃中' : '空闲' }}
+            {{ isScheduling ? t('chat.active') : t('chat.idle') }}
           </span>
         </template>
         <button
@@ -101,13 +104,13 @@ function handleEnterKey(e: KeyboardEvent): void {
           :disabled="!currentRoom"
           @click="toggleMembers"
         >
-          成员{{ currentMembers.length }}
+          {{ t('chat.membersLabel', { count: currentMembers.length }) }}
         </button>
       </div>
     </div>
 
     <div v-if="errorMessage" class="banner error">{{ errorMessage }}</div>
-    <div v-else-if="reloadingMessages" class="banner">正在加载消息…</div>
+    <div v-else-if="reloadingMessages" class="banner">{{ t('chat.loadingMessages') }}</div>
 
     <div class="message-viewport">
       <MessageStream
@@ -121,7 +124,7 @@ function handleEnterKey(e: KeyboardEvent): void {
       <div class="composer-editor">
         <textarea
           :value="draft"
-          placeholder="在此输入消息..."
+          :placeholder="t('chat.inputPlaceholder')"
           rows="2"
           @input="emit('updateDraft', ($event.target as HTMLTextAreaElement).value)"
           @compositionstart="isDraftComposing = true"
@@ -129,8 +132,8 @@ function handleEnterKey(e: KeyboardEvent): void {
           @keydown.enter.exact="handleEnterKey"
         ></textarea>
         <div class="composer-foot">
-          <span>按 Enter 发送，Shift + Enter 换行</span>
-          <button type="submit" :disabled="!draft.trim()">发送</button>
+          <span>{{ t('chat.sendHint') }}</span>
+          <button type="submit" :disabled="!draft.trim()">{{ t('chat.send') }}</button>
         </div>
       </div>
     </form>
@@ -143,11 +146,11 @@ function handleEnterKey(e: KeyboardEvent): void {
           <div class="chat-members-dialog__head">
             <div>
               <p class="chat-members-dialog__eyebrow">Room Members</p>
-              <h3>房间成员</h3>
+              <h3>{{ t('chat.roomMembers') }}</h3>
             </div>
             <div class="chat-members-dialog__actions">
-              <span>{{ currentMembers.length }} 人</span>
-              <button type="button" class="chat-members-dialog__close" @click="closeMembers">关闭</button>
+              <span>{{ t('room.membersCount', { count: currentMembers.length }) }}</span>
+              <button type="button" class="chat-members-dialog__close" @click="closeMembers">{{ t('common.close') }}</button>
             </div>
           </div>
 
@@ -162,7 +165,7 @@ function handleEnterKey(e: KeyboardEvent): void {
               <span v-if="member.role_template_name" class="chat-member-card__meta">{{ member.role_template_name }}</span>
             </article>
           </div>
-          <p v-else class="chat-members-empty">当前房间没有成员。</p>
+          <p v-else class="chat-members-empty">{{ t('chat.noMembers') }}</p>
         </section>
       </div>
     </Teleport>
