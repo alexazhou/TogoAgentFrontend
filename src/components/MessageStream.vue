@@ -9,6 +9,10 @@ const props = defineProps<{
   workingAgentName?: string | null;
 }>();
 
+const emit = defineEmits<{
+  clickWorkingAgent: [agentName: string];
+}>();
+
 const streamRef = useTemplateRef('streamRef');
 const hasScrollbar = ref(false);
 let resizeObserver: ResizeObserver | null = null;
@@ -139,7 +143,14 @@ onBeforeUnmount(() => {
       </template>
     </div>
 
-    <div v-if="workingAgentName" class="working-indicator">
+    <div
+      v-if="workingAgentName"
+      class="working-indicator working-indicator--clickable"
+      role="button"
+      tabindex="0"
+      @click="emit('clickWorkingAgent', workingAgentName!)"
+      @keydown.enter="emit('clickWorkingAgent', workingAgentName!)"
+    >
       <img
         class="working-indicator-avatar"
         :src="getAgentAvatarUrl(workingAgentName)"
@@ -286,6 +297,16 @@ onBeforeUnmount(() => {
   color: var(--muted);
   font-size: 0.78rem;
   animation: fade-in 0.25s ease-out;
+}
+
+.working-indicator--clickable {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.working-indicator--clickable:hover {
+  background: color-mix(in srgb, var(--panel-border) 20%, transparent);
 }
 
 .working-indicator-avatar {

@@ -18,6 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   updateDraft: [value: string];
   submit: [];
+  clickWorkingAgent: [agentName: string];
 }>();
 
 const isPrivateRoom = computed(() => props.currentRoom?.room_type === 'private');
@@ -109,7 +110,11 @@ function handleEnterKey(e: KeyboardEvent): void {
     <div v-else-if="reloadingMessages" class="banner">正在加载消息…</div>
 
     <div class="message-viewport">
-      <MessageStream :messages="messages" :working-agent-name="workingAgentName" />
+      <MessageStream
+        :messages="messages"
+        :working-agent-name="workingAgentName"
+        @click-working-agent="emit('clickWorkingAgent', $event)"
+      />
     </div>
 
     <form v-if="isPrivateRoom" class="composer active" @submit.prevent="handleComposerSubmit">
