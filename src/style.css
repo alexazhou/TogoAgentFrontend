@@ -42,7 +42,7 @@
   --banner-error-bg: rgba(255, 119, 101, 0.12);
   --banner-error-text: #9b342d;
   --composer-bg: #16202b;
-  --composer-border: #253e55;
+  --composer-border: #1d3347;
   --focus-border: #365c82;
   --focus-glow: rgba(54, 92, 130, 0.24);
   --hint-text: #4c5e72;
@@ -59,7 +59,7 @@
   --room-group-border: rgba(105, 170, 230, 0.5);
   --room-group-bg: rgba(105, 170, 230, 0.12);
   --room-group-text: #69aae6;
-  --room-card-border: #253e55;
+  --room-card-border: #1d3347;
   --room-card-border-active: var(--focus-border);
   --unread-bg: rgba(248, 81, 73, 0.16);
   --unread-text: #f87168;
