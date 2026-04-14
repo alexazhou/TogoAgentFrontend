@@ -81,7 +81,7 @@ const { t } = useI18n();
 
 .nav-link {
   width: 100%;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 12px;
   background: var(--panel-bg);
   color: inherit;
