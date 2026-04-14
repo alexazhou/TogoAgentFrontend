@@ -891,7 +891,7 @@ function handleTeamTreeSaved(): void {
   width: 100%;
   border: 1px solid var(--room-card-border);
   border-radius: 12px;
-  background: var(--panel-bg);
+  background: var(--surface-soft);
   color: inherit;
   padding: 8px 10px;
   text-align: left;
@@ -916,12 +916,12 @@ function handleTeamTreeSaved(): void {
 
 .nav-link:hover {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 52%, var(--panel-bg) 48%);
+  background: color-mix(in srgb, var(--selected) 52%, var(--surface-soft) 48%);
 }
 
 .nav-link.active {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 60%, var(--panel-bg) 40%);
+  background: color-mix(in srgb, var(--selected) 60%, var(--surface-soft) 40%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 40%, transparent);
 }
 

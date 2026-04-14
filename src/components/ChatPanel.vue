@@ -224,7 +224,7 @@ function handleEnterKey(e: KeyboardEvent): void {
 
 .chat-head-pill,
 .chat-members-button {
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   background: color-mix(in srgb, var(--panel-bg) 88%, var(--surface-soft) 12%);
   color: var(--muted);
   font-size: 0.76rem;

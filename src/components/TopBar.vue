@@ -430,7 +430,7 @@ function optionLabel(team: TeamSummary): string {
   gap: 10px;
   min-width: 180px;
   height: 28px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 8px;
   background: var(--pill-bg);
   color: var(--text-strong);
@@ -469,7 +469,7 @@ function optionLabel(team: TeamSummary): string {
   padding: 6px;
   display: grid;
   gap: 4px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 10px;
   background: color-mix(in srgb, var(--panel-bg) 96%, var(--surface-soft) 4%);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
@@ -486,7 +486,7 @@ function optionLabel(team: TeamSummary): string {
 
 .team-switcher-group + .team-switcher-group {
   padding-top: 4px;
-  border-top: 1px solid color-mix(in srgb, var(--panel-border) 82%, transparent 18%);
+  border-top: 1px solid color-mix(in srgb, var(--room-card-border) 82%, transparent 18%);
 }
 
 .team-switcher-group__head {
@@ -537,7 +537,7 @@ function optionLabel(team: TeamSummary): string {
 }
 
 .team-switcher-option.is-active {
-  border-color: color-mix(in srgb, var(--focus-border) 56%, var(--panel-border) 44%);
+  border-color: color-mix(in srgb, var(--focus-border) 56%, var(--room-card-border) 44%);
   background: color-mix(in srgb, var(--selected) 72%, var(--panel-bg) 28%);
 }
 
@@ -561,7 +561,7 @@ function optionLabel(team: TeamSummary): string {
   appearance: none;
   -webkit-appearance: none;
   height: 28px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 8px;
   background: var(--pill-bg);
   color: var(--text-strong);
@@ -614,7 +614,7 @@ function optionLabel(team: TeamSummary): string {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 8px;
   padding: 3px 8px;
   background: var(--pill-bg);
@@ -623,7 +623,7 @@ function optionLabel(team: TeamSummary): string {
 }
 
 .team-disabled-pill {
-  border-color: color-mix(in srgb, var(--warn) 28%, var(--panel-border) 72%);
+  border-color: color-mix(in srgb, var(--warn) 28%, var(--room-card-border) 72%);
   background: color-mix(in srgb, var(--warn) 16%, var(--pill-bg) 84%);
   color: color-mix(in srgb, var(--warn) 82%, var(--text-strong) 18%);
 }
@@ -634,13 +634,13 @@ function optionLabel(team: TeamSummary): string {
 }
 
 .schedule-state-pill {
-  border-color: color-mix(in srgb, var(--warn) 28%, var(--panel-border) 72%);
+  border-color: color-mix(in srgb, var(--warn) 28%, var(--room-card-border) 72%);
   background: color-mix(in srgb, var(--warn) 12%, var(--pill-bg) 88%);
   color: color-mix(in srgb, var(--warn) 82%, var(--text-strong) 18%);
 }
 
 .schedule-state-pill[data-state='stopped'] {
-  border-color: color-mix(in srgb, var(--danger) 28%, var(--panel-border) 72%);
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--room-card-border) 72%);
   background: color-mix(in srgb, var(--danger) 12%, var(--pill-bg) 88%);
   color: color-mix(in srgb, var(--danger) 82%, var(--text-strong) 18%);
 }
@@ -653,7 +653,7 @@ function optionLabel(team: TeamSummary): string {
   padding: 6px 10px;
   border-radius: 6px;
   background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   color: var(--text);
   font-size: 0.75rem;
   white-space: nowrap;
@@ -728,7 +728,7 @@ function optionLabel(team: TeamSummary): string {
   gap: 2px;
   height: 28px;
   padding: 0 5px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 999px;
   background: var(--pill-bg);
   color: var(--muted);
@@ -840,7 +840,7 @@ function optionLabel(team: TeamSummary): string {
   gap: 4px;
   height: 28px;
   padding: 0 6px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 8px;
   background: var(--pill-bg);
   color: var(--text-strong);
@@ -886,7 +886,7 @@ function optionLabel(team: TeamSummary): string {
   padding: 4px;
   display: grid;
   gap: 2px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--room-card-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel-bg) 96%, var(--surface-soft) 4%);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
@@ -928,7 +928,7 @@ function optionLabel(team: TeamSummary): string {
 }
 
 .lang-option.is-active {
-  border-color: color-mix(in srgb, var(--focus-border) 56%, var(--panel-border) 44%);
+  border-color: color-mix(in srgb, var(--focus-border) 56%, var(--room-card-border) 44%);
   background: color-mix(in srgb, var(--selected) 72%, var(--panel-bg) 28%);
   font-weight: 600;
 }

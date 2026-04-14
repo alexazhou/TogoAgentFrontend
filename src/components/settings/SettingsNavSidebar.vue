@@ -58,7 +58,7 @@ const { t } = useI18n();
   gap: 8px;
   border: 1px solid var(--panel-border);
   border-radius: 14px;
-  background: var(--surface-soft);
+  background: var(--panel-bg);
 }
 
 .sidebar-card-head {
@@ -83,7 +83,7 @@ const { t } = useI18n();
   width: 100%;
   border: 1px solid var(--room-card-border);
   border-radius: 12px;
-  background: var(--panel-bg);
+  background: var(--surface-soft);
   color: inherit;
   padding: 8px 10px;
   text-align: left;
@@ -108,12 +108,12 @@ const { t } = useI18n();
 
 .nav-link:hover {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 52%, var(--panel-bg) 48%);
+  background: color-mix(in srgb, var(--selected) 52%, var(--surface-soft) 48%);
 }
 
 .nav-link.active {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 60%, var(--panel-bg) 40%);
+  background: color-mix(in srgb, var(--selected) 60%, var(--surface-soft) 40%);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 40%, transparent);
 }
 </style>
