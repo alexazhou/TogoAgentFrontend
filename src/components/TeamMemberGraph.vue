@@ -142,7 +142,7 @@ const {
 .member-graph {
   --member-grid-size: 28px;
   --member-grid-line: rgba(148, 163, 184, 0.16);
-  --member-connector-line: rgba(37, 99, 235, 0.62);
+  --member-connector-line: var(--panel-border);
   position: relative;
   height: 452px;
   padding: 8px 6px 0;

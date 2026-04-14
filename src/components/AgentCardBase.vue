@@ -88,7 +88,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   padding: var(--entity-card-padding-y) var(--entity-card-padding-x);
   text-align: center;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 70%, transparent);
+  box-shadow: none;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
