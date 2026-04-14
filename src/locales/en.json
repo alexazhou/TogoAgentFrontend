@@ -78,8 +78,12 @@
     },
     "activityType": {
       "agentState": "State Change",
+      "startActivity": "Start Action",
+      "stopAction": "Rest",
       "llmInfer": "LLM Inference",
       "toolCall": "Tool Call",
+      "sendMessage": "Send Message",
+      "finishTurn": "End Turn",
       "compact": "Context Compact"
     },
     "tokenEstimate": "Est. {count}",
@@ -91,6 +95,8 @@
     "resumeSuccess": "Retry triggered",
     "stopSuccess": "Current task stopped",
     "copiedError": "Error copied",
+    "parseFailed": "Parse Failed",
+    "sendToRoomPrefix": "To Room [{room}]: ",
     "backupLabel": "Backup Agents",
     "searchPlaceholder": "Search Agents",
     "agentLoadFailed": "Failed to load agents",

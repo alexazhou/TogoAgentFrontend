@@ -78,8 +78,12 @@
     },
     "activityType": {
       "agentState": "状态变更",
+      "startActivity": "唤醒",
+      "stopAction": "休息",
       "llmInfer": "模型推理",
       "toolCall": "工具调用",
+      "sendMessage": "发言",
+      "finishTurn": "结束行动",
       "compact": "上下文压缩"
     },
     "tokenEstimate": "估算 {count}",
@@ -91,6 +95,8 @@
     "resumeSuccess": "已触发重试",
     "stopSuccess": "已停止当前任务",
     "copiedError": "已复制完整报错",
+    "parseFailed": "解析失败",
+    "sendToRoomPrefix": "To 房间【{room}】: ",
     "backupLabel": "备选Agent",
     "searchPlaceholder": "搜索Agent",
     "agentLoadFailed": "Agent 加载失败",

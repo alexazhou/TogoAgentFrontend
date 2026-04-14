@@ -7,9 +7,8 @@ import { formatConnectionState } from '../utils';
 import { loadAgentActivities } from '../realtime/runtimeStore';
 import { useAgentActivities, useAgentStatus } from '../realtime/selectors';
 import AgentCardBase from './AgentCardBase.vue';
+import AgentActivityItem from './AgentActivityItem.vue';
 import type {
-  AgentActivity,
-  AgentActivityStatus,
   AgentDetail,
   AgentStatus,
 } from '../types';
@@ -115,100 +114,6 @@ const activityBadgeLabel = computed(() =>
 );
 
 const visibleActivities = computed(() => activities.value.slice(-30));
-
-function activityStatusLabel(status: AgentActivityStatus): string {
-  if (status === 'started') {
-    return t('agent.activityState.running');
-  }
-  if (status === 'succeeded') {
-    return t('agent.activityState.completed');
-  }
-  if (status === 'failed') {
-    return t('agent.activityState.failed');
-  }
-  return t('agent.activityState.cancelled');
-}
-
-function activityTitle(activity: AgentActivity): string {
-  switch (activity.activity_type) {
-    case 'agent_state':
-      return t('agent.activityType.agentState');
-    case 'llm_infer':
-      return t('agent.activityType.llmInfer');
-    case 'tool_call':
-      return t('agent.activityType.toolCall');
-    case 'compact':
-      return t('agent.activityType.compact');
-    default:
-      return activity.title;
-  }
-}
-
-function activitySummary(activity: AgentActivity): string {
-  const command = getActivityToolCommand(activity);
-  if (command) {
-    return command;
-  }
-  const detail = activity.detail.trim();
-  if (detail) {
-    return detail;
-  }
-  if (activity.error_message?.trim()) {
-    return activity.error_message.trim();
-  }
-  return '';
-}
-
-function formatActivityTime(value: string | null | undefined): string {
-  if (!value) {
-    return '';
-  }
-  return value.replace('T', ' ').slice(0, 19);
-}
-
-function formatDuration(durationMs: number | null | undefined): string {
-  if (typeof durationMs !== 'number' || Number.isNaN(durationMs) || durationMs < 0) {
-    return '';
-  }
-  if (durationMs < 1000) {
-    return `${durationMs}ms`;
-  }
-  return `${(durationMs / 1000).toFixed(durationMs >= 10_000 ? 0 : 1)}s`;
-}
-
-function activityMetaTokens(activity: AgentActivity): string {
-  const metadata = activity.metadata ?? {};
-  const currentTotal = typeof metadata.current_total_tokens === 'number' ? metadata.current_total_tokens : null;
-  const finalTotal = typeof metadata.final_total_tokens === 'number' ? metadata.final_total_tokens : null;
-  const estimated = typeof metadata.estimated_prompt_tokens === 'number' ? metadata.estimated_prompt_tokens : null;
-  const currentCompletion = typeof metadata.current_completion_tokens === 'number' ? metadata.current_completion_tokens : null;
-  if (finalTotal !== null) {
-    return `tokens ${finalTotal}`;
-  }
-  if (currentTotal !== null) {
-    return `tokens ${currentTotal}`;
-  }
-  if (estimated !== null) {
-    const runningTotal = estimated + (currentCompletion ?? 0);
-    return t('agent.tokenEstimate', { count: runningTotal });
-  }
-  return '';
-}
-
-function getActivityModel(activity: AgentActivity): string {
-  const model = activity.metadata?.model;
-  return typeof model === 'string' ? model : '';
-}
-
-function getActivityToolName(activity: AgentActivity): string {
-  const toolName = activity.metadata?.tool_name;
-  return typeof toolName === 'string' ? toolName : '';
-}
-
-function getActivityToolCommand(activity: AgentActivity): string {
-  const command = activity.metadata?.command;
-  return typeof command === 'string' ? command : '';
-}
 
 async function scrollActivitiesToBottom(): Promise<void> {
   await nextTick();
@@ -483,27 +388,11 @@ watch(
                   class="agent-activity-list sidebar-scroll"
                   @scroll="syncActivityFollowState"
                 >
-                  <article
+                  <AgentActivityItem
                     v-for="activity in visibleActivities"
                     :key="activity.id"
-                    class="agent-activity-item"
-                    :data-status="activity.status"
-                  >
-                    <div class="agent-activity-item__row">
-                      <span v-if="activity.status === 'started'" class="agent-activity-item__dot"></span>
-                      <span v-else-if="activity.status === 'succeeded'" class="agent-activity-item__mark agent-activity-item__mark--ok">✓</span>
-                      <span v-else-if="activity.status === 'failed' || activity.status === 'cancelled'" class="agent-activity-item__mark agent-activity-item__mark--fail">✗</span>
-                      <strong class="agent-activity-item__title">{{ activityTitle(activity) }}</strong>
-                      <span class="agent-activity-item__summary" :class="{ 'agent-activity-item__summary--code': !!getActivityToolCommand(activity) }">{{ activitySummary(activity) }}</span>
-                      <span class="agent-activity-item__status">{{ activityStatusLabel(activity.status) }}</span>
-                      <span v-if="formatActivityTime(activity.started_at)">{{ formatActivityTime(activity.started_at) }}</span>
-                      <span v-if="getActivityModel(activity)">{{ getActivityModel(activity) }}</span>
-                      <span v-if="getActivityToolName(activity)">{{ getActivityToolName(activity) }}</span>
-                      <span v-if="activityMetaTokens(activity)">{{ activityMetaTokens(activity) }}</span>
-                      <span v-if="formatDuration(activity.duration_ms)">{{ formatDuration(activity.duration_ms) }}</span>
-                    </div>
-                    <p v-if="activity.error_message" class="agent-activity-item__error">{{ activity.error_message }}</p>
-                  </article>
+                    :activity="activity"
+                  />
                 </div>
               </section>
             </div>
@@ -861,127 +750,6 @@ watch(
   border: 1px dashed color-mix(in srgb, var(--panel-border) 80%, transparent);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.48);
-}
-
-.agent-activity-item {
-  display: grid;
-  gap: 4px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: var(--surface-soft);
-  border: 1px solid var(--panel-border);
-}
-
-.agent-activity-item[data-status='started'] {
-  background: rgba(125, 163, 224, 0.08);
-  border: 1px solid rgba(125, 163, 224, 0.18);
-  box-shadow: none;
-}
-
-.agent-activity-item[data-status='failed'] {
-  border-color: color-mix(in srgb, var(--danger, #f85149) 30%, var(--panel-border));
-  background: color-mix(in srgb, var(--danger, #f85149) 10%, var(--surface-soft));
-}
-
-.agent-activity-item__row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex-wrap: nowrap;
-}
-
-.agent-activity-item__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--good);
-  animation: agent-dot-pulse 2s ease-in-out infinite;
-  flex: none;
-}
-
-.agent-activity-item__mark {
-  flex: none;
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.agent-activity-item__mark--ok {
-  color: var(--good);
-}
-
-.agent-activity-item__mark--fail {
-  color: var(--danger, #f85149);
-}
-
-.agent-activity-item__title {
-  flex: none;
-  color: var(--text-strong);
-  font-size: 0.88rem;
-  line-height: 1.2;
-}
-
-.agent-activity-item__type,
-.agent-activity-item__status,
-.agent-activity-item__row span {
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.2;
-}
-
-.agent-activity-item__status {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 6px;
-  height: 20px;
-  border-radius: 999px;
-  background: rgba(125, 163, 224, 0.1);
-  color: color-mix(in srgb, var(--accent) 76%, var(--text) 24%);
-  font-weight: 600;
-}
-
-.agent-activity-item[data-status='started'] .agent-activity-item__status {
-  margin-left: 4px;
-  padding: 0;
-  height: auto;
-  border-radius: 0;
-  background: transparent;
-  color: var(--accent);
-}
-
-.agent-activity-item[data-status='failed'] .agent-activity-item__status {
-  background: color-mix(in srgb, var(--danger, #f85149) 12%, white 88%);
-  color: var(--danger, #f85149);
-}
-
-.agent-activity-item__summary {
-  min-width: 0;
-  flex: 1 1 auto;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.agent-activity-item[data-status='started'] .agent-activity-item__summary {
-  color: var(--muted);
-}
-
-.agent-activity-item__summary--code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.75rem;
-}
-
-.agent-activity-item__error {
-  margin: 0;
-  color: var(--danger, #f85149);
-  font-size: 0.74rem;
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .loading-card,
