@@ -97,33 +97,23 @@ function getActivityToolArguments(activity: AgentActivity): string {
     return '';
   }
   const formatToolArguments = (value: unknown): string => {
-    if (typeof value === 'object' && value !== null) {
-      if (toolName.value === 'execute_bash') {
-        const command = (value as { command?: unknown }).command;
-        if (typeof command === 'string' && command.trim()) {
-          return command.trim();
-        }
+    if (typeof value !== 'object' || value === null) {
+      return t('agent.parseFailed');
+    }
+    if (toolName.value === 'execute_bash') {
+      const command = (value as { command?: unknown }).command;
+      if (typeof command === 'string' && command.trim()) {
+        return command.trim();
       }
-      if (toolName.value === 'write_file' || toolName.value === 'read_file') {
-        const filePath = (value as { file_path?: unknown }).file_path;
-        if (typeof filePath === 'string' && filePath.trim()) {
-          return filePath.trim();
-        }
+    }
+    if (toolName.value === 'write_file' || toolName.value === 'read_file') {
+      const filePath = (value as { file_path?: unknown }).file_path;
+      if (typeof filePath === 'string' && filePath.trim()) {
+        return filePath.trim();
       }
     }
     return JSON.stringify(value);
   };
-  if (typeof toolArguments === 'string') {
-    const raw = toolArguments.trim();
-    if (!raw) {
-      return '';
-    }
-    try {
-      return formatToolArguments(JSON.parse(raw));
-    } catch {
-      return raw;
-    }
-  }
   return formatToolArguments(toolArguments);
 }
 
@@ -147,17 +137,6 @@ function getSendMessagePreview(activity: AgentActivity): string {
     const message = [candidate.msg, candidate.content, candidate.text].find((item) => typeof item === 'string');
     return typeof message === 'string' ? truncatePreview(message) : t('agent.parseFailed');
   };
-  if (typeof toolArguments === 'string') {
-    const raw = toolArguments.trim();
-    if (!raw) {
-      return '';
-    }
-    try {
-      return extractMessage(JSON.parse(raw));
-    } catch {
-      return t('agent.parseFailed');
-    }
-  }
   return extractMessage(toolArguments);
 }
 
