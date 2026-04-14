@@ -395,8 +395,9 @@ function getActivityToolName(activity: AgentActivity): string {
 }
 
 .agent-activity-item[data-status='failed'] .agent-activity-item__status {
-  background: color-mix(in srgb, var(--danger, #f85149) 12%, white 88%);
-  color: var(--danger, #f85149);
+  background: color-mix(in srgb, var(--danger, #f85149) 38%, var(--panel-bg) 62%);
+  color: #fff;
+  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.12);
 }
 
 .agent-activity-item__summary {
@@ -435,16 +436,8 @@ function getActivityToolName(activity: AgentActivity): string {
 }
 
 .agent-activity-item[data-activity-type='tool_call'] .agent-activity-item__tail {
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   min-width: 0;
-  overflow: hidden;
-}
-
-.agent-activity-item[data-activity-type='tool_call'] .agent-activity-item__time {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .agent-activity-item[data-status='started'] .agent-activity-item__summary {
