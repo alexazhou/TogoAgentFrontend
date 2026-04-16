@@ -1,4 +1,4 @@
-import type { MessageInfo, RoomState } from './types';
+import type { MessageInfo } from './types';
 import { t } from './i18n';
 
 export type ConnectionState =
@@ -8,18 +8,6 @@ export type ConnectionState =
   | 'reconnecting'
   | 'disconnected';
 export type BubbleSide = 'left' | 'right' | 'center';
-
-export function groupRoomsByTeam(rooms: RoomState[]): Array<[string, RoomState[]]> {
-  const map = new Map<string, RoomState[]>();
-
-  for (const room of rooms) {
-    const bucket = map.get(room.team_name) ?? [];
-    bucket.push(room);
-    map.set(room.team_name, bucket);
-  }
-
-  return Array.from(map.entries());
-}
 
 export function formatPreview(message: Pick<MessageInfo, 'sender' | 'content'>): string {
   return `${message.sender}: ${message.content.replace(/\n/g, ' ')}`;

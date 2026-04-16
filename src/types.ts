@@ -55,7 +55,6 @@ export interface AgentSnapshot {
 export interface RoomInfo {
   room_id: number;
   room_name: string;
-  team_name: string;
   room_type: RoomType;
   state: string;
   need_scheduling: boolean;

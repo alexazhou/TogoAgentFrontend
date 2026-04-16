@@ -34,7 +34,6 @@ type RawRoomInfo = {
     biz_id?: unknown;
     tags?: unknown;
   };
-  team_name?: string;
   state?: string;
   need_scheduling?: boolean;
   current_turn_agent?: AgentSnapshot | null;
@@ -201,14 +200,12 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const gtRoom = room.gt_room;
-  const teamName = typeof room.team_name === 'string' ? room.team_name : 'default';
   const roomName = String(gtRoom?.name ?? '');
   const roomType = String(gtRoom?.type ?? 'group').toLowerCase();
 
   return {
     room_id: Number(gtRoom?.id ?? 0),
     room_name: roomName,
-    team_name: teamName,
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
     need_scheduling: Boolean(room.need_scheduling),
