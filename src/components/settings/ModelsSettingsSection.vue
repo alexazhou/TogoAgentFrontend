@@ -25,6 +25,21 @@ const isLoading = ref(false);
 const statusText = ref('');
 const editorDialogRef = ref<InstanceType<typeof ModelServiceEditorDialog> | null>(null);
 
+function formatServiceType(type: LlmServiceInfo['type']): string {
+  switch (type) {
+    case 'openai-compatible':
+      return 'OpenAI Compatible';
+    case 'anthropic':
+      return 'Anthropic';
+    case 'google':
+      return 'Google';
+    case 'deepseek':
+      return 'DeepSeek';
+    default:
+      return type;
+  }
+}
+
 async function loadServices(preferredIndex?: number | null): Promise<void> {
   const data = await getLlmServices();
   services.value = data.llm_services;
@@ -97,11 +112,7 @@ watch(showQuickInit, (value) => {
   <section id="models" class="config-section">
     <SettingsBreadcrumb :items="breadcrumbItems" @navigate="emit('navigateBreadcrumb', $event)" />
 
-    <div class="section-head">
-      <div>
-        <p class="section-eyebrow">Models</p>
-        <h3>{{ t('settings.models.title') }}</h3>
-      </div>
+    <div class="section-head section-head--compact">
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
         <button type="button" class="secondary-button" @click="showQuickInit = true">
@@ -113,40 +124,55 @@ watch(showQuickInit, (value) => {
       </div>
     </div>
 
-    <section class="models-list-card">
-      <div class="models-list-head">
-        <strong>{{ t('settings.models.serviceList') }}</strong>
-        <span>{{ t('settings.models.count', { count: services.length }) }}</span>
-      </div>
-
+    <section class="models-table-section">
       <p v-if="isLoading" class="models-empty">{{ t('settings.models.loading') }}</p>
 
-      <div v-else-if="services.length" class="models-list">
-        <article
-          v-for="(service, index) in services"
-          :key="`${service.name}-${index}`"
-          class="svc-row"
-          :class="{ active: activeIndex === index }"
-        >
-          <div class="svc-row-main">
-            <div class="svc-row-title">
-              <div class="svc-row-name">
-                <strong>{{ service.name }}</strong>
-                <span v-if="service.name === defaultServer" class="svc-chip svc-chip--default">
-                  {{ t('settings.models.defaultBadge') }}
+      <div v-else-if="services.length" class="settings-table-wrap">
+        <table class="settings-table models-table">
+          <thead>
+            <tr>
+              <th>{{ t('settings.models.nameLabel') }}</th>
+              <th>{{ t('settings.models.typeLabel') }}</th>
+              <th class="models-table-model-head">{{ t('settings.models.modelLabel') }}</th>
+              <th class="models-table-status-head">{{ t('settings.models.table.status') }}</th>
+              <th class="models-table-actions-head">{{ t('settings.models.table.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="(service, index) in services"
+              :key="`${service.name}-${index}`"
+              :class="{ active: activeIndex === index }"
+              @click="activeIndex = index"
+            >
+              <td class="models-cell-name">
+                <div class="svc-row-name">
+                  <strong>{{ service.name }}</strong>
+                  <span v-if="service.name === defaultServer" class="svc-chip svc-chip--default">
+                    {{ t('settings.models.defaultBadge') }}
+                  </span>
+                </div>
+              </td>
+              <td class="models-cell-type">{{ formatServiceType(service.type) }}</td>
+              <td class="models-cell-model" :title="service.model">
+                <span class="models-cell-model-text">{{ service.model }}</span>
+              </td>
+              <td class="models-cell-status">
+                <span
+                  class="svc-chip"
+                  :class="service.enable ? 'svc-chip--enabled' : 'svc-chip--disabled'"
+                >
+                  {{ service.enable ? t('settings.models.enabled') : t('settings.models.disabled') }}
                 </span>
-                <span v-if="!service.enable" class="svc-chip svc-chip--disabled">
-                  {{ t('settings.models.disabledBadge') }}
-                </span>
-              </div>
-              <button type="button" class="ghost-button" @click="openEdit(index)">
-                {{ t('common.edit') }}
-              </button>
-            </div>
-            <p class="svc-row-meta">{{ service.type }} · {{ service.model }}</p>
-            <p class="svc-row-detail">{{ service.base_url }}</p>
-          </div>
-        </article>
+              </td>
+              <td class="models-cell-actions">
+                <button type="button" class="ghost-button" @click.stop="openEdit(index)">
+                  {{ t('common.edit') }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <p v-else class="models-empty">{{ t('settings.models.empty') }}</p>
@@ -157,32 +183,24 @@ watch(showQuickInit, (value) => {
 </template>
 
 <style scoped>
-.svc-row {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--surface-soft);
-}
-
 .config-section {
   padding: 12px 0 0;
 }
 
 .section-head,
-.section-actions,
-.models-list-head,
-.svc-row-title {
+.section-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.section-eyebrow {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.68rem;
+.section-head {
+  margin-bottom: 8px;
+}
+
+.section-head--compact {
+  justify-content: flex-end;
 }
 
 .section-head h3 {
@@ -191,22 +209,18 @@ watch(showQuickInit, (value) => {
 }
 
 .section-status,
-.models-empty,
-.models-list-head span,
-.svc-row-meta,
-.svc-row-detail {
+.models-empty {
   color: var(--muted);
 }
 
-.models-list-card {
+.models-table-section {
   margin-top: 10px;
-  padding: 0;
+  padding: 0 10px;
 }
 
-.models-list {
+.settings-table-wrap {
   margin-top: 10px;
-  display: grid;
-  gap: 8px;
+  overflow-x: auto;
 }
 
 .models-empty {
@@ -214,22 +228,73 @@ watch(showQuickInit, (value) => {
   font-size: 0.86rem;
 }
 
-.svc-row {
-  padding: 12px;
+.settings-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.settings-table th,
+.settings-table td {
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.settings-table thead th {
+  position: relative;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--divider) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.settings-table thead th:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  right: 0;
+  width: 1px;
+  height: calc(100% - 28px);
+  background: color-mix(in srgb, var(--divider) 88%, transparent);
+}
+
+.settings-table tbody td {
+  border-bottom: 1px solid color-mix(in srgb, var(--divider) 76%, transparent);
+  color: var(--text-strong);
+  font-size: 0.84rem;
   transition:
-    border-color 140ms ease,
-    background 140ms ease;
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.svc-row.active,
-.svc-row:hover {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 68%, var(--surface-soft) 32%);
+.settings-table tbody tr:hover td,
+.settings-table tbody tr.active td {
+  background: color-mix(in srgb, var(--selected) 44%, transparent);
 }
 
-.svc-row-main {
-  display: grid;
-  gap: 6px;
+.settings-table tbody tr.active td {
+  box-shadow: none;
+}
+
+.settings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.settings-table tbody tr:first-child td {
+  padding-top: 18px;
+}
+
+.svc-row-name strong {
+  color: var(--text-strong);
+  font-size: 0.96rem;
 }
 
 .svc-row-name {
@@ -240,20 +305,45 @@ watch(showQuickInit, (value) => {
   flex-wrap: wrap;
 }
 
-.svc-row-name strong {
-  color: var(--text-strong);
-  font-size: 0.92rem;
+.models-cell-type,
+.models-cell-model {
+  color: var(--muted);
 }
 
-.svc-row-meta,
-.svc-row-detail {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
+.models-cell-model,
+.models-cell-status {
+  white-space: nowrap;
 }
 
-.svc-row-detail {
-  word-break: break-all;
+.models-cell-type {
+  width: 150px;
+}
+
+.models-cell-model {
+  width: 210px;
+  overflow: hidden;
+}
+
+.models-cell-model-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.models-table-status-head,
+.models-cell-status {
+  width: 108px;
+}
+
+.models-cell-actions,
+.models-table-actions-head {
+  width: 88px;
+  text-align: right;
+}
+
+.models-cell-actions :deep(.ghost-button) {
+  white-space: nowrap;
 }
 
 .svc-chip {
@@ -275,6 +365,12 @@ watch(showQuickInit, (value) => {
   color: var(--good);
 }
 
+.svc-chip--enabled {
+  border-color: color-mix(in srgb, var(--good) 38%, var(--panel-border) 62%);
+  background: color-mix(in srgb, var(--good) 12%, var(--panel-bg) 88%);
+  color: var(--good);
+}
+
 .svc-chip--disabled {
   border-color: color-mix(in srgb, var(--warn) 28%, var(--panel-border) 72%);
   background: color-mix(in srgb, var(--warn) 8%, var(--panel-bg) 92%);
@@ -283,15 +379,17 @@ watch(showQuickInit, (value) => {
 
 @media (max-width: 780px) {
   .section-head,
-  .section-actions,
-  .models-list-head,
-  .svc-row-title {
+  .section-actions {
     align-items: flex-start;
     flex-direction: column;
   }
 
   .section-actions {
     width: 100%;
+  }
+
+  .settings-table {
+    min-width: 780px;
   }
 }
 </style>

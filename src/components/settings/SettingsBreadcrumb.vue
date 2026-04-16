@@ -41,8 +41,8 @@ const emit = defineEmits<{
   color: var(--hint-text);
   padding: 0;
   cursor: pointer;
-  font-size: 0.72rem;
-  line-height: 1.2;
+  font-size: 0.92rem;
+  line-height: 1.3;
 }
 
 .breadcrumb-link:not(:last-child)::after {

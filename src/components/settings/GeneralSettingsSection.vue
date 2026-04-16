@@ -31,11 +31,7 @@ const emit = defineEmits<{
   <section id="general" class="config-section">
     <SettingsBreadcrumb :items="breadcrumbItems" @navigate="emit('navigateBreadcrumb', $event)" />
 
-    <div class="section-head">
-      <div>
-        <p class="section-eyebrow">General</p>
-        <h3>系统状态</h3>
-      </div>
+    <div class="section-head section-head--compact">
       <span class="section-status">{{ connectionState === 'connected' ? '已连接' : '状态采集中' }}</span>
     </div>
 
@@ -76,7 +72,6 @@ const emit = defineEmits<{
     <section class="driver-card">
       <div class="driver-head">
         <div>
-          <p class="section-eyebrow">Drivers</p>
           <h4>底层驱动状态</h4>
         </div>
       </div>
@@ -116,12 +111,12 @@ const emit = defineEmits<{
   gap: 12px;
 }
 
-.section-eyebrow {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.68rem;
+.section-head {
+  margin-bottom: 8px;
+}
+
+.section-head--compact {
+  justify-content: flex-end;
 }
 
 .section-head h3,

@@ -316,7 +316,12 @@
       "testError": "测试请求异常",
       "deleteConfirmTitle": "删除 LLM 服务",
       "deleteConfirmMsg": "确认删除服务「{name}」？删除后无法恢复。",
-      "deleteConfirmBtn": "删除"
+      "deleteConfirmBtn": "删除",
+      "table": {
+        "url": "地址",
+        "status": "状态",
+        "actions": "操作"
+      }
     },
     "roles": {
       "title": "角色管理",
@@ -355,7 +360,13 @@
       "saveSuccess": "角色模板已保存",
       "deleteConfirmTitle": "删除角色模板",
       "deleteConfirmMsg": "确认删除模板“{name}”？删除后无法恢复。",
-      "deleteConfirmBtn": "删除"
+      "deleteConfirmBtn": "删除",
+      "table": {
+        "id": "ID",
+        "type": "类型",
+        "soul": "角色 Soul",
+        "actions": "操作"
+      }
     },
     "nav": {
       "label": "导航菜单",

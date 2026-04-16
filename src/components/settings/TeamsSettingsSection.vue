@@ -62,11 +62,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
     <SettingsBreadcrumb :items="breadcrumbItems" @navigate="emit('navigateBreadcrumb', $event)" />
 
     <template v-if="selectedTeamDetail">
-      <div class="team-detail-head">
-        <div class="team-detail-title-block">
-          <p class="section-eyebrow">Team Detail</p>
-          <h3>{{ selectedTeamDetail.name }}</h3>
-        </div>
+      <div class="team-detail-head team-detail-head--compact">
         <div class="team-detail-actions">
           <ToggleSwitch
             :checked="selectedTeamDetail.enabled"
@@ -132,11 +128,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
     </template>
 
     <div v-else class="teams-grid">
-      <div class="section-head teams-list-head">
-        <div class="teams-list-title-group">
-          <p class="section-eyebrow">Teams</p>
-          <h3>{{ t('settings.teams.title') }}</h3>
-        </div>
+      <div class="section-head section-head--compact teams-list-head">
         <button type="button" class="secondary-button" @click="emit('createTeam')">{{ t('settings.teams.newTeam') }}</button>
       </div>
       <section v-if="enabledTeams.length" class="team-group">
@@ -250,19 +242,21 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
   padding: 12px 0 0;
 }
 
-.section-eyebrow {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.68rem;
-}
-
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.section-head,
+.team-detail-head {
+  margin-bottom: 8px;
+}
+
+.section-head--compact,
+.team-detail-head--compact {
+  justify-content: flex-end;
 }
 
 .teams-grid {
@@ -308,32 +302,12 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
   gap: 8px;
 }
 
-.teams-list-title-group h3 {
-  margin: 0;
-  color: var(--text-strong);
-}
-
 .team-detail-head {
   margin-top: 4px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-}
-
-.team-detail-title-block {
-  display: grid;
-  gap: 2px;
-}
-
-.team-detail-head h3 {
-  margin: 0;
-  color: var(--text-strong);
-  font-size: 1rem;
-}
-
-.team-detail-head .section-eyebrow {
-  margin: 0;
 }
 
 .team-detail-actions {

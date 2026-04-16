@@ -56,6 +56,7 @@ const defaultServer = ref<string | null>(null);
 const isSaving = ref(false);
 const isDeleting = ref(false);
 const isTesting = ref(false);
+const isSettingDefault = ref(false);
 const advancedOpen = ref(false);
 const apiKeyVisible = ref(false);
 const deleteConfirmOpen = ref(false);
@@ -325,9 +326,11 @@ async function confirmDelete(): Promise<void> {
 }
 
 async function handleSetDefault(): Promise<void> {
-  if (!canSetDefault.value || currentIndex.value === null) {
+  if (!canSetDefault.value || currentIndex.value === null || isSettingDefault.value) {
     return;
   }
+
+  isSettingDefault.value = true;
 
   try {
     await setDefaultLlmService(currentIndex.value);
@@ -336,7 +339,17 @@ async function handleSetDefault(): Promise<void> {
     closeDialog();
   } catch (error) {
     console.error(error);
+  } finally {
+    isSettingDefault.value = false;
   }
+}
+
+function handleDefaultToggle(nextChecked: boolean): void {
+  if (!nextChecked || isDefault.value) {
+    return;
+  }
+
+  void handleSetDefault();
 }
 
 async function handleTest(): Promise<void> {
@@ -384,21 +397,28 @@ defineExpose({
 <template>
   <Teleport to="body">
     <div v-if="visible" class="editor-overlay" @click.self="closeDialog">
-      <section class="editor-dialog panel">
+      <section class="editor-dialog panel scrollbar-thin">
         <header class="editor-head">
           <div class="editor-head-copy">
             <p class="editor-eyebrow">{{ dialogEyebrow }}</p>
             <h3>{{ dialogTitle }}</h3>
           </div>
-          <button type="button" class="ghost-button editor-close" :aria-label="t('common.close')" @click="closeDialog">
-            ×
-          </button>
+          <div class="editor-head-actions">
+            <ToggleSwitch
+              v-if="!isCreating"
+              variant="inline"
+              :checked="isDefault"
+              :disabled="isSettingDefault || (!isDefault && !canSetDefault)"
+              :label="isDefault ? t('settings.models.defaultServiceBadge') : t('settings.models.setDefault')"
+              @toggle="handleDefaultToggle"
+            />
+            <button type="button" class="ghost-button editor-close" :aria-label="t('common.close')" @click="closeDialog">
+              ×
+            </button>
+          </div>
         </header>
 
         <div class="editor-badges">
-          <span v-if="!isCreating && isDefault" class="svc-chip svc-chip--default">
-            {{ t('settings.models.defaultServiceBadge') }}
-          </span>
           <span v-if="isCreating" class="svc-chip svc-chip--draft">
             {{ t('settings.models.unsavedBadge') }}
           </span>
@@ -421,12 +441,15 @@ defineExpose({
           </label>
 
           <label class="svc-field">
-            <span>{{ t('settings.models.typeLabel') }}</span>
-            <select v-model="form.type" class="svc-input svc-select">
-              <option v-for="serviceType in SERVICE_TYPES" :key="serviceType.value" :value="serviceType.value">
-                {{ serviceType.label }}
-              </option>
-            </select>
+            <span>{{ t('settings.models.enableLabel') }}</span>
+            <div class="svc-toggle-box">
+              <ToggleSwitch
+                variant="inline"
+                :checked="form.enable"
+                :label="form.enable ? t('settings.models.enabled') : t('settings.models.disabled')"
+                @toggle="form.enable = $event"
+              />
+            </div>
           </label>
 
           <label class="svc-field svc-field--wide">
@@ -455,22 +478,21 @@ defineExpose({
           </label>
 
           <label class="svc-field">
+            <span>{{ t('settings.models.typeLabel') }}</span>
+            <select v-model="form.type" class="svc-input svc-select">
+              <option v-for="serviceType in SERVICE_TYPES" :key="serviceType.value" :value="serviceType.value">
+                {{ serviceType.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="svc-field">
             <span>{{ t('settings.models.modelLabel') }}</span>
             <input
               v-model="form.model"
               type="text"
               class="svc-input"
               :placeholder="t('settings.models.modelPlaceholder')"
-            />
-          </label>
-
-          <label class="svc-field svc-field--toggle">
-            <span>{{ t('settings.models.enableLabel') }}</span>
-            <ToggleSwitch
-              variant="inline"
-              :checked="form.enable"
-              :label="form.enable ? t('settings.models.enabled') : t('settings.models.disabled')"
-              @toggle="form.enable = $event"
             />
           </label>
         </div>
@@ -529,46 +551,47 @@ defineExpose({
           </div>
         </section>
 
-        <div class="test-section">
-          <button
-            type="button"
-            class="secondary-button"
-            :disabled="isTesting || (!isCreating && currentIndex === null)"
-            @click="handleTest"
-          >
-            {{ isTesting ? t('settings.models.testing') : t('settings.models.testBtn') }}
-          </button>
-          <div
-            v-if="testResult"
-            class="test-result"
-            :class="testResult.status === 'ok' ? 'test-result--ok' : 'test-result--error'"
-          >
-            <strong>{{ testResult.message }}</strong>
-            <p v-if="testResult.detail">{{ testResult.detail }}</p>
-          </div>
-        </div>
-
         <p v-if="statusText" class="editor-status">{{ statusText }}</p>
 
         <footer class="editor-actions">
-          <button v-if="canSetDefault" type="button" class="ghost-button" @click="handleSetDefault">
-            {{ t('settings.models.setDefault') }}
-          </button>
-          <button
-            v-if="canDelete"
-            type="button"
-            class="secondary-button secondary-button--danger"
-            :disabled="isDeleting"
-            @click="requestDelete"
-          >
-            {{ isDeleting ? t('settings.models.deleting') : t('settings.models.deleteBtn') }}
-          </button>
-          <button type="button" class="secondary-button" @click="closeDialog">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="button" class="secondary-button" :disabled="!canSave" @click="saveService">
-            {{ isSaving ? t('settings.models.saving') : (isCreating ? t('settings.models.createBtn') : t('settings.models.saveBtn')) }}
-          </button>
+          <div class="editor-actions-leading">
+            <div class="test-section">
+              <button
+                type="button"
+                class="secondary-button"
+                :disabled="isTesting || (!isCreating && currentIndex === null)"
+                @click="handleTest"
+              >
+                {{ isTesting ? t('settings.models.testing') : t('settings.models.testBtn') }}
+              </button>
+              <div
+                v-if="testResult"
+                class="test-result"
+                :class="testResult.status === 'ok' ? 'test-result--ok' : 'test-result--error'"
+              >
+                <strong>{{ testResult.message }}</strong>
+                <p v-if="testResult.detail">{{ testResult.detail }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="editor-actions-trailing">
+            <button
+              v-if="canDelete"
+              type="button"
+              class="secondary-button secondary-button--danger"
+              :disabled="isDeleting"
+              @click="requestDelete"
+            >
+              {{ isDeleting ? t('settings.models.deleting') : t('settings.models.deleteBtn') }}
+            </button>
+            <button type="button" class="secondary-button" @click="closeDialog">
+              {{ t('common.cancel') }}
+            </button>
+            <button type="button" class="secondary-button" :disabled="!canSave" @click="saveService">
+              {{ isSaving ? t('settings.models.saving') : (isCreating ? t('settings.models.createBtn') : t('settings.models.saveBtn')) }}
+            </button>
+          </div>
         </footer>
       </section>
 
@@ -617,6 +640,13 @@ defineExpose({
 .editor-head,
 .editor-actions {
   justify-content: space-between;
+}
+
+.editor-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .editor-head-copy {
@@ -690,15 +720,16 @@ defineExpose({
   grid-column: 1 / -1;
 }
 
-.svc-field--toggle {
-  display: flex;
-  flex-direction: column;
-}
-
 .svc-field > span,
 .editor-status {
   color: var(--muted);
   font-size: 0.76rem;
+}
+
+.svc-toggle-box {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 .svc-input,
@@ -816,13 +847,39 @@ defineExpose({
 }
 
 .editor-actions {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.editor-actions-leading,
+.editor-actions-trailing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editor-actions-leading {
+  min-height: 32px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.editor-actions-trailing {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
 
 .secondary-button--danger {
-  border-color: color-mix(in srgb, #ef4444 30%, var(--team-create-control-border) 70%);
-  background: color-mix(in srgb, #fee2e2 48%, var(--panel-bg) 52%);
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--panel-border) 62%);
+  background: color-mix(in srgb, var(--danger) 10%, var(--panel-bg) 90%);
+  color: color-mix(in srgb, var(--danger) 88%, var(--text-strong) 12%);
+}
+
+.secondary-button--danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--danger) 62%, var(--focus-border) 38%);
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface-soft) 82%);
+  color: color-mix(in srgb, var(--danger) 92%, var(--text-strong) 8%);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 780px) {
@@ -839,6 +896,22 @@ defineExpose({
   .svc-form-grid,
   .advanced-grid {
     grid-template-columns: 1fr;
+  }
+
+  .editor-head-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .editor-actions,
+  .editor-actions-leading,
+  .editor-actions-trailing {
+    width: 100%;
+  }
+
+  .editor-actions-leading,
+  .editor-actions-trailing {
+    justify-content: flex-start;
   }
 }
 </style>

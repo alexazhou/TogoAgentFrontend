@@ -316,7 +316,12 @@
       "testError": "Test request error",
       "deleteConfirmTitle": "Delete LLM Service",
       "deleteConfirmMsg": "Confirm deleting service \"{name}\"? This cannot be undone.",
-      "deleteConfirmBtn": "Delete"
+      "deleteConfirmBtn": "Delete",
+      "table": {
+        "url": "URL",
+        "status": "Status",
+        "actions": "Actions"
+      }
     },
     "roles": {
       "title": "Role Management",
@@ -355,7 +360,13 @@
       "saveSuccess": "Role template saved",
       "deleteConfirmTitle": "Delete Role Template",
       "deleteConfirmMsg": "Confirm deleting template \"{name}\"? This cannot be undone.",
-      "deleteConfirmBtn": "Delete"
+      "deleteConfirmBtn": "Delete",
+      "table": {
+        "id": "ID",
+        "type": "Type",
+        "soul": "Soul",
+        "actions": "Actions"
+      }
     },
     "nav": {
       "label": "Navigation",

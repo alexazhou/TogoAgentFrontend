@@ -255,7 +255,7 @@ defineExpose({
 <template>
   <Teleport to="body">
     <div v-if="visible" class="editor-overlay" @click.self="closeDialog">
-      <section class="editor-dialog panel">
+      <section class="editor-dialog panel scrollbar-thin">
         <header class="editor-head">
           <div class="editor-head-copy">
             <p class="editor-eyebrow">{{ dialogEyebrow }}</p>

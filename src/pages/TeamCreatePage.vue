@@ -172,11 +172,7 @@ onMounted(() => {
           <div class="create-shell">
             <SettingsBreadcrumb :items="breadcrumbItems" @navigate="navigateBreadcrumb" />
 
-            <div class="team-detail-head">
-              <div class="team-detail-title-row">
-                <h4>{{ name.trim() || '新建团队' }}</h4>
-                <p class="section-eyebrow">Create Team</p>
-              </div>
+            <div class="team-detail-head team-detail-head--compact">
               <div class="team-detail-actions">
                 <button type="button" class="secondary-button" @click="goBack">返回团队列表</button>
               </div>
@@ -272,8 +268,7 @@ onMounted(() => {
   line-height: 1.04;
 }
 
-.settings-eyebrow,
-.section-eyebrow {
+.settings-eyebrow {
   margin: 0;
   color: var(--accent);
   text-transform: uppercase;
@@ -385,31 +380,15 @@ onMounted(() => {
 
 .team-detail-head {
   margin-top: 4px;
+  margin-bottom: 8px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.team-detail-title-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.team-detail-head h4 {
-  margin: 0;
-  color: var(--text-strong);
-  font-size: 1rem;
-}
-
-.section-eyebrow {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.68rem;
+.team-detail-head--compact {
+  justify-content: flex-end;
 }
 
 .team-detail-actions {

@@ -87,11 +87,7 @@ onMounted(() => {
   <section id="roles" class="config-section">
     <SettingsBreadcrumb :items="breadcrumbItems" @navigate="emit('navigateBreadcrumb', $event)" />
 
-    <div class="section-head">
-      <div>
-        <p class="section-eyebrow">Roles</p>
-        <h3>{{ t('settings.roles.title') }}</h3>
-      </div>
+    <div class="section-head section-head--compact">
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
         <button type="button" class="secondary-button" @click="openCreate">
@@ -100,42 +96,48 @@ onMounted(() => {
       </div>
     </div>
 
-    <section class="roles-list-card">
-      <div class="roles-list-head">
-        <strong>{{ t('settings.roles.templateList') }}</strong>
-        <span>{{ t('settings.roles.count', { count: templates.length }) }}</span>
-      </div>
-
+    <section class="roles-table-section">
       <p v-if="isLoading" class="roles-empty">{{ t('settings.roles.loading') }}</p>
 
-      <div v-else-if="templates.length" class="roles-list">
-        <article
-          v-for="template in templates"
-          :key="template.id"
-          class="role-row"
-          :class="{ active: selectedTemplateId === template.id }"
-        >
-          <div class="role-row-main">
-            <div class="role-row-title">
-              <div class="role-row-title-main">
-                <span class="role-row-id">#{{ template.id }}</span>
+      <div v-else-if="templates.length" class="settings-table-wrap">
+        <table class="settings-table roles-table">
+          <thead>
+            <tr>
+              <th>{{ t('settings.roles.table.id') }}</th>
+              <th>{{ t('settings.roles.nameLabel') }}</th>
+              <th>{{ t('settings.roles.table.type') }}</th>
+              <th>{{ t('settings.roles.modelLabel') }}</th>
+              <th class="roles-table-actions-head">{{ t('settings.roles.table.actions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="template in templates"
+              :key="template.id"
+              :class="{ active: selectedTemplateId === template.id }"
+              @click="selectedTemplateId = template.id"
+            >
+              <td class="roles-cell-id">#{{ template.id }}</td>
+              <td class="roles-cell-name">
                 <strong>{{ template.name }}</strong>
-              </div>
-              <div class="role-row-actions">
+              </td>
+              <td>
                 <span
                   class="role-chip"
                   :class="isSystemType(template.type) ? 'role-chip--system' : 'role-chip--user'"
                 >
                   {{ isSystemType(template.type) ? t('settings.roles.systemTemplate') : t('settings.roles.userTemplate') }}
                 </span>
-                <button type="button" class="ghost-button" @click="openEdit(template.id)">
+              </td>
+              <td class="roles-cell-model">{{ template.model || t('common.auto') }}</td>
+              <td class="roles-cell-actions">
+                <button type="button" class="ghost-button" @click.stop="openEdit(template.id)">
                   {{ t('common.edit') }}
                 </button>
-              </div>
-            </div>
-            <p class="role-row-preview">{{ buildSoulPreview(template.soul) }}</p>
-          </div>
-        </article>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <p v-else class="roles-empty">{{ t('settings.roles.empty') }}</p>
@@ -146,33 +148,24 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.role-row {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--surface-soft);
-}
-
 .config-section {
   padding: 12px 0 0;
 }
 
 .section-head,
-.section-actions,
-.roles-list-head,
-.role-row-title,
-.role-row-actions {
+.section-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.section-eyebrow {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.68rem;
+.section-head {
+  margin-bottom: 8px;
+}
+
+.section-head--compact {
+  justify-content: flex-end;
 }
 
 .section-head h3 {
@@ -181,22 +174,18 @@ onMounted(() => {
 }
 
 .section-status,
-.roles-empty,
-.roles-list-head span,
-.role-row-id,
-.role-row-preview {
+.roles-empty {
   color: var(--muted);
 }
 
-.roles-list-card {
+.roles-table-section {
   margin-top: 10px;
-  padding: 0;
+  padding: 0 10px;
 }
 
-.roles-list {
+.settings-table-wrap {
   margin-top: 10px;
-  display: grid;
-  gap: 8px;
+  overflow-x: auto;
 }
 
 .roles-empty {
@@ -204,50 +193,101 @@ onMounted(() => {
   font-size: 0.86rem;
 }
 
-.role-row {
-  padding: 12px;
-  transition:
-    border-color 140ms ease,
-    background 140ms ease;
-}
-
-.role-row.active,
-.role-row:hover {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 68%, var(--surface-soft) 32%);
-}
-
-.role-row-main {
-  display: grid;
-  gap: 8px;
-}
-
-.role-row-title-main {
+.settings-table {
+  width: 100%;
   min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
 }
 
-.role-row-main strong {
+.settings-table th,
+.settings-table td {
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.settings-table thead th {
+  position: relative;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--divider) 86%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
   color: var(--text-strong);
-  font-size: 0.92rem;
-}
-
-.role-row-id {
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
-.role-row-preview {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.settings-table thead th:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  right: 0;
+  width: 1px;
+  height: calc(100% - 28px);
+  background: color-mix(in srgb, var(--divider) 88%, transparent);
+}
+
+.settings-table tbody td {
+  border-bottom: 1px solid color-mix(in srgb, var(--divider) 76%, transparent);
+  color: var(--text-strong);
+  font-size: 0.84rem;
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.settings-table tbody tr:hover td,
+.settings-table tbody tr.active td {
+  background: color-mix(in srgb, var(--selected) 44%, transparent);
+}
+
+.settings-table tbody tr.active td {
+  box-shadow: none;
+}
+
+.settings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.settings-table tbody tr:first-child td {
+  padding-top: 18px;
+}
+
+.roles-cell-id,
+.roles-cell-model {
+  color: var(--muted);
+}
+
+.roles-cell-id,
+.roles-cell-model {
+  white-space: nowrap;
+}
+
+.roles-cell-id {
+  width: 72px;
+}
+
+.roles-cell-name strong {
+  color: var(--text-strong);
+  font-size: 0.96rem;
+}
+
+.roles-cell-model {
+  width: 132px;
+}
+
+.roles-cell-actions,
+.roles-table-actions-head {
+  width: 88px;
+  text-align: right;
+}
+
+.roles-cell-actions :deep(.ghost-button) {
+  white-space: nowrap;
 }
 
 .role-chip {
@@ -277,17 +317,17 @@ onMounted(() => {
 
 @media (max-width: 780px) {
   .section-head,
-  .section-actions,
-  .roles-list-head,
-  .role-row-title,
-  .role-row-actions {
+  .section-actions {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .section-actions,
-  .role-row-actions {
+  .section-actions {
     width: 100%;
+  }
+
+  .settings-table {
+    min-width: 720px;
   }
 }
 </style>

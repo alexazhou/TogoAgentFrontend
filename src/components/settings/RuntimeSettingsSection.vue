@@ -17,13 +17,6 @@ const emit = defineEmits<{
   <section id="runtime" class="config-section">
     <SettingsBreadcrumb :items="breadcrumbItems" @navigate="emit('navigateBreadcrumb', $event)" />
 
-    <div class="section-head">
-      <div>
-        <p class="section-eyebrow">Runtime</p>
-        <h3>运行与存储</h3>
-      </div>
-    </div>
-
     <div class="form-grid">
       <label class="field-card">
         <span>配置目录</span>
@@ -50,26 +43,6 @@ const emit = defineEmits<{
   padding: 12px 0 0;
 }
 
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.section-eyebrow {
-  margin: 0;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-size: 0.68rem;
-}
-
-.section-head h3 {
-  margin: 0;
-  color: var(--text-strong);
-}
-
 .section-status,
 .field-card span {
   color: var(--muted);
@@ -79,7 +52,7 @@ const emit = defineEmits<{
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
 .field-card {
