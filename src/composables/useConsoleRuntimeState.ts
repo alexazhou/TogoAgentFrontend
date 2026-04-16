@@ -46,7 +46,7 @@ export function useConsoleRuntimeState(options: UseConsoleRuntimeStateOptions) {
       return;
     }
 
-    await loadRoomMessagesState(roomId);
+    await loadRoomMessagesState(toValue(options.teamId), roomId);
     selectedRoomId.value = roomId;
     setActiveRealtimeContext(toValue(options.teamId), roomId);
 

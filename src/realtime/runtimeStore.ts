@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { totalMessageCount, updateScheduleState } from '../appUiState';
+import type { RawMessageInfo } from '../api';
 import {
   getAgentActivities as fetchAgentActivities,
   getAgentsByTeamId as fetchAgentsByTeamId,
@@ -40,6 +41,14 @@ function syncTotalMessageCount(): void {
   }
 
   totalMessageCount.value = roomMessagesState.value[activeRoomId.value]?.length ?? 0;
+}
+
+function normalizeMessage(teamId: number, raw: RawMessageInfo): MessageInfo {
+  return {
+    sender: resolveMessageSenderName(teamId, raw.agent_id),
+    content: raw.content,
+    time: raw.send_time,
+  };
 }
 
 function resolveMessageSenderName(teamId: number, senderId: number): string {
@@ -139,7 +148,7 @@ export async function loadTeamRooms(teamId: number): Promise<RoomState[]> {
         const lastMessage = roomMessages[roomMessages.length - 1];
         return {
           room_id: room.room_id,
-          preview: lastMessage ? formatPreview(lastMessage) : t('message.noMessage'),
+          preview: lastMessage ? formatPreview(normalizeMessage(teamId, lastMessage)) : t('message.noMessage'),
         };
       } catch (error) {
         console.error(error);
@@ -171,8 +180,9 @@ export function seedRoomMessages(roomId: number, messages: MessageInfo[]): void 
   syncTotalMessageCount();
 }
 
-export async function loadRoomMessagesState(roomId: number): Promise<MessageInfo[]> {
-  const messages = await fetchRoomMessages(roomId);
+export async function loadRoomMessagesState(teamId: number, roomId: number): Promise<MessageInfo[]> {
+  const rawMessages = await fetchRoomMessages(roomId);
+  const messages = rawMessages.map((m) => normalizeMessage(teamId, m));
   seedRoomMessages(roomId, messages);
   return messages;
 }

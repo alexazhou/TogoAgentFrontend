@@ -578,8 +578,14 @@ export async function stopAgent(agentId: number): Promise<{ status: string; agen
   });
 }
 
-export async function getRoomMessages(roomId: number): Promise<MessageInfo[]> {
-  const data = await requestJson<{ messages: MessageInfo[] }>(
+export type RawMessageInfo = {
+  agent_id: number;
+  content: string;
+  send_time: string;
+};
+
+export async function getRoomMessages(roomId: number): Promise<RawMessageInfo[]> {
+  const data = await requestJson<{ messages: RawMessageInfo[] }>(
     `/rooms/${roomId}/messages/list.json`,
   );
   return data.messages;
