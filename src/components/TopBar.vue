@@ -188,17 +188,14 @@ function toggleActiveTeamEnabled(): void {
   <header class="topbar">
     <div class="brand-group">
       <button
-        class="nav-action nav-icon-button"
+        class="nav-icon-button nav-icon-button--bare"
         type="button"
         :disabled="activeTeamId === null"
         :title="t('topbar.settings')"
         :aria-label="t('topbar.settings')"
         @click="emit('openSettings')"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="3.5"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16.9l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-        </svg>
+        <i class="fa-solid fa-gear" aria-hidden="true"></i>
       </button>
       <div class="team-switcher">
         <button
@@ -429,14 +426,14 @@ function toggleActiveTeamEnabled(): void {
   background: var(--topbar-bg);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  padding: 4px 10px;
+  padding: 4px 10px 4px 5px;
   overflow: visible;
 }
 
 .brand-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
@@ -599,14 +596,26 @@ function toggleActiveTeamEnabled(): void {
 }
 
 .nav-icon-button {
-  width: 28px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
   padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  box-shadow: none;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.nav-action:disabled {
+.nav-action:disabled,
+.nav-icon-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -616,8 +625,20 @@ function toggleActiveTeamEnabled(): void {
   color: var(--text-strong);
 }
 
+.nav-icon-button--bare {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+}
+
+.nav-icon-button--bare:not(:disabled):hover {
+  background: color-mix(in srgb, var(--selected) 44%, transparent);
+  color: var(--text-strong);
+}
+
 .team-switcher-button:focus-visible,
 .nav-action:focus-visible,
+.nav-icon-button:focus-visible,
 .theme-switch:focus-visible,
 .team-enabled-switch:focus-visible {
   border-color: var(--focus-border);
@@ -843,8 +864,7 @@ function toggleActiveTeamEnabled(): void {
   color: var(--text-strong);
 }
 
-.theme-switch svg,
-.nav-icon-button svg {
+.theme-switch svg {
   width: 12px;
   height: 12px;
   fill: none;
@@ -852,6 +872,14 @@ function toggleActiveTeamEnabled(): void {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.nav-icon-button i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .theme-switch-icon {
