@@ -874,7 +874,6 @@ function handleTeamTreeSaved(): void {
 }
 
 .sidebar-card,
-.config-section,
 .placeholder-card,
 .status-card,
 .metric-card,
@@ -987,7 +986,7 @@ function handleTeamTreeSaved(): void {
 }
 
 .config-section {
-  padding: 12px 14px;
+  padding: 12px 0 0;
 }
 
 .form-grid,
