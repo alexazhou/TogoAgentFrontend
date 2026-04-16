@@ -96,7 +96,6 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.config-section,
 .status-card,
 .metric-card,
 .driver-card {
@@ -106,7 +105,7 @@ const emit = defineEmits<{
 }
 
 .config-section {
-  padding: 12px 14px;
+  padding: 12px 0 0;
 }
 
 .section-head,

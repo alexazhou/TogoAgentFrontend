@@ -239,7 +239,6 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 </template>
 
 <style scoped>
-.config-section,
 .team-card,
 .empty-card {
   border: 1px solid var(--panel-border);
@@ -248,7 +247,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 }
 
 .config-section {
-  padding: 12px 14px;
+  padding: 12px 0 0;
 }
 
 .section-eyebrow {

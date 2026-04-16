@@ -22,75 +22,70 @@ const { t } = useI18n();
 
 <template>
   <aside class="settings-sidebar">
-    <div class="sidebar-card">
-      <div class="sidebar-card-head">
-        <span>{{ t('settings.nav.label') }}</span>
-        <small v-if="countLabel">{{ countLabel }}</small>
-      </div>
-      <nav class="settings-nav" :aria-label="t('settings.nav.ariaLabel')">
-        <button
-          v-for="item in items"
-          :key="item.id"
-          type="button"
-          class="nav-link"
-          :class="{ active: item.id === activeId }"
-          @click="emit('select', item.id)"
-        >
-          <strong>{{ item.label }}</strong>
-          <span>{{ item.note }}</span>
-        </button>
-      </nav>
+    <div class="sidebar-head">
+      <span>{{ t('settings.nav.label') }}</span>
+      <small v-if="countLabel">{{ countLabel }}</small>
     </div>
+
+    <nav class="settings-nav" :aria-label="t('settings.nav.ariaLabel')">
+      <button
+        v-for="item in items"
+        :key="item.id"
+        type="button"
+        class="nav-link"
+        :class="{ active: item.id === activeId }"
+        @click="emit('select', item.id)"
+      >
+        <strong>{{ item.label }}</strong>
+        <span>{{ item.note }}</span>
+      </button>
+    </nav>
   </aside>
 </template>
 
 <style scoped>
 .settings-sidebar {
   min-height: 0;
-  padding-top: 10px;
-}
-
-.sidebar-card {
   height: 100%;
-  padding: 10px;
+  padding: 10px 18px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--panel-bg);
+  gap: 10px;
+  border-right: 1px solid var(--divider);
 }
 
-.sidebar-card-head {
+.sidebar-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 0 4px;
 }
 
-.sidebar-card-head span,
-.sidebar-card-head small {
+.sidebar-head span,
+.sidebar-head small {
   color: var(--muted);
 }
 
 .settings-nav {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .nav-link {
   width: 100%;
-  border: 1px solid var(--room-card-border);
+  border: 1px solid transparent;
   border-radius: 12px;
-  background: var(--surface-soft);
+  background: transparent;
   color: inherit;
-  padding: 8px 10px;
+  padding: 10px 12px;
   text-align: left;
   cursor: pointer;
   transition:
     border-color 140ms ease,
-    background 140ms ease;
+    background 140ms ease,
+    transform 140ms ease;
 }
 
 .nav-link strong {
@@ -107,13 +102,22 @@ const { t } = useI18n();
 }
 
 .nav-link:hover {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 52%, var(--surface-soft) 48%);
+  border-color: color-mix(in srgb, var(--focus-border) 18%, transparent);
+  background: color-mix(in srgb, var(--selected) 28%, transparent);
+  transform: translateX(2px);
 }
 
 .nav-link.active {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 60%, var(--surface-soft) 40%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 40%, transparent);
+  background: color-mix(in srgb, var(--selected) 44%, var(--panel-bg) 56%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 26%, transparent);
+}
+
+@media (max-width: 980px) {
+  .settings-sidebar {
+    padding: 0 0 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--divider);
+  }
 }
 </style>

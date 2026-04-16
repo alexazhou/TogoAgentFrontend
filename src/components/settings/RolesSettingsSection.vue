@@ -1,18 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import {
-  createRoleTemplate,
-  deleteRoleTemplate,
-  getRoleTemplateDetail,
-  getRoleTemplates,
-  updateRoleTemplate,
-} from '../../api';
-import { showGlobalSuccessToast } from '../../appUiState';
+import { getRoleTemplates } from '../../api';
+import type { RoleTemplateSummary } from '../../types';
+import RoleTemplateEditorDialog from './RoleTemplateEditorDialog.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
-import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import type { SettingsBreadcrumbItem } from './types';
-import type { RoleTemplateDetail, RoleTemplateSummary } from '../../types';
 
 defineProps<{
   breadcrumbItems: SettingsBreadcrumbItem[];
@@ -26,27 +19,9 @@ const { t } = useI18n();
 
 const templates = ref<RoleTemplateSummary[]>([]);
 const selectedTemplateId = ref<number | null>(null);
-const currentDetail = ref<RoleTemplateDetail | null>(null);
 const isLoading = ref(false);
-const isSaving = ref(false);
-const isDeleting = ref(false);
-const isCreating = ref(false);
-const advancedOpen = ref(false);
 const statusText = ref('');
-const deleteConfirmOpen = ref(false);
-const form = ref({
-  name: '',
-  soul: '',
-  model: '',
-  allowedToolsText: '',
-});
-
-type RoleTemplateFormSnapshot = {
-  name: string;
-  soul: string;
-  model: string;
-  allowed_tools: string[] | null;
-};
+const editorDialogRef = ref<InstanceType<typeof RoleTemplateEditorDialog> | null>(null);
 
 function equalsIgnoreCase(value: string | null | undefined, expected: string): boolean {
   return String(value ?? '').trim().toLowerCase() === expected.toLowerCase();
@@ -55,56 +30,6 @@ function equalsIgnoreCase(value: string | null | undefined, expected: string): b
 function isSystemType(type: string | null | undefined): boolean {
   return equalsIgnoreCase(type, 'system');
 }
-
-const currentTypeLabel = computed(() => {
-  if (isSystemType(currentDetail.value?.type)) {
-    return t('settings.roles.systemTemplate');
-  }
-  if (equalsIgnoreCase(currentDetail.value?.type, 'user')) {
-    return t('settings.roles.userTemplate');
-  }
-  return t('settings.roles.undefined');
-});
-
-const isSystemTemplate = computed(() => isSystemType(currentDetail.value?.type));
-const canDelete = computed(() => !isCreating.value && !!currentDetail.value && !isSystemTemplate.value && !isDeleting.value);
-const isNameReadonly = computed(() => !isCreating.value && isSystemTemplate.value);
-const isSystemReadonlyFields = computed(() => !isCreating.value && isSystemTemplate.value);
-const formSnapshot = computed<RoleTemplateFormSnapshot>(() => ({
-  name: form.value.name.trim(),
-  soul: form.value.soul,
-  model: form.value.model.trim(),
-  allowed_tools: normalizeAllowedToolsList(parseAllowedTools()),
-}));
-const currentDetailSnapshot = computed<RoleTemplateFormSnapshot | null>(() => {
-  if (!currentDetail.value) {
-    return null;
-  }
-  return {
-    name: currentDetail.value.name.trim(),
-    soul: currentDetail.value.soul,
-    model: currentDetail.value.model.trim(),
-    allowed_tools: normalizeAllowedToolsList(currentDetail.value.allowed_tools),
-  };
-});
-const isDirty = computed(() => {
-  if (isCreating.value) {
-    return true;
-  }
-  if (!currentDetailSnapshot.value) {
-    return false;
-  }
-  return JSON.stringify(formSnapshot.value) !== JSON.stringify(currentDetailSnapshot.value);
-});
-const canSave = computed(() => {
-  if (isSaving.value) {
-    return false;
-  }
-  if (isCreating.value) {
-    return form.value.name.trim().length > 0;
-  }
-  return !!currentDetail.value && !isSystemTemplate.value && isDirty.value;
-});
 
 function buildSoulPreview(soul: string | undefined): string {
   const normalized = String(soul ?? '')
@@ -116,58 +41,21 @@ function buildSoulPreview(soul: string | undefined): string {
   return normalized.length > 72 ? `${normalized.slice(0, 72)}...` : normalized;
 }
 
-function resetForm(detail?: RoleTemplateDetail | null): void {
-  form.value = {
-    name: detail?.name || '',
-    soul: detail?.soul || '',
-    model: detail?.model || '',
-    allowedToolsText: (detail?.allowed_tools ?? []).join(', '),
-  };
-}
-
-function parseAllowedTools(): string[] | null {
-  const items = form.value.allowedToolsText
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  return items.length ? items : null;
-}
-
-function normalizeAllowedToolsList(value: string[] | null | undefined): string[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-  const normalized = value
-    .map((item) => String(item).trim())
-    .filter(Boolean);
-  return normalized.length ? normalized : null;
-}
-
-async function loadTemplateList(preferredId?: number | null): Promise<void> {
-  const nextTemplates = await getRoleTemplates();
-  templates.value = nextTemplates;
-
-  const availableId = preferredId && nextTemplates.some((template) => template.id === preferredId)
-    ? preferredId
-    : nextTemplates[0]?.id ?? null;
-
-  if (availableId === null) {
-    selectedTemplateId.value = null;
-    currentDetail.value = null;
-    if (!isCreating.value) {
-      resetForm(null);
-    }
-    return;
-  }
-
-  await selectTemplate(availableId);
-}
-
 async function loadRoleSettings(preferredId?: number | null): Promise<void> {
   isLoading.value = true;
   statusText.value = '';
+
   try {
-    await loadTemplateList(preferredId);
+    const nextTemplates = await getRoleTemplates();
+    templates.value = nextTemplates;
+
+    if (preferredId !== null && preferredId !== undefined && nextTemplates.some((template) => template.id === preferredId)) {
+      selectedTemplateId.value = preferredId;
+    } else if (selectedTemplateId.value !== null && nextTemplates.some((template) => template.id === selectedTemplateId.value)) {
+      return;
+    } else {
+      selectedTemplateId.value = nextTemplates[0]?.id ?? null;
+    }
   } catch (error) {
     console.error(error);
     statusText.value = t('settings.roles.loadFailed');
@@ -176,102 +64,22 @@ async function loadRoleSettings(preferredId?: number | null): Promise<void> {
   }
 }
 
-async function selectTemplate(templateId: number): Promise<void> {
-  selectedTemplateId.value = templateId;
-  isCreating.value = false;
-  advancedOpen.value = false;
-  statusText.value = '';
-  const detail = await getRoleTemplateDetail(templateId);
-  currentDetail.value = detail;
-  resetForm(detail);
-}
-
-function startCreate(): void {
-  isCreating.value = true;
+function openCreate(): void {
   selectedTemplateId.value = null;
-  currentDetail.value = null;
-  advancedOpen.value = false;
-  statusText.value = '';
-  resetForm(null);
+  editorDialogRef.value?.openCreate();
 }
 
-function toggleAdvanced(): void {
-  advancedOpen.value = !advancedOpen.value;
+function openEdit(templateId: number): void {
+  selectedTemplateId.value = templateId;
+  void editorDialogRef.value?.openEdit(templateId);
 }
 
-async function saveCurrentTemplate(): Promise<void> {
-  if (!canSave.value) {
-    return;
-  }
-
-  isSaving.value = true;
-  statusText.value = '';
-  try {
-    if (isCreating.value) {
-      const created = await createRoleTemplate({
-        name: form.value.name.trim(),
-        soul: form.value.soul,
-        model: form.value.model.trim(),
-        allowed_tools: parseAllowedTools(),
-      });
-      await loadRoleSettings(created.id);
-      showGlobalSuccessToast(t('settings.roles.createSuccess'));
-    } else if (selectedTemplateId.value !== null) {
-      const updated = await updateRoleTemplate(selectedTemplateId.value, {
-        name: form.value.name.trim(),
-        soul: form.value.soul,
-        model: form.value.model.trim(),
-        allowed_tools: parseAllowedTools(),
-      });
-      currentDetail.value = updated;
-      resetForm(updated);
-      await loadTemplateList(updated.id);
-      showGlobalSuccessToast(t('settings.roles.saveSuccess'));
-    }
-    statusText.value = t('settings.roles.saved');
-  } catch (error) {
-    console.error(error);
-    statusText.value = t('settings.roles.saveFailed');
-  } finally {
-    isSaving.value = false;
-  }
-}
-
-function requestDelete(): void {
-  if (!canDelete.value) {
-    return;
-  }
-  deleteConfirmOpen.value = true;
-}
-
-function closeDeleteConfirm(): void {
-  deleteConfirmOpen.value = false;
-}
-
-async function confirmDelete(): Promise<void> {
-  if (selectedTemplateId.value === null || !currentDetail.value) {
-    closeDeleteConfirm();
-    return;
-  }
-
-  isDeleting.value = true;
-  statusText.value = '';
-  try {
-    await deleteRoleTemplate(selectedTemplateId.value);
-    closeDeleteConfirm();
-    await loadRoleSettings(null);
-    showGlobalSuccessToast(t('settings.roles.deleteSuccess'));
-    statusText.value = t('settings.roles.deleted');
-  } catch (error) {
-    console.error(error);
-    statusText.value = t('settings.roles.deleteFailed');
-  } finally {
-    isDeleting.value = false;
-  }
+function handleDialogChanged(payload: { preferredId: number | null }): void {
+  void loadRoleSettings(payload.preferredId);
 }
 
 onMounted(() => {
-  loadRoleSettings().catch(console.error);
+  void loadRoleSettings();
 });
 </script>
 
@@ -286,170 +94,59 @@ onMounted(() => {
       </div>
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
-        <button type="button" class="secondary-button" @click="startCreate">{{ t('settings.roles.newTemplate') }}</button>
+        <button type="button" class="secondary-button" @click="openCreate">
+          {{ t('settings.roles.newTemplate') }}
+        </button>
       </div>
     </div>
 
-    <div class="roles-layout">
-      <aside class="roles-list-card">
-        <div class="roles-list-head">
-          <strong>{{ t('settings.roles.templateList') }}</strong>
-          <span>{{ t('settings.roles.count', { count: templates.length }) }}</span>
-        </div>
+    <section class="roles-list-card">
+      <div class="roles-list-head">
+        <strong>{{ t('settings.roles.templateList') }}</strong>
+        <span>{{ t('settings.roles.count', { count: templates.length }) }}</span>
+      </div>
 
-        <p v-if="isLoading" class="roles-empty">{{ t('settings.roles.loading') }}</p>
+      <p v-if="isLoading" class="roles-empty">{{ t('settings.roles.loading') }}</p>
 
-        <div v-else-if="templates.length" class="roles-list">
-          <button
-            v-for="template in templates"
-            :key="template.id"
-            type="button"
-            class="role-row"
-            :class="{ active: !isCreating && selectedTemplateId === template.id }"
-            @click="selectTemplate(template.id)"
-          >
-            <div class="role-row-main">
-              <div class="role-row-title">
-                <div class="role-row-title-main">
-                  <span class="role-row-id">#{{ template.id }}</span>
-                  <strong>{{ template.name }}</strong>
-                </div>
+      <div v-else-if="templates.length" class="roles-list">
+        <article
+          v-for="template in templates"
+          :key="template.id"
+          class="role-row"
+          :class="{ active: selectedTemplateId === template.id }"
+        >
+          <div class="role-row-main">
+            <div class="role-row-title">
+              <div class="role-row-title-main">
+                <span class="role-row-id">#{{ template.id }}</span>
+                <strong>{{ template.name }}</strong>
+              </div>
+              <div class="role-row-actions">
                 <span
                   class="role-chip"
                   :class="isSystemType(template.type) ? 'role-chip--system' : 'role-chip--user'"
                 >
                   {{ isSystemType(template.type) ? t('settings.roles.systemTemplate') : t('settings.roles.userTemplate') }}
                 </span>
+                <button type="button" class="ghost-button" @click="openEdit(template.id)">
+                  {{ t('common.edit') }}
+                </button>
               </div>
-              <p class="role-row-preview">{{ buildSoulPreview(template.soul) }}</p>
             </div>
-          </button>
-        </div>
-
-        <p v-else class="roles-empty">{{ t('settings.roles.empty') }}</p>
-      </aside>
-
-      <section class="role-editor-card">
-        <div class="role-editor-head">
-          <div>
-            <p class="section-eyebrow">{{ isCreating ? 'Create Template' : 'Template Detail' }}</p>
-            <h4>{{ isCreating ? t('settings.roles.newTitle') : (form.name || t('settings.roles.detailFallback')) }}</h4>
+            <p class="role-row-preview">{{ buildSoulPreview(template.soul) }}</p>
           </div>
-          <div class="role-editor-meta">
-            <span
-              class="role-chip"
-              :class="isCreating ? 'role-chip--draft' : (isSystemTemplate ? 'role-chip--system' : 'role-chip--user')"
-            >
-              {{ isCreating ? t('settings.roles.unsaved') : currentTypeLabel }}
-            </span>
-          </div>
-        </div>
+        </article>
+      </div>
 
-        <div class="role-form-grid">
-          <label class="role-field">
-            <span>{{ t('settings.roles.nameLabel') }}</span>
-            <input
-              v-model="form.name"
-              type="text"
-              class="role-input"
-              :class="{ 'role-input--readonly': isNameReadonly }"
-              :placeholder="t('settings.roles.namePlaceholder')"
-              :readonly="isNameReadonly"
-            />
-          </label>
+      <p v-else class="roles-empty">{{ t('settings.roles.empty') }}</p>
+    </section>
 
-          <label class="role-field role-field--wide">
-            <span>Soul</span>
-            <textarea
-              v-model="form.soul"
-              class="role-textarea"
-              :class="{ 'role-input--readonly': isSystemReadonlyFields }"
-              rows="12"
-              :placeholder="t('settings.roles.soulPlaceholder')"
-              :readonly="isSystemReadonlyFields"
-            ></textarea>
-          </label>
-        </div>
-
-        <section class="advanced-card">
-          <button
-            type="button"
-            class="advanced-toggle"
-            :aria-expanded="advancedOpen"
-            @click="toggleAdvanced"
-          >
-            <div>
-              <p class="section-eyebrow">Advanced</p>
-              <strong>{{ t('settings.roles.advanced') }}</strong>
-            </div>
-            <span class="advanced-toggle__state">{{ advancedOpen ? t('common.collapse') : t('common.expand') }}</span>
-          </button>
-
-          <div v-if="advancedOpen" class="advanced-grid">
-            <label class="role-field">
-              <span>{{ t('settings.roles.modelLabel') }}</span>
-              <input
-                v-model="form.model"
-                type="text"
-                class="role-input"
-                :class="{ 'role-input--readonly': isSystemReadonlyFields }"
-                :placeholder="t('settings.roles.modelPlaceholder')"
-                :readonly="isSystemReadonlyFields"
-              />
-            </label>
-
-            <label class="role-field role-field--wide">
-              <span>{{ t('settings.roles.toolsLabel') }}</span>
-              <input
-                v-model="form.allowedToolsText"
-                type="text"
-                class="role-input"
-                :class="{ 'role-input--readonly': isSystemReadonlyFields }"
-                :placeholder="t('settings.roles.toolsPlaceholder')"
-                :readonly="isSystemReadonlyFields"
-              />
-            </label>
-          </div>
-        </section>
-
-        <div class="role-editor-actions">
-          <button
-            v-if="canDelete"
-            type="button"
-            class="secondary-button secondary-button--danger"
-            :disabled="isDeleting"
-            @click="requestDelete"
-          >
-            {{ isDeleting ? t('settings.roles.deleting') : t('settings.roles.deleteBtn') }}
-          </button>
-          <button
-            type="button"
-            class="secondary-button"
-            :disabled="!canSave"
-            @click="saveCurrentTemplate"
-          >
-            {{ isSaving ? t('settings.roles.saving') : (isCreating ? t('settings.roles.createBtn') : t('settings.roles.saveBtn')) }}
-          </button>
-        </div>
-      </section>
-    </div>
-
-    <ConfirmDialog
-      :open="deleteConfirmOpen"
-      :title="t('settings.roles.deleteConfirmTitle')"
-      :message="t('settings.roles.deleteConfirmMsg', { name: currentDetail?.name || '' })"
-      :confirm-label="t('settings.roles.deleteConfirmBtn')"
-      danger
-      @close="closeDeleteConfirm"
-      @confirm="confirmDelete"
-    />
+    <RoleTemplateEditorDialog ref="editorDialogRef" @changed="handleDialogChanged" />
   </section>
 </template>
 
 <style scoped>
-.config-section,
 .roles-list-card,
-.role-editor-card,
 .role-row {
   border: 1px solid var(--panel-border);
   border-radius: 14px;
@@ -457,17 +154,14 @@ onMounted(() => {
 }
 
 .config-section {
-  padding: 12px 14px;
+  padding: 12px 0 0;
 }
 
 .section-head,
 .section-actions,
 .roles-list-head,
-.role-row-main,
-.role-row-meta,
-.role-editor-head,
-.role-editor-meta,
-.role-editor-actions {
+.role-row-title,
+.role-row-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -482,8 +176,7 @@ onMounted(() => {
   font-size: 0.68rem;
 }
 
-.section-head h3,
-.role-editor-head h4 {
+.section-head h3 {
   margin: 0;
   color: var(--text-strong);
 }
@@ -491,20 +184,13 @@ onMounted(() => {
 .section-status,
 .roles-empty,
 .roles-list-head span,
-.role-row-main span {
+.role-row-id,
+.role-row-preview {
   color: var(--muted);
 }
 
-.roles-layout {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 10px;
+.roles-list-card {
   margin-top: 10px;
-  align-items: start;
-}
-
-.roles-list-card,
-.role-editor-card {
   padding: 12px;
 }
 
@@ -514,11 +200,13 @@ onMounted(() => {
   gap: 8px;
 }
 
+.roles-empty {
+  margin-top: 10px;
+  font-size: 0.86rem;
+}
+
 .role-row {
-  width: 100%;
-  padding: 10px;
-  text-align: left;
-  cursor: pointer;
+  padding: 12px;
   transition:
     border-color 140ms ease,
     background 140ms ease;
@@ -530,23 +218,9 @@ onMounted(() => {
   background: color-mix(in srgb, var(--selected) 68%, var(--surface-soft) 32%);
 }
 
-.role-row-main,
-.role-row-meta {
-  width: 100%;
-}
-
 .role-row-main {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  display: grid;
   gap: 8px;
-}
-
-.role-row-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
 }
 
 .role-row-title-main {
@@ -557,34 +231,24 @@ onMounted(() => {
 }
 
 .role-row-main strong {
-  display: block;
   color: var(--text-strong);
   font-size: 0.92rem;
-  min-width: 0;
 }
 
 .role-row-id {
-  color: var(--muted);
   font-size: 0.72rem;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-.role-row-title .role-chip {
-  margin-left: auto;
-  flex: 0 0 auto;
-}
-
 .role-row-preview {
   margin: 0;
-  color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  text-align: left;
 }
 
 .role-chip {
@@ -612,122 +276,19 @@ onMounted(() => {
   color: color-mix(in srgb, var(--text-strong) 90%, var(--accent) 10%);
 }
 
-.role-chip--draft {
-  border-color: color-mix(in srgb, var(--panel-border) 88%, var(--focus-border) 12%);
-  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
-  color: var(--muted);
-}
-
-.role-editor-card {
-  display: grid;
-  gap: 12px;
-  align-self: start;
-}
-
-.advanced-card {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-soft) 84%, var(--panel-bg) 16%);
-  overflow: hidden;
-}
-
-.advanced-toggle {
-  width: 100%;
-  min-height: 76px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.advanced-toggle strong {
-  color: var(--text-strong);
-  font-size: 0.96rem;
-}
-
-.advanced-toggle__state {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.advanced-grid {
-  padding: 0 14px 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.role-form-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-}
-
-.role-field {
-  display: grid;
-  gap: 6px;
-}
-
-.role-field--wide {
-  grid-column: 1 / -1;
-}
-
-.role-field span {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-
-.role-input,
-.role-textarea {
-  width: 100%;
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
-  padding: 10px 12px;
-  font: inherit;
-  box-sizing: border-box;
-}
-
-.role-input--readonly {
-  border: 1px dashed color-mix(in srgb, var(--focus-border) 18%, var(--panel-border) 82%);
-  background: color-mix(in srgb, var(--surface-soft) 86%, var(--panel-bg) 14%);
-  color: color-mix(in srgb, var(--muted) 84%, var(--text-strong) 16%);
-  -webkit-text-fill-color: color-mix(in srgb, var(--muted) 84%, var(--text-strong) 16%);
-  box-shadow: none;
-}
-
-.role-input[readonly],
-.role-textarea[readonly] {
-  cursor: default;
-}
-
-.role-textarea {
-  resize: vertical;
-  min-height: 220px;
-}
-
-.secondary-button--danger {
-  border-color: color-mix(in srgb, #ef4444 30%, var(--team-create-control-border) 70%);
-  background: color-mix(in srgb, #fee2e2 48%, var(--panel-bg) 52%);
-}
-
-@media (max-width: 980px) {
-  .roles-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 780px) {
-  .advanced-grid,
-  .role-form-grid {
-    grid-template-columns: 1fr;
+  .section-head,
+  .section-actions,
+  .roles-list-head,
+  .role-row-title,
+  .role-row-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .section-actions,
+  .role-row-actions {
+    width: 100%;
   }
 }
 </style>

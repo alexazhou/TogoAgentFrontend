@@ -861,7 +861,7 @@ function handleTeamTreeSaved(): void {
   min-height: 0;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
-  gap: 10px;
+  gap: 0;
 }
 
 .settings-sidebar,
@@ -952,7 +952,7 @@ function handleTeamTreeSaved(): void {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px 4px 0 0;
+  padding: 10px 4px 0 18px;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--focus-border) 16%, var(--panel-border) 84%) transparent;
 }
@@ -1342,13 +1342,8 @@ function handleTeamTreeSaved(): void {
     min-height: auto;
   }
 
-  .sidebar-card {
-    height: auto;
-  }
-
-  .settings-nav {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  .settings-main {
+    padding-left: 0;
   }
 }
 

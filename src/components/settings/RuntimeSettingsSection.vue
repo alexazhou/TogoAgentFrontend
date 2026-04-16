@@ -47,13 +47,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .config-section {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--surface-soft);
-}
-
-.config-section {
-  padding: 12px 14px;
+  padding: 12px 0 0;
 }
 
 .section-head {

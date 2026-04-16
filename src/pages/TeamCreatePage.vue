@@ -286,7 +286,7 @@ onMounted(() => {
   min-height: 0;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
-  gap: 10px;
+  gap: 0;
 }
 
 .settings-sidebar,
@@ -369,14 +369,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px 4px 0 0;
+  padding: 10px 4px 0 18px;
 }
 
 .config-section {
-  border: 1px solid var(--panel-border);
-  border-radius: 14px;
-  background: var(--surface-soft);
-  padding: 12px 14px;
+  padding: 12px 0 0;
 }
 
 .create-shell {
@@ -454,7 +451,11 @@ onMounted(() => {
   }
 
   .settings-sidebar {
-    padding-top: 10px;
+    padding-top: 0;
+  }
+
+  .settings-main {
+    padding-left: 0;
   }
 
   .team-detail-head {
