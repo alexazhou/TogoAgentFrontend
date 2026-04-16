@@ -21,6 +21,7 @@ const props = defineProps<{
   messages: MessageInfo[];
   errorMessage: string;
   reloadingMessages: boolean;
+  teamEnabled: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -40,6 +41,9 @@ const {
 const { t } = useI18n();
 
 const composerNotice = computed(() => {
+  if (!props.teamEnabled) {
+    return t('chat.teamDisabled');
+  }
   if (!props.currentRoom || props.currentRoom.room_type === 'private') {
     return '';
   }

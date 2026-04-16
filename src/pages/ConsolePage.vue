@@ -225,6 +225,7 @@ onBeforeUnmount(() => {
         :messages="messages"
         :error-message="errorMessage"
         :reloading-messages="reloadingMessages"
+        :team-enabled="currentTeam?.enabled ?? true"
         @update-error="errorMessage = $event"
         @click-working-agent="openAgent"
       />

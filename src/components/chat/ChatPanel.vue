@@ -120,7 +120,7 @@ function handleEnterKey(e: KeyboardEvent): void {
       />
     </div>
 
-    <form v-if="isPrivateRoom" class="composer active" @submit.prevent="handleComposerSubmit">
+    <form v-if="isPrivateRoom && !composerNotice" class="composer active" @submit.prevent="handleComposerSubmit">
       <div class="composer-editor">
         <textarea
           :value="draft"

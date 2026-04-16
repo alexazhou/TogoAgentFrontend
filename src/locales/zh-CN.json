@@ -129,6 +129,7 @@
     "roomMembers": "房间成员",
     "noMembers": "当前房间没有成员。",
     "observeMode": "当前为观察模式，请在私聊房间向对应 Agent 发送消息。",
+    "teamDisabled": "当前团队已停用，请先启用再发送消息。",
     "sendFailed": "消息发送失败。",
     "waitingSpeaker": "等待 {name} 发言",
     "processing": "{name} 处理中"

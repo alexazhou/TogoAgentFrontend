@@ -129,6 +129,7 @@
     "roomMembers": "Room Members",
     "noMembers": "No members in this room.",
     "observeMode": "Observe mode active. Please send messages in private rooms.",
+    "teamDisabled": "This team is disabled. Please enable it before sending messages.",
     "sendFailed": "Failed to send message.",
     "waitingSpeaker": "Waiting for {name} to speak",
     "processing": "{name} processing"
