@@ -65,12 +65,12 @@ const { t } = useI18n();
   display: grid;
   gap: 14px;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 26%, var(--border-default) 74%);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--panel-bg) 95%, transparent) 0%,
-      color-mix(in srgb, var(--surface-soft) 92%, transparent) 100%
+      color-mix(in srgb, var(--surface-panel) 95%, transparent) 0%,
+      color-mix(in srgb, var(--surface-panel-muted) 92%, transparent) 100%
     );
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
 }
@@ -82,7 +82,7 @@ const { t } = useI18n();
 
 .confirm-eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.68rem;
@@ -90,13 +90,13 @@ const { t } = useI18n();
 
 .confirm-head h3 {
   margin: 0;
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-size: 1.12rem;
 }
 
 .confirm-message {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.9rem;
   line-height: 1.55;
 }
@@ -115,12 +115,12 @@ const { t } = useI18n();
 }
 
 .secondary-button--danger {
-  border-color: color-mix(in srgb, #ef4444 30%, var(--team-create-control-border) 70%);
-  background: color-mix(in srgb, #fee2e2 48%, var(--panel-bg) 52%);
+  border-color: color-mix(in srgb, var(--state-danger) 30%, var(--border-default) 70%);
+  background: color-mix(in srgb, var(--state-danger) 16%, var(--surface-panel) 84%);
 }
 
 .secondary-button--danger:hover {
-  border-color: color-mix(in srgb, #ef4444 62%, var(--focus-border) 38%);
-  background: color-mix(in srgb, #fee2e2 78%, #fff 22%);
+  border-color: color-mix(in srgb, var(--state-danger) 62%, var(--interactive-focus-border) 38%);
+  background: color-mix(in srgb, var(--state-danger) 26%, var(--surface-elevated) 74%);
 }
 </style>

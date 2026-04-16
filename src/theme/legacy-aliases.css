@@ -1,0 +1,38 @@
+:root {
+  --panel-bg: var(--surface-panel);
+  --panel-bg-elevated: var(--surface-elevated);
+  --panel-border: var(--border-default);
+  --panel-border-strong: var(--border-strong);
+  --team-create-panel-border: #3a4d63;
+  --team-create-control-border: var(--border-strong);
+  --team-create-node-border: var(--border-subtle);
+  --panel-shadow: var(--shadow-panel);
+  --accent: var(--text-secondary);
+  --accent-soft: rgba(127, 145, 164, 0.14);
+  --muted: var(--text-secondary);
+  --text: var(--text-primary);
+  --good: var(--state-success);
+  --danger: var(--state-danger);
+  --warn: var(--state-warning);
+  --warn-track: var(--state-warning-track);
+  --bubble-left: #182533;
+  --bubble-right: var(--interactive-selected);
+  --bubble-right-text: var(--text-on-accent);
+  --surface-soft: var(--surface-panel-muted);
+  --surface-quiet: var(--surface-panel-deep);
+  --text-strong: var(--text-primary);
+  --selected: var(--interactive-selected);
+  --divider: var(--border-subtle);
+  --focus-border: var(--interactive-focus-border);
+  --focus-glow: var(--interactive-focus-ring);
+  --hint-text: var(--text-tertiary);
+}
+
+:root[data-theme='light'] {
+  --team-create-panel-border: #d6e1ee;
+  --team-create-control-border: var(--border-default);
+  --team-create-node-border: var(--border-default);
+  --accent-soft: rgba(111, 130, 152, 0.12);
+  --bubble-left: #edf3fa;
+  --bubble-right: #4f86c6;
+}

@@ -449,7 +449,7 @@ function handleEnterKey(e: KeyboardEvent): void {
 .banner {
   border-radius: 6px;
   padding: 6px 8px;
-  background: var(--surface-1);
+  background: var(--surface-panel);
   font-size: 0.78rem;
 }
 

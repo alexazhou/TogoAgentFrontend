@@ -350,7 +350,7 @@ onBeforeUnmount(() => {
   padding: 18px 20px;
   border: 2px dashed color-mix(in srgb, var(--state-danger) 45%, var(--border-default) 55%);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--state-danger) 12%, var(--surface-1) 88%);
+  background: color-mix(in srgb, var(--state-danger) 12%, var(--surface-panel) 88%);
   color: color-mix(in srgb, var(--state-danger) 88%, var(--text-primary) 12%);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
   font-size: 1rem;
@@ -384,7 +384,7 @@ onBeforeUnmount(() => {
   padding: 16px 20px;
   border: 1px solid color-mix(in srgb, var(--state-success) 42%, var(--border-default) 58%);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--state-success) 18%, var(--surface-1) 82%);
+  background: color-mix(in srgb, var(--state-success) 18%, var(--surface-panel) 82%);
   color: color-mix(in srgb, var(--state-success) 78%, var(--text-primary) 22%);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
   font-size: 0.96rem;

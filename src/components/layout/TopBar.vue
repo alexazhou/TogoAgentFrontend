@@ -547,13 +547,13 @@ function optionLabel(team: TeamSummary): string {
 .team-switcher-option:hover,
 .team-switcher-option:focus-visible {
   border-color: color-mix(in srgb, var(--interactive-focus-border) 42%, transparent);
-  background: color-mix(in srgb, var(--interactive-selected) 56%, var(--surface-1) 44%);
+  background: color-mix(in srgb, var(--interactive-selected) 56%, var(--surface-panel) 44%);
   outline: none;
 }
 
 .team-switcher-option.is-active {
   border-color: color-mix(in srgb, var(--interactive-focus-border) 56%, var(--border-subtle) 44%);
-  background: color-mix(in srgb, var(--interactive-selected) 72%, var(--surface-1) 28%);
+  background: color-mix(in srgb, var(--interactive-selected) 72%, var(--surface-panel) 28%);
 }
 
 .team-switcher-option__name {
@@ -978,12 +978,12 @@ function optionLabel(team: TeamSummary): string {
 .lang-option:hover,
 .lang-option:focus-visible {
   border-color: color-mix(in srgb, var(--interactive-focus-border) 42%, transparent);
-  background: color-mix(in srgb, var(--interactive-selected) 56%, var(--surface-1) 44%);
+  background: color-mix(in srgb, var(--interactive-selected) 56%, var(--surface-panel) 44%);
 }
 
 .lang-option.is-active {
   border-color: color-mix(in srgb, var(--interactive-focus-border) 56%, var(--border-subtle) 44%);
-  background: color-mix(in srgb, var(--interactive-selected) 72%, var(--surface-1) 28%);
+  background: color-mix(in srgb, var(--interactive-selected) 72%, var(--surface-panel) 28%);
   font-weight: 600;
 }
 

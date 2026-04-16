@@ -190,7 +190,7 @@ function isDeptRoom(room: RoomState): boolean {
 
 .room-tag-dept {
   border: 1px solid color-mix(in srgb, var(--state-success) 24%, var(--border-default) 76%);
-  background: color-mix(in srgb, var(--state-success) 12%, var(--surface-1) 88%);
+  background: color-mix(in srgb, var(--state-success) 12%, var(--surface-panel) 88%);
   color: color-mix(in srgb, var(--state-success) 84%, var(--text-primary) 16%);
 }
 
@@ -221,7 +221,7 @@ function isDeptRoom(room: RoomState): boolean {
 .placeholder {
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--surface-2);
+  background: var(--surface-panel-muted);
   color: var(--text-secondary);
   font-size: 0.78rem;
 }
@@ -240,7 +240,7 @@ function isDeptRoom(room: RoomState): boolean {
   justify-content: center;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: var(--surface-1);
+  background: var(--surface-panel);
   color: var(--text-primary);
   font-size: 0.92rem;
   line-height: 1;

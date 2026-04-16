@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '../theme/legacy-aliases.css';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { totalMessageCount } from '../appUiState';

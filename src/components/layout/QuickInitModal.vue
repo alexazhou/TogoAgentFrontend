@@ -217,12 +217,12 @@ async function handleSave(): Promise<void> {
   display: grid;
   gap: 18px;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 32%, var(--panel-border) 68%);
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 32%, var(--border-default) 68%);
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--panel-bg) 95%, transparent) 0%,
-      color-mix(in srgb, var(--surface-soft) 92%, transparent) 100%
+      color-mix(in srgb, var(--surface-panel) 95%, transparent) 0%,
+      color-mix(in srgb, var(--surface-panel-muted) 92%, transparent) 100%
     );
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.40);
 }
@@ -234,7 +234,7 @@ async function handleSave(): Promise<void> {
 
 .quick-init-eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.68rem;
@@ -242,13 +242,13 @@ async function handleSave(): Promise<void> {
 
 .quick-init-head h3 {
   margin: 0;
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-size: 1.18rem;
 }
 
 .quick-init-desc {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.86rem;
   line-height: 1.55;
 }
@@ -265,7 +265,7 @@ async function handleSave(): Promise<void> {
 
 .label-text {
   font-size: 0.78rem;
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -273,10 +273,10 @@ async function handleSave(): Promise<void> {
   width: 100%;
   height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
-  background: var(--surface-soft);
-  color: var(--text-strong);
+  background: var(--surface-panel-muted);
+  color: var(--text-primary);
   font-size: 0.88rem;
   outline: none;
   transition: border-color 0.18s ease;
@@ -284,8 +284,8 @@ async function handleSave(): Promise<void> {
 }
 
 .form-input:focus {
-  border-color: var(--focus-border);
-  box-shadow: 0 0 0 2px var(--focus-glow);
+  border-color: var(--interactive-focus-border);
+  box-shadow: 0 0 0 2px var(--interactive-focus-ring);
 }
 
 .form-input:disabled {
@@ -294,7 +294,7 @@ async function handleSave(): Promise<void> {
 
 .form-hint {
   font-size: 0.72rem;
-  color: var(--hint-text);
+  color: var(--text-tertiary);
 }
 
 .form-select {
@@ -362,23 +362,23 @@ async function handleSave(): Promise<void> {
 }
 
 .test-result--ok {
-  border: 1px solid color-mix(in srgb, var(--good) 38%, var(--panel-border) 62%);
-  background: color-mix(in srgb, var(--good) 10%, var(--panel-bg) 90%);
-  color: var(--good);
+  border: 1px solid color-mix(in srgb, var(--state-success) 38%, var(--border-default) 62%);
+  background: color-mix(in srgb, var(--state-success) 10%, var(--surface-panel) 90%);
+  color: var(--state-success);
 }
 
 .test-result--error {
-  border: 1px solid color-mix(in srgb, var(--danger) 34%, var(--panel-border) 66%);
-  background: color-mix(in srgb, var(--danger) 10%, var(--panel-bg) 90%);
-  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--state-danger) 34%, var(--border-default) 66%);
+  background: color-mix(in srgb, var(--state-danger) 10%, var(--surface-panel) 90%);
+  color: var(--state-danger);
 }
 
 .save-error {
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--danger) 34%, var(--panel-border) 66%);
-  background: color-mix(in srgb, var(--danger) 10%, var(--panel-bg) 90%);
-  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--state-danger) 34%, var(--border-default) 66%);
+  background: color-mix(in srgb, var(--state-danger) 10%, var(--surface-panel) 90%);
+  color: var(--state-danger);
   font-size: 0.82rem;
 }
 
@@ -400,12 +400,12 @@ async function handleSave(): Promise<void> {
   height: 36px;
   padding: 0 20px;
   font-size: 0.84rem;
-  border-color: color-mix(in srgb, var(--good) 38%, var(--team-create-control-border) 62%);
-  background: color-mix(in srgb, var(--good) 14%, var(--panel-bg) 86%);
+  border-color: color-mix(in srgb, var(--state-success) 38%, var(--border-default) 62%);
+  background: color-mix(in srgb, var(--state-success) 14%, var(--surface-panel) 86%);
 }
 
 .save-button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--good) 58%, var(--focus-border) 42%);
-  background: color-mix(in srgb, var(--good) 24%, var(--panel-bg) 76%);
+  border-color: color-mix(in srgb, var(--state-success) 58%, var(--interactive-focus-border) 42%);
+  background: color-mix(in srgb, var(--state-success) 24%, var(--surface-panel) 76%);
 }
 </style>

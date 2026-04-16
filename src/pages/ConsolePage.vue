@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '../theme/legacy-aliases.css';
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState } from '../appUiState';
@@ -275,7 +276,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-border) 55%, transparent);
+  background: color-mix(in srgb, var(--border-default) 55%, transparent);
   opacity: 0;
   transition:
     opacity 0.18s ease,
