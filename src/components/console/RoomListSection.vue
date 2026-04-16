@@ -212,7 +212,7 @@ function isDeptRoom(room: RoomState): boolean {
 
 .room-preview {
   margin: 2px 0 0;
-  color: var(--text-secondary);
+  color: color-mix(in srgb, var(--text-primary) 72%, var(--text-secondary) 28%);
   line-height: 1.15;
   font-size: 0.74rem;
   transform: translateY(2px);

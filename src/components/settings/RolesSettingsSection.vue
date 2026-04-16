@@ -186,6 +186,9 @@ onMounted(() => {
 .settings-table-wrap {
   margin-top: 10px;
   overflow-x: auto;
+  padding: 10px 12px 12px;
+  border-radius: 16px;
+  background: var(--settings-table-surface);
 }
 
 .roles-empty {
@@ -213,7 +216,7 @@ onMounted(() => {
   padding-top: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--divider) 86%, transparent);
-  background: color-mix(in srgb, var(--surface-soft) 82%, var(--panel-bg) 18%);
+  background: var(--settings-table-head-bg);
   color: var(--text-strong);
   font-size: 0.84rem;
   font-weight: 700;
@@ -242,10 +245,11 @@ onMounted(() => {
 
 .settings-table tbody tr:hover td,
 .settings-table tbody tr.active td {
-  background: color-mix(in srgb, var(--selected) 44%, transparent);
+  background: var(--settings-table-row-hover);
 }
 
 .settings-table tbody tr.active td {
+  background: var(--settings-table-row-active);
   box-shadow: none;
 }
 

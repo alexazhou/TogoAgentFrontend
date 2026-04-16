@@ -207,6 +207,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   font-family: 'IBM Plex Sans', 'Noto Sans SC', sans-serif;
   font-weight: 600;
   letter-spacing: 0;
+  color: var(--text-primary);
 }
 
 .chat-head-title {

@@ -292,7 +292,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 }
 
 .team-group-count {
-  color: var(--hint-text);
+  color: var(--settings-card-hint-text);
   font-size: 0.68rem;
 }
 
@@ -428,7 +428,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 }
 
 .team-card-id {
-  color: var(--hint-text);
+  color: var(--settings-card-hint-text);
   font-size: 0.68rem;
   white-space: nowrap;
 }
@@ -454,7 +454,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
   border: 1px solid color-mix(in srgb, var(--focus-border) 22%, var(--panel-border) 78%);
   border-radius: 999px;
   background: var(--panel-bg);
-  color: var(--muted);
+  color: var(--settings-card-muted-text);
   font-size: 0.68rem;
   line-height: 1.2;
   white-space: nowrap;
@@ -472,7 +472,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 
 .team-last-active {
   min-width: 0;
-  color: var(--hint-text);
+  color: var(--settings-card-hint-text);
   font-size: 0.64rem;
   line-height: 1.2;
   white-space: nowrap;
@@ -487,7 +487,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
 
 .empty-card p {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: var(--settings-card-muted-text);
   font-size: 0.72rem;
   line-height: 1.35;
 }
