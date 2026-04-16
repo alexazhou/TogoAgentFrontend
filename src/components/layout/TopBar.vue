@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import i18n from '../../i18n';
 import { setLanguage } from '../../api';
-import ToggleSwitch from '../ui/ToggleSwitch.vue';
+import LabeledSwitch from '../ui/LabeledSwitch.vue';
 import type { TeamSummary } from '../../types';
 import type { ConnectionState } from '../../utils';
 import type { AppLocale } from '../../i18n';
@@ -176,9 +176,6 @@ function optionLabel(team: TeamSummary): string {
   return `${team.name} #${team.id}`;
 }
 
-function toggleActiveTeamEnabled(enabled: boolean): void {
-  emit('toggleActiveTeamEnabled', enabled);
-}
 </script>
 
 <template>
@@ -268,15 +265,14 @@ function toggleActiveTeamEnabled(enabled: boolean): void {
           </section>
         </div>
       </div>
-      <ToggleSwitch
+      <LabeledSwitch
         class="topbar-team-enabled-switch"
-        size="sm"
         :disabled="activeTeamId === null || activeTeamEnabledPending"
         :checked="activeTeamEnabled"
         :aria-label="activeTeamToggleAriaLabel"
         :title="activeTeamToggleAriaLabel"
         :label="activeTeamToggleLabel"
-        @toggle="toggleActiveTeamEnabled"
+        @toggle="emit('toggleActiveTeamEnabled', $event)"
       />
     </div>
 
@@ -634,10 +630,6 @@ function toggleActiveTeamEnabled(enabled: boolean): void {
 .theme-switch:focus-visible {
   border-color: var(--focus-border);
   box-shadow: 0 0 0 2px var(--focus-glow);
-}
-
-.topbar-team-enabled-switch {
-  flex: 0 0 auto;
 }
 
 .status-group {
