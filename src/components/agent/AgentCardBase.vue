@@ -51,30 +51,20 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
     type="button"
     @click="$emit('click')"
   >
-    <div class="entity-card__profile-row entity-card__profile-row--badge">
-      <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
-        #{{ normalizedEmployeeNumber }}
-      </small>
-    </div>
-    <div class="entity-card__profile-row entity-card__profile-row--overline">
-      <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
-        {{ normalizedOverline }}
-      </small>
-    </div>
-    <div class="entity-card__profile-row entity-card__profile-row--avatar">
-      <img
-        v-if="avatarName && !empty"
-        class="entity-card__avatar"
-        :src="getAgentAvatarUrl(avatarLookupKey)"
-        :alt="avatarAlt"
-      />
-    </div>
-    <div class="entity-card__profile-row entity-card__profile-row--title">
-      <strong class="entity-card__title" :title="title">{{ title }}</strong>
-    </div>
-    <div class="entity-card__profile-row entity-card__profile-row--subtitle">
-      <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
-    </div>
+    <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
+      #{{ normalizedEmployeeNumber }}
+    </small>
+    <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
+      {{ normalizedOverline }}
+    </small>
+    <img
+      v-if="avatarName && !empty"
+      class="entity-card__avatar"
+      :src="getAgentAvatarUrl(avatarLookupKey)"
+      :alt="avatarAlt"
+    />
+    <strong class="entity-card__title" :title="title">{{ title }}</strong>
+    <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
   </button>
 </template>
 
@@ -311,116 +301,16 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-avatar-radius: 24%;
   --entity-overline-size: 0.8rem;
   --entity-avatar-size-ratio: 0.42;
+  --entity-overline-top-ratio: 0.134;
+  --entity-avatar-top-ratio: 0.312;
+  --entity-title-top-ratio: 0.719;
+  --entity-subtitle-top-ratio: 0.852;
   --entity-title-size: 0.84rem;
   --entity-subtitle-size: 0.68rem;
+  --entity-title-block-height: 2.2em;
+  --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.84rem;
   --entity-badge-offset-ratio: 0.05;
   --entity-overline-clearance-ratio: 1.3;
-  height: var(--entity-card-height);
-  display: grid;
-  grid-template-rows: 11px 24px minmax(0, 1fr) 24px 20px;
-  align-content: stretch;
-  justify-items: stretch;
-  row-gap: 0;
-  overflow: hidden;
-}
-
-.entity-card:not(.entity-card--profile) .entity-card__profile-row {
-  display: contents;
-}
-
-.entity-card__profile-row {
-  width: calc(100% + (2 * var(--entity-card-padding-x)));
-  margin-left: calc(-1 * var(--entity-card-padding-x));
-  min-width: 0;
-  border-radius: 10px;
-}
-
-.entity-card--profile .entity-card__profile-row--badge {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-start;
-  margin-top: calc(-1 * var(--entity-card-padding-y));
-  padding-left: 4px;
-  background: color-mix(in srgb, #f6d365 34%, transparent);
-}
-
-.entity-card--profile .entity-card__profile-row--overline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, #ffe29a 34%, transparent);
-}
-
-.entity-card--profile .entity-card__profile-row--avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  background: color-mix(in srgb, #84fab0 26%, transparent);
-}
-
-.entity-card--profile .entity-card__profile-row--title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  padding-top: 0;
-  background: color-mix(in srgb, #8fd3f4 32%, transparent);
-}
-
-.entity-card--profile .entity-card__profile-row--subtitle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  padding-top: 0;
-  background: color-mix(in srgb, #fbc2eb 32%, transparent);
-}
-
-.entity-card--profile .entity-card__badge {
-  position: static;
-  max-width: 100%;
-}
-
-.entity-card--profile .entity-card__overline {
-  position: static;
-  box-sizing: border-box;
-  width: 100%;
-  transform: none;
-  padding: 0 4px;
-  margin: 0;
-  text-align: center;
-}
-
-.entity-card--profile.has-overline.has-badge .entity-card__overline {
-  width: 100%;
-}
-
-.entity-card--profile .entity-card__avatar {
-  position: static;
-  width: var(--entity-avatar-size);
-  aspect-ratio: 1 / 1;
-  height: auto;
-  margin: 0;
-  transform: none;
-}
-
-.entity-card--profile .entity-card__title {
-  position: static;
-  width: 100%;
-  margin: 0;
-  min-height: 0;
-  transform: none;
-  line-height: 1.12;
-}
-
-.entity-card--profile .entity-card__subtitle {
-  position: static;
-  width: 100%;
-  margin: 0;
-  min-height: 0;
-  transform: none;
-  line-height: 1.1;
 }
 </style>
