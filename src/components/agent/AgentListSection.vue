@@ -58,6 +58,10 @@ function statusLabel(status: AgentInfo['status']): string {
 </template>
 
 <style scoped>
+.sidebar-card.panel {
+  box-shadow: inset 0 0 0 1px var(--panel-border-soft);
+}
+
 .agent-list {
   display: flex;
   flex-direction: column;

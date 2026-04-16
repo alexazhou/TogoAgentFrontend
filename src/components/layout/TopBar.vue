@@ -412,7 +412,7 @@ function optionLabel(team: TeamSummary): string {
   align-items: center;
   min-height: 0;
   background: color-mix(in srgb, var(--surface-panel) 84%, var(--surface-pill) 16%);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--panel-border-soft);
   border-radius: 10px;
   padding: 4px 10px 4px 5px;
   overflow: visible;

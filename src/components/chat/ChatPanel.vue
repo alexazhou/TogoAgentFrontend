@@ -181,6 +181,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   min-height: 0;
   overflow: hidden;
   background: var(--surface-chat);
+  border-color: var(--panel-border-soft);
 }
 
 .chat.has-banner {
@@ -505,8 +506,8 @@ function handleEnterKey(e: KeyboardEvent): void {
 }
 
 .composer-editor:focus-within {
-  border-color: var(--interactive-focus-border);
-  box-shadow: 0 0 0 1px var(--interactive-focus-ring);
+  border-color: var(--input-focus-border);
+  box-shadow: 0 0 0 2px var(--input-focus-ring);
 }
 
 .composer textarea {

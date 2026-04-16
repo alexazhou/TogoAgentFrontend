@@ -267,6 +267,7 @@ onBeforeUnmount(() => {
 
 .bubble {
   background: var(--bubble-left);
+  color: var(--bubble-left-text, inherit);
 }
 
 .side-right .bubble {

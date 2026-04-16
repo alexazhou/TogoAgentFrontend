@@ -79,6 +79,10 @@ function isDeptRoom(room: RoomState): boolean {
 </template>
 
 <style scoped>
+.sidebar-card.panel {
+  box-shadow: inset 0 0 0 1px var(--panel-border-soft);
+}
+
 .room-card {
   width: 100%;
   min-width: 0;

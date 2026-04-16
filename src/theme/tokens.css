@@ -7,18 +7,18 @@
 
   /* Theme schema */
   /* Page-level background and ambient color anchors. */
-  --surface-page: #0e1621;
-  --surface-page-top: #101822;
+  --surface-page: #1b2a38;
+  --surface-page-top: #223243;
   --bg-canvas-accent-left: rgba(43, 82, 120, 0.18);
   --bg-canvas-accent-right: rgba(124, 191, 255, 0.24);
 
   /* Layered surfaces used by panels, overlays, and special content areas. */
-  --surface-panel: #17212b;
-  --surface-panel-muted: #202b36;
-  --surface-panel-deep: #101822;
+  --surface-panel: #223445;
+  --surface-panel-muted: #304557;
+  --surface-panel-deep: #15212d;
   --surface-overlay: rgba(23, 33, 43, 0.96);
   --surface-elevated: #223040;
-  --surface-chat: var(--surface-page);
+  --surface-chat: color-mix(in srgb, var(--surface-panel) 90%, var(--surface-page) 10%);
   --surface-input: color-mix(in srgb, var(--surface-panel) 74%, var(--surface-panel-deep) 26%);
   --surface-pill: var(--surface-elevated);
 
@@ -38,6 +38,8 @@
   --interactive-hover-border: #365c82;
   --interactive-focus-border: #365c82;
   --interactive-focus-ring: rgba(54, 92, 130, 0.24);
+  --input-focus-border: #7fa6cd;
+  --input-focus-ring: rgba(127, 166, 205, 0.32);
 
   /* Status colors for success, danger, warning, and info messaging. */
   --state-success: #56d4b0;
@@ -63,12 +65,13 @@
   --banner-error-bg: rgba(255, 119, 101, 0.12);
   --banner-error-text: #9b342d;
   --banner-error-border: color-mix(in srgb, var(--state-danger) 30%, var(--border-default) 70%);
+  --panel-border-soft: color-mix(in srgb, var(--border-default) 48%, transparent);
 
   /* Utility chrome tokens for idle dots, scrollbars, and theme toggles. */
   --status-dot-idle: var(--text-tertiary);
-  --scrollbar-track: var(--surface-panel-deep);
-  --scrollbar-thumb: var(--interactive-focus-border);
-  --scrollbar-thumb-hover: color-mix(in srgb, var(--interactive-focus-border) 80%, white);
+  --scrollbar-track: #404a55;
+  --scrollbar-thumb: #5e7fa2;
+  --scrollbar-thumb-hover: #6f90b2;
   --toolbar-switch-off: #3a4655;
   --toolbar-switch-handle: #c7d0db;
   --theme-switch-icon-active: #dfe8f2;
@@ -80,7 +83,8 @@
   --room-group-border: rgba(105, 170, 230, 0.5);
   --room-group-bg: rgba(105, 170, 230, 0.12);
   --room-group-text: var(--state-info);
-  --room-card-border: var(--border-subtle);
+  --room-card-border: rgba(112, 118, 126, 0.22);
+  --room-card-border-stroke: color-mix(in srgb, var(--room-card-border) 88%, var(--surface-panel-muted) 12%);
   --room-card-border-active: var(--interactive-focus-border);
   --unread-bg: rgba(248, 81, 73, 0.16);
   --unread-text: #f87168;
@@ -120,6 +124,8 @@
   --interactive-hover-border: #7aa7d6;
   --interactive-focus-border: #7aa7d6;
   --interactive-focus-ring: rgba(122, 167, 214, 0.24);
+  --input-focus-border: #5e93c9;
+  --input-focus-ring: rgba(94, 147, 201, 0.24);
 
   /* Status colors for success, danger, warning, and info messaging. */
   --state-success: #1d9a79;
@@ -144,6 +150,7 @@
   --banner-error-bg: rgba(217, 77, 70, 0.12);
   --banner-error-text: #b94a45;
   --banner-error-border: color-mix(in srgb, var(--state-danger) 28%, var(--border-default) 72%);
+  --panel-border-soft: var(--border-default);
 
   /* Utility chrome tokens for idle dots, scrollbars, and theme toggles. */
   --status-dot-idle: #98a9bd;
@@ -162,6 +169,7 @@
   --room-group-bg: rgba(230, 241, 255, 0.92);
   --room-group-text: var(--state-info);
   --room-card-border: rgba(122, 151, 184, 0.18);
+  --room-card-border-stroke: var(--room-card-border);
   --room-card-border-active: rgba(109, 156, 211, 0.22);
   --unread-bg: rgba(217, 77, 70, 0.12);
   --unread-text: #d94d46;
