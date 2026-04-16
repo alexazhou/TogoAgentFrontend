@@ -157,7 +157,6 @@ watch(showQuickInit, (value) => {
 </template>
 
 <style scoped>
-.models-list-card,
 .svc-row {
   border: 1px solid var(--panel-border);
   border-radius: 14px;
@@ -201,7 +200,7 @@ watch(showQuickInit, (value) => {
 
 .models-list-card {
   margin-top: 10px;
-  padding: 12px;
+  padding: 0;
 }
 
 .models-list {

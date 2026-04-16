@@ -146,7 +146,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.roles-list-card,
 .role-row {
   border: 1px solid var(--panel-border);
   border-radius: 14px;
@@ -191,7 +190,7 @@ onMounted(() => {
 
 .roles-list-card {
   margin-top: 10px;
-  padding: 12px;
+  padding: 0;
 }
 
 .roles-list {
