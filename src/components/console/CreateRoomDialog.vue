@@ -7,7 +7,7 @@ import { createTeamRoom } from '../api';
 import { showGlobalSuccessToast } from '../appUiState';
 import { loadRoleTemplates, loadTeamAgents, loadTeamRooms } from '../realtime/runtimeStore';
 import { useRoleTemplates, useTeamAgents } from '../realtime/selectors';
-import ConfirmDialog from './ConfirmDialog.vue';
+import ConfirmDialog from './ui/ConfirmDialog.vue';
 
 type CreateRoomMemberOption = {
   id: number;

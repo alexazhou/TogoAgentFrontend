@@ -9,8 +9,8 @@ import {
   updateRoleTemplate,
 } from '../../api';
 import { showGlobalSuccessToast } from '../../appUiState';
-import ConfirmDialog from '../ConfirmDialog.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import type { SettingsBreadcrumbItem } from './types';
 import type { RoleTemplateDetail, RoleTemplateSummary } from '../../types';
 

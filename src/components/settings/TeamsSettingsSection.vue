@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import TeamInfoCard from '../TeamInfoCard.vue';
 import TeamTreeEditor from '../TeamTreeEditor.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
+import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import type { SettingsBreadcrumbItem } from './types';
 import type { TeamDetail, TeamSummary } from '../../types';
 
@@ -67,26 +68,14 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
           <h3>{{ selectedTeamDetail.name }}</h3>
         </div>
         <div class="team-detail-actions">
-          <button
-            type="button"
-            class="team-enabled-switch"
-            :class="{ 'is-enabled': selectedTeamDetail.enabled }"
+          <ToggleSwitch
+            :checked="selectedTeamDetail.enabled"
             :disabled="teamEnabledPending[selectedTeamDetail.id]"
-            :aria-pressed="selectedTeamDetail.enabled"
-            @click="emit('toggleTeamEnabled', selectedTeamDetail.id, !selectedTeamDetail.enabled)"
-          >
-            <span class="team-enabled-switch__label">
-              {{ teamEnabledPending[selectedTeamDetail.id]
-                ? t('settings.teams.switching')
-                : (selectedTeamDetail.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled')) }}
-            </span>
-            <span class="team-enabled-switch__track">
-              <span
-                class="team-enabled-switch__thumb"
-                :class="{ 'is-enabled': selectedTeamDetail.enabled }"
-              ></span>
-            </span>
-          </button>
+            :label="teamEnabledPending[selectedTeamDetail.id]
+              ? t('settings.teams.switching')
+              : (selectedTeamDetail.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled'))"
+            @toggle="emit('toggleTeamEnabled', selectedTeamDetail.id, $event)"
+          />
         </div>
       </div>
 
@@ -162,21 +151,12 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
                 <strong>{{ team.name }}</strong>
                 <span class="team-card-id">#{{ team.id }}</span>
               </div>
-              <button
-                type="button"
-                class="team-enabled-switch"
-                :class="{ 'is-enabled': team.enabled }"
+              <ToggleSwitch
+                :checked="team.enabled"
                 :disabled="teamEnabledPending[team.id]"
-                :aria-pressed="team.enabled"
-                @click="emit('toggleTeamEnabled', team.id, !team.enabled)"
-              >
-                <span class="team-enabled-switch__label">
-                  {{ teamEnabledPending[team.id] ? t('settings.teams.switching') : (team.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled')) }}
-                </span>
-                <span class="team-enabled-switch__track">
-                  <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': team.enabled }"></span>
-                </span>
-              </button>
+                :label="teamEnabledPending[team.id] ? t('settings.teams.switching') : (team.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled'))"
+                @toggle="emit('toggleTeamEnabled', team.id, $event)"
+              />
             </div>
             <div class="team-card-summary">
               <div class="team-summary-row">
@@ -214,21 +194,12 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
                 <strong>{{ team.name }}</strong>
                 <span class="team-card-id">#{{ team.id }}</span>
               </div>
-              <button
-                type="button"
-                class="team-enabled-switch"
-                :class="{ 'is-enabled': team.enabled }"
+              <ToggleSwitch
+                :checked="team.enabled"
                 :disabled="teamEnabledPending[team.id]"
-                :aria-pressed="team.enabled"
-                @click="emit('toggleTeamEnabled', team.id, !team.enabled)"
-              >
-                <span class="team-enabled-switch__label">
-                  {{ teamEnabledPending[team.id] ? t('settings.teams.switching') : (team.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled')) }}
-                </span>
-                <span class="team-enabled-switch__track">
-                  <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': team.enabled }"></span>
-                </span>
-              </button>
+                :label="teamEnabledPending[team.id] ? t('settings.teams.switching') : (team.enabled ? t('settings.teams.enabled') : t('settings.teams.disabled'))"
+                @toggle="emit('toggleTeamEnabled', team.id, $event)"
+              />
             </div>
             <div class="team-card-summary">
               <div class="team-summary-row">
@@ -487,75 +458,6 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
   color: var(--hint-text);
   font-size: 0.68rem;
   white-space: nowrap;
-}
-
-.team-enabled-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 26px;
-  padding: 0 4px 0 10px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-bg) 86%, var(--surface-soft) 14%);
-  color: var(--muted);
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
-}
-
-.team-enabled-switch:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 40%, var(--panel-bg) 60%);
-}
-
-.team-enabled-switch:disabled {
-  opacity: 0.62;
-  cursor: not-allowed;
-}
-
-.team-enabled-switch.is-enabled {
-  color: var(--good);
-}
-
-.team-enabled-switch__label {
-  font-size: 0.66rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.team-enabled-switch__track {
-  position: relative;
-  width: 34px;
-  height: 18px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 18%, var(--panel-border) 82%);
-  transition: background 0.18s ease;
-}
-
-.team-enabled-switch.is-enabled .team-enabled-switch__track {
-  background: color-mix(in srgb, var(--good) 24%, var(--panel-border) 76%);
-}
-
-.team-enabled-switch__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--panel-bg) 84%, white 16%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
-  transition:
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-.team-enabled-switch__thumb.is-enabled {
-  transform: translateX(16px);
-  background: color-mix(in srgb, var(--panel-bg) 66%, white 34%);
 }
 
 .team-card-summary {

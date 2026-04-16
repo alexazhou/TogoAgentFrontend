@@ -10,8 +10,9 @@ import {
   testLlmService,
 } from '../../api';
 import { showGlobalSuccessToast, showQuickInit } from '../../appUiState';
-import ConfirmDialog from '../ConfirmDialog.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
+import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import type { SettingsBreadcrumbItem } from './types';
 import type { LlmServiceInfo, LlmServiceType } from '../../types';
 
@@ -509,11 +510,12 @@ watch(showQuickInit, (val) => {
 
           <label class="svc-field svc-field--toggle">
             <span>{{ t('settings.models.enableLabel') }}</span>
-            <label class="toggle-switch">
-              <input v-model="form.enable" type="checkbox" />
-              <span class="toggle-track"></span>
-              <span class="toggle-label">{{ form.enable ? t('settings.models.enabled') : t('settings.models.disabled') }}</span>
-            </label>
+            <ToggleSwitch
+              variant="inline"
+              :checked="form.enable"
+              :label="form.enable ? t('settings.models.enabled') : t('settings.models.disabled')"
+              @toggle="form.enable = $event"
+            />
           </label>
         </div>
 
@@ -855,56 +857,6 @@ watch(showQuickInit, (val) => {
 .svc-textarea {
   resize: vertical;
   min-height: 60px;
-}
-
-/* Toggle switch */
-.toggle-switch {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.toggle-switch input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.toggle-track {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--panel-border);
-  transition: background 160ms ease;
-}
-
-.toggle-track::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: transform 160ms ease;
-}
-
-.toggle-switch input:checked + .toggle-track {
-  background: var(--good);
-}
-
-.toggle-switch input:checked + .toggle-track::after {
-  transform: translateX(16px);
-}
-
-.toggle-label {
-  color: var(--muted);
-  font-size: 0.82rem;
 }
 
 /* Advanced section */

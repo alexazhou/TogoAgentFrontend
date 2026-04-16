@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import i18n from '../i18n';
 import { setLanguage } from '../api';
+import ToggleSwitch from './ui/ToggleSwitch.vue';
 import type { TeamSummary } from '../types';
 import type { ConnectionState } from '../utils';
 import type { AppLocale } from '../i18n';
@@ -39,7 +40,6 @@ const currentLocale = computed<AppLocale>(() => i18n.global.locale.value);
 const activeTeamName = computed(() => (
   props.teams.find((team) => team.id === props.activeTeamId)?.name ?? t('topbar.selectTeam')
 ));
-const activeTeam = computed(() => props.teams.find((team) => team.id === props.activeTeamId) ?? null);
 const enabledTeams = computed(() => props.teams
   .filter((team) => team.enabled)
   .slice()
@@ -176,11 +176,8 @@ function optionLabel(team: TeamSummary): string {
   return `${team.name} #${team.id}`;
 }
 
-function toggleActiveTeamEnabled(): void {
-  if (!activeTeam.value || props.activeTeamEnabledPending) {
-    return;
-  }
-  emit('toggleActiveTeamEnabled', !activeTeam.value.enabled);
+function toggleActiveTeamEnabled(enabled: boolean): void {
+  emit('toggleActiveTeamEnabled', enabled);
 }
 </script>
 
@@ -271,21 +268,16 @@ function toggleActiveTeamEnabled(): void {
           </section>
         </div>
       </div>
-      <button
-        type="button"
-        class="team-enabled-switch topbar-team-enabled-switch"
-        :class="{ 'is-enabled': activeTeamEnabled }"
+      <ToggleSwitch
+        class="topbar-team-enabled-switch"
+        size="sm"
         :disabled="activeTeamId === null || activeTeamEnabledPending"
-        :aria-pressed="activeTeamEnabled"
+        :checked="activeTeamEnabled"
         :aria-label="activeTeamToggleAriaLabel"
         :title="activeTeamToggleAriaLabel"
-        @click="toggleActiveTeamEnabled"
-      >
-        <span class="team-enabled-switch__label">{{ activeTeamToggleLabel }}</span>
-        <span class="team-enabled-switch__track">
-          <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': activeTeamEnabled }"></span>
-        </span>
-      </button>
+        :label="activeTeamToggleLabel"
+        @toggle="toggleActiveTeamEnabled"
+      />
     </div>
 
     <div class="status-group">
@@ -639,79 +631,9 @@ function toggleActiveTeamEnabled(): void {
 .team-switcher-button:focus-visible,
 .nav-action:focus-visible,
 .nav-icon-button:focus-visible,
-.theme-switch:focus-visible,
-.team-enabled-switch:focus-visible {
+.theme-switch:focus-visible {
   border-color: var(--focus-border);
   box-shadow: 0 0 0 2px var(--focus-glow);
-}
-
-.team-enabled-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 6px 0 9px;
-  border: 1px solid var(--room-card-border);
-  border-radius: 8px;
-  background: var(--pill-bg);
-  color: var(--text-strong);
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
-}
-
-.team-enabled-switch:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 40%, var(--panel-bg) 60%);
-}
-
-.team-enabled-switch:disabled {
-  opacity: 0.62;
-  cursor: not-allowed;
-}
-
-.team-enabled-switch.is-enabled {
-  color: var(--good);
-}
-
-.team-enabled-switch__label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.team-enabled-switch__track {
-  position: relative;
-  width: 30px;
-  height: 16px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 16%, var(--room-card-border) 84%);
-  transition: background 0.18s ease;
-}
-
-.team-enabled-switch.is-enabled .team-enabled-switch__track {
-  background: color-mix(in srgb, var(--good) 24%, var(--room-card-border) 76%);
-}
-
-.team-enabled-switch__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
-  transition:
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-.team-enabled-switch__thumb.is-enabled {
-  transform: translateX(14px);
-  background: color-mix(in srgb, var(--panel-bg) 72%, white 28%);
 }
 
 .topbar-team-enabled-switch {

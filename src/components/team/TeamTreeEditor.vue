@@ -9,10 +9,10 @@ import {
   type MemberModelOption,
   type MemberTemplateOption,
 } from '../composables/useMemberEditorDialog';
-import ConfirmDialog from './ConfirmDialog.vue';
 import DepartmentEditorDialog from './DepartmentEditorDialog.vue';
 import TeamMembersCard from './TeamMembersCard.vue';
 import MemberEditorDialog from './MemberEditorDialog.vue';
+import ConfirmDialog from './ui/ConfirmDialog.vue';
 import type { DeptTreeNode, FrontendConfig } from '../types';
 import type { AgentInfo } from '../types';
 import type { TeamGraphNode } from './teamGraphTypes';
