@@ -97,7 +97,7 @@ function isDeptRoom(room: RoomState): boolean {
 
 .room-card:hover,
 .room-card.selected {
-  background: var(--selected);
+  background: var(--interactive-selected);
   box-shadow: inset 0 0 0 1px var(--room-card-border-active);
 }
 
@@ -120,7 +120,7 @@ function isDeptRoom(room: RoomState): boolean {
 .room-title strong {
   font-size: 0.88rem;
   line-height: 1.15;
-  color: var(--room-title-text);
+  color: var(--text-primary);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -189,9 +189,9 @@ function isDeptRoom(room: RoomState): boolean {
 }
 
 .room-tag-dept {
-  border: 1px solid rgba(47, 127, 102, 0.24);
-  background: rgba(47, 127, 102, 0.12);
-  color: #2f7f66;
+  border: 1px solid color-mix(in srgb, var(--state-success) 24%, var(--border-default) 76%);
+  background: color-mix(in srgb, var(--state-success) 12%, var(--surface-1) 88%);
+  color: color-mix(in srgb, var(--state-success) 84%, var(--text-primary) 16%);
 }
 
 .room-tag-dept__label {
@@ -201,14 +201,14 @@ function isDeptRoom(room: RoomState): boolean {
 
 .room-meta {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.72rem;
   white-space: nowrap;
 }
 
 .room-preview {
   margin: 2px 0 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   line-height: 1.15;
   font-size: 0.74rem;
   transform: translateY(2px);
@@ -221,8 +221,8 @@ function isDeptRoom(room: RoomState): boolean {
 .placeholder {
   padding: 8px 10px;
   border-radius: 6px;
-  background: var(--surface-soft);
-  color: var(--muted);
+  background: var(--surface-2);
+  color: var(--text-secondary);
   font-size: 0.78rem;
 }
 
@@ -238,10 +238,10 @@ function isDeptRoom(room: RoomState): boolean {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--team-create-control-border);
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--text-strong);
+  background: var(--surface-1);
+  color: var(--text-primary);
   font-size: 0.92rem;
   line-height: 1;
   cursor: pointer;
@@ -252,8 +252,8 @@ function isDeptRoom(room: RoomState): boolean {
 }
 
 .room-add-button:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: var(--selected);
+  border-color: var(--interactive-focus-border);
+  background: var(--interactive-selected);
   transform: translateY(-1px);
 }
 

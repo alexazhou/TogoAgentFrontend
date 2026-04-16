@@ -348,10 +348,10 @@ onBeforeUnmount(() => {
   width: min(345px, calc(100vw - 16px));
   min-height: 96px;
   padding: 18px 20px;
-  border: 2px dashed color-mix(in srgb, var(--danger) 45%, var(--panel-border) 55%);
+  border: 2px dashed color-mix(in srgb, var(--state-danger) 45%, var(--border-default) 55%);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--danger) 12%, var(--panel-bg) 88%);
-  color: #ff5f56;
+  background: color-mix(in srgb, var(--state-danger) 12%, var(--surface-1) 88%);
+  color: color-mix(in srgb, var(--state-danger) 88%, var(--text-primary) 12%);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
   font-size: 1rem;
   line-height: 1.5;
@@ -382,10 +382,10 @@ onBeforeUnmount(() => {
   width: min(360px, calc(100vw - 40px));
   min-height: 64px;
   padding: 16px 20px;
-  border: 1px solid color-mix(in srgb, #6dc7a3 42%, var(--panel-border) 58%);
+  border: 1px solid color-mix(in srgb, var(--state-success) 42%, var(--border-default) 58%);
   border-radius: 18px;
-  background: color-mix(in srgb, #6dc7a3 18%, var(--panel-bg) 82%);
-  color: color-mix(in srgb, #1c7f5f 78%, var(--text-strong) 22%);
+  background: color-mix(in srgb, var(--state-success) 18%, var(--surface-1) 82%);
+  color: color-mix(in srgb, var(--state-success) 78%, var(--text-primary) 22%);
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
   font-size: 0.96rem;
   line-height: 1.45;

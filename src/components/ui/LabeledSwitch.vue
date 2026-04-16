@@ -52,8 +52,8 @@ function handleClick(): void {
   padding: 0 6px 0 9px;
   border: 1px solid var(--room-card-border);
   border-radius: 8px;
-  background: var(--pill-bg);
-  color: var(--text-strong);
+  background: var(--surface-pill);
+  color: var(--text-primary);
   cursor: pointer;
   transition:
     border-color 0.18s ease,
@@ -63,8 +63,8 @@ function handleClick(): void {
 }
 
 .labeled-switch:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 40%, var(--panel-bg) 60%);
+  border-color: var(--interactive-focus-border);
+  background: color-mix(in srgb, var(--interactive-selected) 40%, var(--surface-panel) 60%);
 }
 
 .labeled-switch:disabled {
@@ -73,13 +73,13 @@ function handleClick(): void {
 }
 
 .labeled-switch:focus-visible {
-  border-color: var(--focus-border);
-  box-shadow: 0 0 0 2px var(--focus-glow);
+  border-color: var(--interactive-focus-border);
+  box-shadow: 0 0 0 2px var(--interactive-focus-ring);
   outline: none;
 }
 
 .labeled-switch.is-checked {
-  color: var(--good);
+  color: var(--state-success);
 }
 
 .labeled-switch__label {
@@ -93,12 +93,12 @@ function handleClick(): void {
   width: 30px;
   height: 16px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--danger) 16%, var(--room-card-border) 84%);
+  background: color-mix(in srgb, var(--state-danger) 16%, var(--room-card-border) 84%);
   transition: background 0.18s ease;
 }
 
 .labeled-switch.is-checked .labeled-switch__track {
-  background: color-mix(in srgb, var(--good) 24%, var(--room-card-border) 76%);
+  background: color-mix(in srgb, var(--state-success) 24%, var(--room-card-border) 76%);
 }
 
 .labeled-switch__thumb {
@@ -108,7 +108,7 @@ function handleClick(): void {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
+  background: color-mix(in srgb, var(--surface-panel) 88%, white 12%);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
   transition:
     transform 0.18s ease,
@@ -117,6 +117,6 @@ function handleClick(): void {
 
 .labeled-switch__thumb.is-checked {
   transform: translateX(14px);
-  background: color-mix(in srgb, var(--panel-bg) 72%, white 28%);
+  background: color-mix(in srgb, var(--surface-panel) 72%, white 28%);
 }
 </style>

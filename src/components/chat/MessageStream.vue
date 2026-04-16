@@ -228,7 +228,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.72rem;
   padding: 0 6px;
 }
@@ -245,12 +245,12 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
-  background: color-mix(in srgb, var(--panel-bg-elevated) 84%, var(--panel-border) 16%);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 30%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 84%, var(--border-default) 16%);
 }
 
 .time {
-  color: var(--hint-text);
+  color: var(--text-tertiary);
 }
 
 .bubble,
@@ -276,7 +276,7 @@ onBeforeUnmount(() => {
 
 .system-note {
   text-align: center;
-  color: color-mix(in srgb, var(--muted) 78%, var(--text-strong) 22%);
+  color: color-mix(in srgb, var(--text-secondary) 78%, var(--text-primary) 22%);
   background: transparent;
   padding: 0;
   max-width: min(72%, 760px);
@@ -297,7 +297,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.78rem;
   animation: fade-in 0.25s ease-out;
 }
@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
 }
 
 .working-indicator--clickable:hover {
-  background: color-mix(in srgb, var(--panel-border) 20%, transparent);
+  background: color-mix(in srgb, var(--border-default) 20%, transparent);
 }
 
 .working-indicator-avatar {
@@ -318,12 +318,12 @@ onBeforeUnmount(() => {
   border-radius: 6px;
   object-fit: cover;
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
-  background: color-mix(in srgb, var(--panel-bg-elevated) 84%, var(--panel-border) 16%);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 30%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 84%, var(--border-default) 16%);
 }
 
 .working-indicator-text {
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-weight: 500;
 }
 
@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--muted);
+  background: var(--text-secondary);
   animation: dot-pulse 1.4s infinite ease-in-out;
 }
 

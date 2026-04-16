@@ -96,6 +96,16 @@ function statusLabel(status: AgentInfo['status']): string {
   cursor: pointer;
   color: inherit;
   text-align: left;
+  transition:
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.agent-card:hover,
+.agent-card:focus-visible {
+  background: var(--interactive-selected);
+  box-shadow: inset 0 0 0 1px var(--room-card-border-active);
+  outline: none;
 }
 
 .agent-primary {
@@ -115,7 +125,8 @@ function statusLabel(status: AgentInfo['status']): string {
   border-radius: 8px;
   flex-shrink: 0;
   object-fit: cover;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-border-strong) 30%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 84%, var(--border-default) 16%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-strong) 30%, transparent);
 }
 
 .agent-name-line {
@@ -128,14 +139,14 @@ function statusLabel(status: AgentInfo['status']): string {
 }
 
 .agent-name {
-  color: var(--text-strong);
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .agent-template {
-  color: var(--hint-text);
+  color: var(--text-tertiary);
   font-size: 0.72rem;
   font-weight: 500;
   overflow: hidden;
@@ -145,7 +156,7 @@ function statusLabel(status: AgentInfo['status']): string {
 
 .agent-card p {
   margin: 0;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.72rem;
   white-space: nowrap;
   transform: translateY(2px);
@@ -155,22 +166,22 @@ function statusLabel(status: AgentInfo['status']): string {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--muted);
+  color: var(--text-secondary);
   white-space: nowrap;
   font-size: 0.72rem;
 }
 
 .agent-state[data-state='active'] .status-dot {
-  background: var(--good);
+  background: var(--state-success);
   box-shadow: none;
 }
 
 .agent-state[data-state='failed'] {
-  color: var(--danger, #f85149);
+  color: var(--state-danger);
 }
 
 .agent-state[data-state='failed'] .status-dot {
-  background: var(--danger, #f85149);
+  background: var(--state-danger);
   box-shadow: none;
 }
 
@@ -184,7 +195,7 @@ function statusLabel(status: AgentInfo['status']): string {
 .status-dot-pulse {
   width: 6px;
   height: 6px;
-  background: var(--good);
+  background: var(--state-success);
   animation: agent-dot-pulse 2s ease-in-out infinite;
 }
 

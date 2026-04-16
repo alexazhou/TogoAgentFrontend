@@ -180,7 +180,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: var(--chat-bg);
+  background: var(--surface-chat);
 }
 
 .chat.has-banner {
@@ -198,7 +198,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   gap: 10px;
   align-items: center;
   padding: 0 2px 8px;
-  border-bottom: 1px solid var(--chat-divider);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .chat-head h2 {
@@ -224,9 +224,9 @@ function handleEnterKey(e: KeyboardEvent): void {
 
 .chat-head-pill,
 .chat-members-button {
-  border: 1px solid var(--room-card-border);
-  background: color-mix(in srgb, var(--panel-bg) 88%, var(--surface-soft) 12%);
-  color: var(--muted);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-pill) 88%, var(--surface-panel-muted) 12%);
+  color: var(--text-secondary);
   font-size: 0.76rem;
   line-height: 1;
   display: inline-flex;
@@ -244,13 +244,13 @@ function handleEnterKey(e: KeyboardEvent): void {
 }
 
 .chat-head-pill-scheduling {
-  color: #3fb950;
-  border-color: color-mix(in srgb, #3fb950 35%, var(--panel-border) 65%);
-  background: color-mix(in srgb, #3fb950 14%, var(--panel-bg) 86%);
+  color: var(--state-success);
+  border-color: color-mix(in srgb, var(--state-success) 35%, var(--border-default) 65%);
+  background: color-mix(in srgb, var(--state-success) 14%, var(--surface-panel) 86%);
 }
 
 .chat-head-pill-idle {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .chat-head-pill[data-tooltip]:not([data-tooltip=''])::after {
@@ -260,10 +260,10 @@ function handleEnterKey(e: KeyboardEvent): void {
   top: calc(100% + 8px);
   padding: 6px 10px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-soft) 78%, var(--panel-bg) 22%);
-  border: 1px solid var(--panel-border);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-default);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-size: 0.72rem;
   font-weight: 500;
   line-height: 1.2;
@@ -293,9 +293,9 @@ function handleEnterKey(e: KeyboardEvent): void {
 }
 
 .chat-members-button:hover:not(:disabled) {
-  border-color: var(--focus-border);
-  color: var(--text-strong);
-  background: color-mix(in srgb, var(--selected) 58%, var(--panel-bg) 42%);
+  border-color: var(--interactive-focus-border);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--interactive-selected) 58%, var(--surface-panel) 42%);
 }
 
 .chat-members-button:disabled {
@@ -319,9 +319,9 @@ function handleEnterKey(e: KeyboardEvent): void {
   max-height: min(720px, calc(100vh - 48px));
   overflow: auto;
   padding: 18px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 20%, var(--panel-border) 80%);
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 20%, var(--border-default) 80%);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--panel-bg) 97%, var(--surface-soft) 3%);
+  background: var(--surface-overlay);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
 }
 
@@ -339,7 +339,7 @@ function handleEnterKey(e: KeyboardEvent): void {
 
 .chat-members-dialog__eyebrow {
   margin: 0 0 4px;
-  color: var(--accent);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   font-size: 0.68rem;
@@ -347,21 +347,21 @@ function handleEnterKey(e: KeyboardEvent): void {
 
 .chat-members-dialog__head h3 {
   margin: 0;
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-size: 1.15rem;
 }
 
 .chat-members-dialog__actions span,
 .chat-members-empty {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.74rem;
 }
 
 .chat-members-dialog__close {
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--border-default);
   border-radius: 999px;
   background: transparent;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.76rem;
   line-height: 1;
   padding: 7px 12px;
@@ -369,8 +369,8 @@ function handleEnterKey(e: KeyboardEvent): void {
 }
 
 .chat-members-dialog__close:hover {
-  border-color: var(--focus-border);
-  color: var(--text-strong);
+  border-color: var(--interactive-focus-border);
+  color: var(--text-primary);
 }
 
 .chat-members-grid {
@@ -382,9 +382,9 @@ function handleEnterKey(e: KeyboardEvent): void {
 .chat-member-card {
   position: relative;
   padding: 12px 8px 10px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 10%, var(--panel-border) 90%);
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 10%, var(--border-default) 90%);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-soft) 80%, var(--panel-bg) 20%);
+  background: color-mix(in srgb, var(--surface-panel-muted) 80%, var(--surface-panel) 20%);
   display: grid;
   justify-items: center;
   gap: 8px;
@@ -395,7 +395,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   position: absolute;
   top: 8px;
   left: 8px;
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.8rem;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -411,7 +411,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   top: 0;
   left: 50%;
   transform: translate(-50%, -30%);
-  color: #5f87ab;
+  color: color-mix(in srgb, var(--state-info) 72%, var(--text-primary) 28%);
   font-size: 0.72rem;
   line-height: 1;
   font-weight: 700;
@@ -423,20 +423,20 @@ function handleEnterKey(e: KeyboardEvent): void {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--focus-border) 22%, var(--panel-border) 78%);
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 22%, var(--border-default) 78%);
   object-fit: cover;
-  background: color-mix(in srgb, var(--surface-soft) 76%, var(--panel-bg) 24%);
+  background: color-mix(in srgb, var(--surface-panel-muted) 76%, var(--surface-panel) 24%);
 }
 
 .chat-member-card strong {
-  color: var(--text-strong);
+  color: var(--text-primary);
   font-size: 0.78rem;
   line-height: 1.25;
   word-break: break-word;
 }
 
 .chat-member-card__meta {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 0.76rem;
   line-height: 1.25;
   word-break: break-word;
@@ -449,7 +449,7 @@ function handleEnterKey(e: KeyboardEvent): void {
 .banner {
   border-radius: 6px;
   padding: 6px 8px;
-  background: var(--banner-bg);
+  background: var(--surface-1);
   font-size: 0.78rem;
 }
 
@@ -479,7 +479,7 @@ function handleEnterKey(e: KeyboardEvent): void {
 
 .composer {
   background: transparent;
-  border-top: 1px solid var(--chat-divider);
+  border-top: 1px solid var(--border-subtle);
   padding: 8px 0 0;
   overflow: hidden;
 }
@@ -493,10 +493,10 @@ function handleEnterKey(e: KeyboardEvent): void {
 }
 
 .composer-editor {
-  background: var(--composer-bg);
+  background: var(--surface-input);
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--composer-border);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 78%, var(--border-default) 22%);
   border-radius: 8px;
   overflow: hidden;
   transition:
@@ -505,8 +505,8 @@ function handleEnterKey(e: KeyboardEvent): void {
 }
 
 .composer-editor:focus-within {
-  border-color: var(--focus-border);
-  box-shadow: 0 0 0 1px var(--focus-glow);
+  border-color: var(--interactive-focus-border);
+  box-shadow: 0 0 0 1px var(--interactive-focus-ring);
 }
 
 .composer textarea {
@@ -546,14 +546,14 @@ function handleEnterKey(e: KeyboardEvent): void {
 
 .composer-foot span {
   display: block;
-  color: var(--muted);
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .composer-hint {
   background: transparent;
-  border-top: 1px solid var(--chat-divider);
-  color: var(--hint-text);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
   text-align: center;
   padding: 3px 8px;
   font-size: 0.74rem;
@@ -574,8 +574,8 @@ function handleEnterKey(e: KeyboardEvent): void {
   border: 0;
   border-radius: 6px;
   padding: 5px 10px;
-  background: var(--selected);
-  color: var(--text-strong);
+  background: var(--interactive-selected);
+  color: var(--text-primary);
   font-weight: 700;
   cursor: pointer;
   font-size: 0.74rem;
