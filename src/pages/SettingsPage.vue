@@ -112,6 +112,27 @@ const detailTeamId = computed(() => {
   const value = Number(raw);
   return Number.isFinite(value) ? value : null;
 });
+
+watch(
+  teams,
+  (latestTeams) => {
+    if (!selectedTeamDetail.value) {
+      return;
+    }
+
+    const latestSummary = latestTeams.find((team) => team.id === selectedTeamDetail.value?.id);
+    if (!latestSummary || selectedTeamDetail.value.enabled === latestSummary.enabled) {
+      return;
+    }
+
+    selectedTeamDetail.value = {
+      ...selectedTeamDetail.value,
+      enabled: latestSummary.enabled,
+    };
+  },
+  { deep: true },
+);
+
 function buildTeamInfoDraft(detail: TeamDetail) {
   return {
     name: detail.name,

@@ -48,6 +48,8 @@
     "switchToDark": "Switch to Dark Mode",
     "switchToLight": "Switch to Light Mode",
     "teamDisabled": "This team is disabled",
+    "teamToggleLabel": "Current team",
+    "teamSwitching": "Switching",
     "teamGroupEnabled": "Enabled",
     "teamGroupDisabled": "Disabled",
     "teamsCount": "{count} teams",

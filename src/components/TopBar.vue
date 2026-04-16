@@ -18,6 +18,8 @@ const props = defineProps<{
   teams: TeamSummary[];
   activeTeamId: number | null;
   activeTeamEnabled: boolean;
+  activeTeamEnabledPending: boolean;
+  showTeamDisabledPill?: boolean;
   showConnectionStatus?: boolean;
   scheduleState?: string;
   scheduleNotRunningReason?: string;
@@ -26,6 +28,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   toggleTheme: [];
   selectTeam: [teamId: number];
+  toggleActiveTeamEnabled: [enabled: boolean];
   openSettings: [];
 }>();
 
@@ -36,6 +39,7 @@ const currentLocale = computed<AppLocale>(() => i18n.global.locale.value);
 const activeTeamName = computed(() => (
   props.teams.find((team) => team.id === props.activeTeamId)?.name ?? t('topbar.selectTeam')
 ));
+const activeTeam = computed(() => props.teams.find((team) => team.id === props.activeTeamId) ?? null);
 const enabledTeams = computed(() => props.teams
   .filter((team) => team.enabled)
   .slice()
@@ -44,6 +48,15 @@ const disabledTeams = computed(() => props.teams
   .filter((team) => !team.enabled)
   .slice()
   .sort((left, right) => left.id - right.id));
+const activeTeamToggleLabel = computed(() => {
+  if (props.activeTeamEnabledPending) {
+    return t('topbar.teamSwitching');
+  }
+  return props.activeTeamEnabled ? t('settings.teams.enabled') : t('settings.teams.disabled');
+});
+const activeTeamToggleAriaLabel = computed(() => (
+  `${t('topbar.teamToggleLabel')}：${activeTeamToggleLabel.value}`
+));
 const scheduleLabel = computed(() => {
   switch (props.scheduleState) {
     case 'blocked': return t('topbar.scheduleBlocked');
@@ -162,14 +175,31 @@ function activeOptionId(): string | undefined {
 function optionLabel(team: TeamSummary): string {
   return `${team.name} #${team.id}`;
 }
+
+function toggleActiveTeamEnabled(): void {
+  if (!activeTeam.value || props.activeTeamEnabledPending) {
+    return;
+  }
+  emit('toggleActiveTeamEnabled', !activeTeam.value.enabled);
+}
 </script>
 
 <template>
   <header class="topbar">
     <div class="brand-group">
-      <div>
-        <p class="eyebrow">Team Agent Web Console</p>
-      </div>
+      <button
+        class="nav-action nav-icon-button"
+        type="button"
+        :disabled="activeTeamId === null"
+        :title="t('topbar.settings')"
+        :aria-label="t('topbar.settings')"
+        @click="emit('openSettings')"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16.9l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+        </svg>
+      </button>
       <div class="team-switcher">
         <button
           :id="buttonLabelId()"
@@ -245,22 +275,24 @@ function optionLabel(team: TeamSummary): string {
         </div>
       </div>
       <button
-        class="nav-action nav-icon-button"
         type="button"
-        :disabled="activeTeamId === null"
-        :title="t('topbar.settings')"
-        :aria-label="t('topbar.settings')"
-        @click="emit('openSettings')"
+        class="team-enabled-switch topbar-team-enabled-switch"
+        :class="{ 'is-enabled': activeTeamEnabled }"
+        :disabled="activeTeamId === null || activeTeamEnabledPending"
+        :aria-pressed="activeTeamEnabled"
+        :aria-label="activeTeamToggleAriaLabel"
+        :title="activeTeamToggleAriaLabel"
+        @click="toggleActiveTeamEnabled"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="3.5"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A2 2 0 0 1 4.21 16.9l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.3l.06.06A1.65 1.65 0 0 0 8.92 4a1.65 1.65 0 0 0 1-1.51V2.4a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
-        </svg>
+        <span class="team-enabled-switch__label">{{ activeTeamToggleLabel }}</span>
+        <span class="team-enabled-switch__track">
+          <span class="team-enabled-switch__thumb" :class="{ 'is-enabled': activeTeamEnabled }"></span>
+        </span>
       </button>
     </div>
 
     <div class="status-group">
-      <div v-if="!activeTeamEnabled" class="team-disabled-pill">{{ t('topbar.teamDisabled') }}</div>
+      <div v-if="showTeamDisabledPill && !activeTeamEnabled" class="team-disabled-pill">{{ t('topbar.teamDisabled') }}</div>
       <div
         v-if="scheduleLabel"
         class="schedule-state-pill-wrapper"
@@ -406,15 +438,6 @@ function optionLabel(team: TeamSummary): string {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.eyebrow {
-  margin: 0;
-  color: var(--accent);
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  line-height: 1;
 }
 
 .team-switcher {
@@ -595,9 +618,83 @@ function optionLabel(team: TeamSummary): string {
 
 .team-switcher-button:focus-visible,
 .nav-action:focus-visible,
-.theme-switch:focus-visible {
+.theme-switch:focus-visible,
+.team-enabled-switch:focus-visible {
   border-color: var(--focus-border);
   box-shadow: 0 0 0 2px var(--focus-glow);
+}
+
+.team-enabled-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 6px 0 9px;
+  border: 1px solid var(--room-card-border);
+  border-radius: 8px;
+  background: var(--pill-bg);
+  color: var(--text-strong);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+}
+
+.team-enabled-switch:hover:not(:disabled) {
+  border-color: var(--focus-border);
+  background: color-mix(in srgb, var(--selected) 40%, var(--panel-bg) 60%);
+}
+
+.team-enabled-switch:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.team-enabled-switch.is-enabled {
+  color: var(--good);
+}
+
+.team-enabled-switch__label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.team-enabled-switch__track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 16%, var(--room-card-border) 84%);
+  transition: background 0.18s ease;
+}
+
+.team-enabled-switch.is-enabled .team-enabled-switch__track {
+  background: color-mix(in srgb, var(--good) 24%, var(--room-card-border) 76%);
+}
+
+.team-enabled-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--panel-bg) 88%, white 12%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.team-enabled-switch__thumb.is-enabled {
+  transform: translateX(14px);
+  background: color-mix(in srgb, var(--panel-bg) 72%, white 28%);
+}
+
+.topbar-team-enabled-switch {
+  flex: 0 0 auto;
 }
 
 .status-group {

@@ -48,6 +48,8 @@
     "switchToDark": "切换到暗色模式",
     "switchToLight": "切换到亮色模式",
     "teamDisabled": "本团队已停用",
+    "teamToggleLabel": "当前团队",
+    "teamSwitching": "切换中",
     "teamGroupEnabled": "启用中",
     "teamGroupDisabled": "已停用",
     "teamsCount": "{count} 团队",

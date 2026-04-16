@@ -10,11 +10,13 @@ import {
   reconnectProgress,
   scheduleNotRunningReason,
   scheduleState,
+  showGlobalSuccessToast,
   showQuickInit,
   totalMessageCount,
   updateScheduleState,
 } from './appUiState';
-import { getSystemStatus } from './api';
+import { getSystemStatus, setTeamEnabled } from './api';
+import ConfirmDialog from './components/ConfirmDialog.vue';
 import QuickInitModal from './components/QuickInitModal.vue';
 import TopBar from './components/TopBar.vue';
 import { startRealtimeClient, stopRealtimeClient } from './realtime/wsClient';
@@ -41,9 +43,23 @@ const teamIdFromRoute = computed<number | null>(() => {
 
 const currentTeam = computed(() => findTeamById(teamIdFromRoute.value));
 const activeTeamId = computed(() => currentTeam.value?.id ?? preferredTeamId.value ?? firstTeamId.value);
+const activeTeam = computed(() => findTeamById(activeTeamId.value));
 const activeTeamEnabled = computed(() => {
-  const enabled = currentTeam.value?.enabled as boolean | number | undefined;
+  const enabled = activeTeam.value?.enabled as boolean | number | undefined;
   return enabled !== false && enabled !== 0;
+});
+const activeTeamEnabledPending = ref<Record<number, boolean>>({});
+const isActiveTeamTogglePending = computed(() => (
+  activeTeamId.value !== null ? Boolean(activeTeamEnabledPending.value[activeTeamId.value]) : false
+));
+const teamToggleConfirm = ref<{
+  open: boolean;
+  teamId: number | null;
+  enabled: boolean;
+}>({
+  open: false,
+  teamId: null,
+  enabled: false,
 });
 const showTeamDisabledPill = computed(() => route.name === 'console' && !activeTeamEnabled.value);
 const showTopbarConnectionStatus = computed(() => route.name === 'console');
@@ -91,6 +107,58 @@ function openSettings(): void {
 function selectTeam(teamId: number): void {
   setPreferredTeamId(teamId);
   router.push({ name: 'console', params: { teamId } }).catch(console.error);
+}
+
+function requestActiveTeamEnabledToggle(enabled: boolean): void {
+  if (!activeTeam.value) {
+    return;
+  }
+
+  teamToggleConfirm.value = {
+    open: true,
+    teamId: activeTeam.value.id,
+    enabled,
+  };
+}
+
+function closeTeamToggleConfirm(): void {
+  teamToggleConfirm.value = {
+    open: false,
+    teamId: null,
+    enabled: false,
+  };
+}
+
+async function updateTeamEnabledState(teamIdToUpdate: number, enabled: boolean): Promise<void> {
+  if (activeTeamEnabledPending.value[teamIdToUpdate]) {
+    return;
+  }
+
+  activeTeamEnabledPending.value = {
+    ...activeTeamEnabledPending.value,
+    [teamIdToUpdate]: true,
+  };
+
+  try {
+    await setTeamEnabled(teamIdToUpdate, enabled);
+    await loadTeams();
+    showGlobalSuccessToast(enabled ? t('settings.page.teamEnabled') : t('settings.page.teamDisabled'));
+  } catch (error) {
+    console.error(error);
+  } finally {
+    const nextPending = { ...activeTeamEnabledPending.value };
+    delete nextPending[teamIdToUpdate];
+    activeTeamEnabledPending.value = nextPending;
+  }
+}
+
+function confirmTeamToggle(): void {
+  const { teamId: targetTeamId, enabled } = teamToggleConfirm.value;
+  closeTeamToggleConfirm();
+  if (targetTeamId === null) {
+    return;
+  }
+  void updateTeamEnabledState(targetTeamId, enabled);
 }
 
 function redirectToTeam(teamId: number | null): void {
@@ -162,12 +230,15 @@ onBeforeUnmount(() => {
       :total-message-count="totalMessageCount"
       :teams="teams"
       :active-team-id="activeTeamId"
-      :active-team-enabled="showTeamDisabledPill ? activeTeamEnabled : true"
+      :active-team-enabled="activeTeamEnabled"
+      :active-team-enabled-pending="isActiveTeamTogglePending"
+      :show-team-disabled-pill="showTeamDisabledPill"
       :show-connection-status="showTopbarConnectionStatus"
       :schedule-state="scheduleState"
       :schedule-not-running-reason="scheduleNotRunningReason"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
+      @toggle-active-team-enabled="requestActiveTeamEnabledToggle"
       @open-settings="openSettings"
     />
 
@@ -209,6 +280,15 @@ onBeforeUnmount(() => {
       v-if="showQuickInit"
       @skip="handleInitSkip"
       @done="handleInitDone"
+    />
+
+    <ConfirmDialog
+      :open="teamToggleConfirm.open"
+      :title="teamToggleConfirm.enabled ? t('settings.page.toggleEnableTitle') : t('settings.page.toggleDisableTitle')"
+      :message="teamToggleConfirm.enabled ? t('settings.page.toggleEnableMsg') : t('settings.page.toggleDisableMsg')"
+      :confirm-label="teamToggleConfirm.enabled ? t('settings.page.toggleEnableBtn') : t('settings.page.toggleDisableBtn')"
+      @close="closeTeamToggleConfirm"
+      @confirm="confirmTeamToggle"
     />
   </div>
 </template>
