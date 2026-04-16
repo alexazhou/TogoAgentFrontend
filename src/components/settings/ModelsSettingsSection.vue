@@ -115,9 +115,6 @@ watch(showQuickInit, (value) => {
     <div class="section-head section-head--compact">
       <div class="section-actions">
         <span v-if="statusText" class="section-status">{{ statusText }}</span>
-        <button type="button" class="secondary-button" @click="showQuickInit = true">
-          {{ t('settings.models.quickInit') }}
-        </button>
         <button type="button" class="secondary-button" @click="openCreate">
           {{ t('settings.models.addService') }}
         </button>

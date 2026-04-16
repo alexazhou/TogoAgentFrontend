@@ -269,7 +269,6 @@
     },
     "models": {
       "title": "LLM Service Management",
-      "quickInit": "Quick Init",
       "addService": "Add Service",
       "serviceList": "Service List",
       "count": "{count}",
@@ -376,7 +375,13 @@
       "roles": "Role Management",
       "rolesNote": "Role templates and responsibilities",
       "models": "LLM Service Management",
-      "modelsNote": "Model services and call policies"
+      "modelsNote": "Model services and call policies",
+      "quickInit": "Quick Init",
+      "quickInitNote": "Set up model access in one step"
+    },
+    "quickInit": {
+      "eyebrow": "Bootstrap",
+      "saveSuccess": "Quick init completed"
     },
     "teams": {
       "title": "All Teams",

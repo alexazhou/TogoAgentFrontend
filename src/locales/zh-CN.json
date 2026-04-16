@@ -269,7 +269,6 @@
     },
     "models": {
       "title": "大模型服务管理",
-      "quickInit": "快速初始化",
       "addService": "新增服务",
       "serviceList": "服务列表",
       "count": "{count} 个",
@@ -376,7 +375,13 @@
       "roles": "角色管理",
       "rolesNote": "角色模板与职责分配",
       "models": "大模型服务管理",
-      "modelsNote": "模型服务与调用策略"
+      "modelsNote": "模型服务与调用策略",
+      "quickInit": "快速初始化",
+      "quickInitNote": "一键完成基础模型接入"
+    },
+    "quickInit": {
+      "eyebrow": "基础接入",
+      "saveSuccess": "快速初始化已完成"
     },
     "teams": {
       "title": "所有团队",

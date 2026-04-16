@@ -4,7 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { deleteTeam, clearTeamData, getAgents, getAgentsByTeamId, getDeptTree, getDirectories, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
-import { connectionState, showGlobalSuccessToast, totalMessageCount } from '../appUiState';
+import { connectionState, showGlobalSuccessToast, showQuickInit, totalMessageCount } from '../appUiState';
 import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
@@ -177,6 +177,11 @@ const breadcrumbItems = computed<SettingsBreadcrumbItem[]>(() => {
   return items;
 });
 function openSection(sectionId: string): void {
+  if (sectionId === 'quickInit') {
+    showQuickInit.value = true;
+    return;
+  }
+
   router.push({
     name: 'settings',
     params: { teamId: teamId.value, section: sectionId },
