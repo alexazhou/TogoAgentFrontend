@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import { showGlobalSuccessToast, totalMessageCount } from '../appUiState';
 import { createTeam } from '../api';
 import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
-import TeamInfoCard from '../components/TeamInfoCard.vue';
+import TeamInfoCard from '../components/team/TeamInfoCard.vue';
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import { useSettingsNavItems } from '../components/settings/settingsNavItems';
 import SettingsBreadcrumb from '../components/settings/SettingsBreadcrumb.vue';

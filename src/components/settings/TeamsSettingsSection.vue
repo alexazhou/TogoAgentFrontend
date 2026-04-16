@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import TeamInfoCard from '../TeamInfoCard.vue';
-import TeamTreeEditor from '../TeamTreeEditor.vue';
+import TeamInfoCard from '../team/TeamInfoCard.vue';
+import TeamTreeEditor from '../team/TeamTreeEditor.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import ToggleSwitch from '../ui/ToggleSwitch.vue';
 import type { SettingsBreadcrumbItem } from './types';

@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getAgentDetail, resumeAgent, stopAgent } from '../api';
-import { connectionState, showGlobalSuccessToast } from '../appUiState';
-import { formatConnectionState } from '../utils';
-import { loadAgentActivities } from '../realtime/runtimeStore';
-import { useAgentActivities, useAgentStatus } from '../realtime/selectors';
+import { getAgentDetail, resumeAgent, stopAgent } from '../../api';
+import { connectionState, showGlobalSuccessToast } from '../../appUiState';
+import { formatConnectionState } from '../../utils';
+import { loadAgentActivities } from '../../realtime/runtimeStore';
+import { useAgentActivities, useAgentStatus } from '../../realtime/selectors';
 import AgentCardBase from './AgentCardBase.vue';
 import AgentActivityItem from './AgentActivityItem.vue';
 import type {
   AgentDetail,
   AgentStatus,
-} from '../types';
+} from '../../types';
 
 const { t } = useI18n();
 
@@ -328,7 +328,7 @@ watch(
                   :overline="displayTeamName"
                   :employee-number="displayEmployeeNumber"
                   :avatar-name="displayAgentName"
-                  variant="leader"
+                  variant="profile"
                   readonly
                 />
                 <div class="agent-status-panel" :data-status="currentStatus ?? undefined">

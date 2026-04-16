@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { testLlmService, quickInit } from '../api';
-import type { LlmServiceTestResult, LlmServiceType } from '../types';
+import { testLlmService, quickInit } from '../../api';
+import type { LlmServiceTestResult, LlmServiceType } from '../../types';
 
 const SERVICE_TYPES: { value: LlmServiceType; label: string }[] = [
   { value: 'openai-compatible', label: 'OpenAI Compatible' },

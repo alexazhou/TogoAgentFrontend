@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useTeamAgents, useTeamRooms } from '../realtime/selectors';
+import { useTeamAgents, useTeamRooms } from '../../realtime/selectors';
 import RoomListSection from './RoomListSection.vue';
 
 const emit = defineEmits<{

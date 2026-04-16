@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import type { RoomState } from '../types';
+import type { RoomState } from '../../types';
 
 defineProps<{
   loading: boolean;

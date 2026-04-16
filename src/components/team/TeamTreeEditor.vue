@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, saveMembersByTeamId, setDeptTree } from '../api';
-import { showGlobalSuccessToast } from '../appUiState';
+import { getAgentsByTeamId, getDeptTree, getFrontendConfig, getRoleTemplates, saveMembersByTeamId, setDeptTree } from '../../api';
+import { showGlobalSuccessToast } from '../../appUiState';
 import {
   useMemberEditorDialog,
   type MemberDriverOption,
   type MemberModelOption,
   type MemberTemplateOption,
-} from '../composables/useMemberEditorDialog';
+} from '../../composables/useMemberEditorDialog';
 import DepartmentEditorDialog from './DepartmentEditorDialog.vue';
 import TeamMembersCard from './TeamMembersCard.vue';
 import MemberEditorDialog from './MemberEditorDialog.vue';
-import ConfirmDialog from './ui/ConfirmDialog.vue';
-import type { DeptTreeNode, FrontendConfig } from '../types';
-import type { AgentInfo } from '../types';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
+import type { DeptTreeNode, FrontendConfig } from '../../types';
+import type { AgentInfo } from '../../types';
 import type { TeamGraphNode } from './teamGraphTypes';
 
 type DraftOrgNode = {

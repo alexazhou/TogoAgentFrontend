@@ -16,8 +16,8 @@ import {
   updateScheduleState,
 } from './appUiState';
 import { getSystemStatus, setTeamEnabled } from './api';
-import QuickInitModal from './components/QuickInitModal.vue';
-import TopBar from './components/TopBar.vue';
+import QuickInitModal from './components/layout/QuickInitModal.vue';
+import TopBar from './components/layout/TopBar.vue';
 import ConfirmDialog from './components/ui/ConfirmDialog.vue';
 import { startRealtimeClient, stopRealtimeClient } from './realtime/wsClient';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';

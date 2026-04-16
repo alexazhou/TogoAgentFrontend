@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useTeamAgents } from '../realtime/selectors';
-import AgentListSection from './AgentListSection.vue';
+import { useTeamAgents } from '../../realtime/selectors';
+import AgentListSection from '../agent/AgentListSection.vue';
 
 const props = defineProps<{
   teamId: number | null;

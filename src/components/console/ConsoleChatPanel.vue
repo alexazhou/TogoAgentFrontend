@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { postRoomMessage } from '../api';
-import { useConsoleMessageScroll } from '../composables/useConsoleMessageScroll';
-import ChatPanel from './ChatPanel.vue';
+import { postRoomMessage } from '../../api';
+import { useConsoleMessageScroll } from '../../composables/useConsoleMessageScroll';
+import ChatPanel from '../chat/ChatPanel.vue';
 import type {
   AgentInfo,
   DeptTreeNode,
@@ -11,7 +11,7 @@ import type {
   RoleTemplateSummary,
   RoomMemberProfile,
   RoomState,
-} from '../types';
+} from '../../types';
 
 const props = defineProps<{
   currentRoom: RoomState | null;

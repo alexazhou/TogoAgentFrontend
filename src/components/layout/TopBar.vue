@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import i18n from '../i18n';
-import { setLanguage } from '../api';
-import ToggleSwitch from './ui/ToggleSwitch.vue';
-import type { TeamSummary } from '../types';
-import type { ConnectionState } from '../utils';
-import type { AppLocale } from '../i18n';
+import i18n from '../../i18n';
+import { setLanguage } from '../../api';
+import ToggleSwitch from '../ui/ToggleSwitch.vue';
+import type { TeamSummary } from '../../types';
+import type { ConnectionState } from '../../utils';
+import type { AppLocale } from '../../i18n';
 
 const { t } = useI18n();
 

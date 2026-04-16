@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { getAgentAvatarUrl } from '../avatar';
+import { getAgentAvatarUrl } from '../../avatar';
 
 const props = withDefaults(defineProps<{
   title: string;
@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<{
   selected?: boolean;
   empty?: boolean;
   readonly?: boolean;
-  variant?: 'template' | 'graph' | 'leader' | 'featured';
+  variant?: 'template' | 'graph' | 'leader' | 'featured' | 'profile';
 }>(), {
   employeeNumber: '',
   avatarName: '',
@@ -33,6 +33,7 @@ const normalizedEmployeeNumber = computed(() => (
   /^\d+$/.test(props.employeeNumber) ? props.employeeNumber : ''
 ));
 const normalizedOverline = computed(() => props.overline?.trim() || '');
+const isProfileVariant = computed(() => props.variant === 'profile');
 </script>
 
 <template>
@@ -45,25 +46,54 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
         'is-empty': empty,
         'is-readonly': readonly,
         'has-overline': !!normalizedOverline,
+        'has-badge': !!normalizedEmployeeNumber,
       },
     ]"
     type="button"
     @click="$emit('click')"
   >
-    <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
-      {{ normalizedOverline }}
-    </small>
-    <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
-      #{{ normalizedEmployeeNumber }}
-    </small>
-    <img
-      v-if="avatarName && !empty"
-      class="entity-card__avatar"
-      :src="getAgentAvatarUrl(avatarLookupKey)"
-      :alt="avatarAlt"
-    />
-    <strong class="entity-card__title" :title="title">{{ title }}</strong>
-    <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
+    <template v-if="isProfileVariant">
+      <div class="entity-card__profile-row entity-card__profile-row--badge">
+        <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
+          #{{ normalizedEmployeeNumber }}
+        </small>
+      </div>
+      <div class="entity-card__profile-row entity-card__profile-row--overline">
+        <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
+          {{ normalizedOverline }}
+        </small>
+      </div>
+      <div class="entity-card__profile-row entity-card__profile-row--avatar">
+        <img
+          v-if="avatarName && !empty"
+          class="entity-card__avatar"
+          :src="getAgentAvatarUrl(avatarLookupKey)"
+          :alt="avatarAlt"
+        />
+      </div>
+      <div class="entity-card__profile-row entity-card__profile-row--title">
+        <strong class="entity-card__title" :title="title">{{ title }}</strong>
+      </div>
+      <div class="entity-card__profile-row entity-card__profile-row--subtitle">
+        <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
+      </div>
+    </template>
+    <template v-else>
+      <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
+        {{ normalizedOverline }}
+      </small>
+      <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
+        #{{ normalizedEmployeeNumber }}
+      </small>
+      <img
+        v-if="avatarName && !empty"
+        class="entity-card__avatar"
+        :src="getAgentAvatarUrl(avatarLookupKey)"
+        :alt="avatarAlt"
+      />
+      <strong class="entity-card__title" :title="title">{{ title }}</strong>
+      <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
+    </template>
   </button>
 </template>
 
@@ -79,6 +109,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-subtitle-top: calc(var(--entity-card-height) * var(--entity-subtitle-top-ratio, 0.772));
   --entity-badge-top: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
   --entity-badge-left: calc(var(--entity-card-width) * var(--entity-badge-offset-ratio, 0.078));
+  --entity-overline-clearance: calc(var(--entity-badge-size) * var(--entity-overline-clearance-ratio, 1.5));
   box-sizing: border-box;
   position: relative;
   border: 1px solid var(--team-create-node-border);
@@ -166,6 +197,10 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   letter-spacing: 0.01em;
 }
 
+.entity-card.has-overline.has-badge .entity-card__overline {
+  width: calc(100% - (2 * var(--entity-card-padding-x)) - var(--entity-overline-clearance));
+}
+
 .entity-card__title {
   position: absolute;
   top: var(--entity-title-top);
@@ -246,6 +281,8 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-title-block-height: 2.2em;
   --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.8rem;
+  --entity-badge-offset-ratio: 0.058;
+  --entity-overline-clearance-ratio: 1.45;
 }
 
 .entity-card--leader {
@@ -260,6 +297,8 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-title-block-height: 2.2em;
   --entity-subtitle-block-height: 1.35em;
   --entity-badge-size: 0.84rem;
+  --entity-badge-offset-ratio: 0.05;
+  --entity-overline-clearance-ratio: 1.3;
 }
 
 .entity-card--featured {
@@ -280,5 +319,123 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
   --entity-subtitle-block-height: 1.7em;
   --entity-badge-size: 0.84rem;
   --entity-badge-offset-ratio: 0.068;
+  --entity-overline-clearance-ratio: 1.4;
+}
+
+.entity-card--profile {
+  --entity-card-width: 132px;
+  --entity-card-radius: 20px;
+  --entity-card-padding-y: 8px;
+  --entity-card-padding-x: 8px;
+  --entity-avatar-radius: 24%;
+  --entity-overline-size: 0.8rem;
+  --entity-avatar-size-ratio: 0.42;
+  --entity-title-size: 0.84rem;
+  --entity-subtitle-size: 0.68rem;
+  --entity-badge-size: 0.84rem;
+  --entity-badge-offset-ratio: 0.05;
+  --entity-overline-clearance-ratio: 1.3;
+  height: var(--entity-card-height);
+  display: grid;
+  grid-template-rows: 11px 24px minmax(0, 1fr) 24px 20px;
+  align-content: stretch;
+  justify-items: stretch;
+  row-gap: 0;
+  overflow: hidden;
+}
+
+.entity-card__profile-row {
+  width: calc(100% + (2 * var(--entity-card-padding-x)));
+  margin-left: calc(-1 * var(--entity-card-padding-x));
+  min-width: 0;
+  border-radius: 10px;
+}
+
+.entity-card--profile .entity-card__profile-row--badge {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  margin-top: calc(-1 * var(--entity-card-padding-y));
+  padding-left: 4px;
+  background: color-mix(in srgb, #f6d365 34%, transparent);
+}
+
+.entity-card--profile .entity-card__profile-row--overline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, #ffe29a 34%, transparent);
+}
+
+.entity-card--profile .entity-card__profile-row--avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  background: color-mix(in srgb, #84fab0 26%, transparent);
+}
+
+.entity-card--profile .entity-card__profile-row--title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding-top: 0;
+  background: color-mix(in srgb, #8fd3f4 32%, transparent);
+}
+
+.entity-card--profile .entity-card__profile-row--subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding-top: 0;
+  background: color-mix(in srgb, #fbc2eb 32%, transparent);
+}
+
+.entity-card--profile .entity-card__badge {
+  position: static;
+  max-width: 100%;
+}
+
+.entity-card--profile .entity-card__overline {
+  position: static;
+  box-sizing: border-box;
+  width: 100%;
+  transform: none;
+  padding: 0 4px;
+  margin: 0;
+  text-align: center;
+}
+
+.entity-card--profile.has-overline.has-badge .entity-card__overline {
+  width: 100%;
+}
+
+.entity-card--profile .entity-card__avatar {
+  position: static;
+  width: var(--entity-avatar-size);
+  aspect-ratio: 1 / 1;
+  height: auto;
+  margin: 0;
+  transform: none;
+}
+
+.entity-card--profile .entity-card__title {
+  position: static;
+  width: 100%;
+  margin: 0;
+  min-height: 0;
+  transform: none;
+  line-height: 1.12;
+}
+
+.entity-card--profile .entity-card__subtitle {
+  position: static;
+  width: 100%;
+  margin: 0;
+  min-height: 0;
+  transform: none;
+  line-height: 1.1;
 }
 </style>

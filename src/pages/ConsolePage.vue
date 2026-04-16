@@ -2,11 +2,11 @@
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { connectionState } from '../appUiState';
-import AgentActivityDialog from '../components/AgentActivityDialog.vue';
-import ConsoleAgentListPanel from '../components/ConsoleAgentListPanel.vue';
-import ConsoleChatPanel from '../components/ConsoleChatPanel.vue';
-import ConsoleRoomListPanel from '../components/ConsoleRoomListPanel.vue';
-import CreateRoomDialog from '../components/CreateRoomDialog.vue';
+import AgentActivityDialog from '../components/agent/AgentActivityDialog.vue';
+import ConsoleAgentListPanel from '../components/console/ConsoleAgentListPanel.vue';
+import ConsoleChatPanel from '../components/console/ConsoleChatPanel.vue';
+import ConsoleRoomListPanel from '../components/console/ConsoleRoomListPanel.vue';
+import CreateRoomDialog from '../components/console/CreateRoomDialog.vue';
 import { useAgentActivityDialogState } from '../composables/useAgentActivityDialogState';
 import { useConsoleRuntimeState } from '../composables/useConsoleRuntimeState';
 import { useConsoleSidebarLayout } from '../composables/useConsoleSidebarLayout';

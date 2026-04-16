@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import AgentCardBase from './AgentCardBase.vue';
+import AgentCardBase from '../agent/AgentCardBase.vue';
 import type { TeamGraphNode } from './teamGraphTypes';
 
 const props = defineProps<{

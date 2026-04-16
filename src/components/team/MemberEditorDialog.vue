@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import AgentCardBase from './AgentCardBase.vue';
-import AgentTemplateCard from './AgentTemplateCard.vue';
-import type { MemberDriverOption, MemberModelOption, MemberTemplateOption } from '../composables/useMemberEditorDialog';
+import AgentCardBase from '../agent/AgentCardBase.vue';
+import AgentTemplateCard from '../agent/AgentTemplateCard.vue';
+import type { MemberDriverOption, MemberModelOption, MemberTemplateOption } from '../../composables/useMemberEditorDialog';
 
 const props = defineProps<{
   open: boolean;

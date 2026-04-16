@@ -2,12 +2,12 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { getAgentAvatarUrl } from '../avatar';
-import { createTeamRoom } from '../api';
-import { showGlobalSuccessToast } from '../appUiState';
-import { loadRoleTemplates, loadTeamAgents, loadTeamRooms } from '../realtime/runtimeStore';
-import { useRoleTemplates, useTeamAgents } from '../realtime/selectors';
-import ConfirmDialog from './ui/ConfirmDialog.vue';
+import { getAgentAvatarUrl } from '../../avatar';
+import { createTeamRoom } from '../../api';
+import { showGlobalSuccessToast } from '../../appUiState';
+import { loadRoleTemplates, loadTeamAgents, loadTeamRooms } from '../../realtime/runtimeStore';
+import { useRoleTemplates, useTeamAgents } from '../../realtime/selectors';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 
 type CreateRoomMemberOption = {
   id: number;

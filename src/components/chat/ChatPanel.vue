@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getAgentAvatarUrl } from '../avatar';
-import type { MessageInfo, RoomMemberProfile, RoomState } from '../types';
-import { useAgentStatus } from '../realtime/selectors';
+import { getAgentAvatarUrl } from '../../avatar';
+import type { MessageInfo, RoomMemberProfile, RoomState } from '../../types';
+import { useAgentStatus } from '../../realtime/selectors';
 import MessageStream from './MessageStream.vue';
 
 const props = defineProps<{

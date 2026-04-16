@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { getAgentAvatarUrl } from '../avatar';
-import type { AgentInfo } from '../types';
+import { getAgentAvatarUrl } from '../../avatar';
+import type { AgentInfo } from '../../types';
 
 defineProps<{
   agents: AgentInfo[];

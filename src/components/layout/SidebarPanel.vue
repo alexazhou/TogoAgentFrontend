@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { AgentInfo, RoomState } from '../types';
-import AgentListSection from './AgentListSection.vue';
-import RoomListSection from './RoomListSection.vue';
+import type { AgentInfo, RoomState } from '../../types';
+import AgentListSection from '../agent/AgentListSection.vue';
+import RoomListSection from '../console/RoomListSection.vue';
 
 defineProps<{
   loading: boolean;
