@@ -33,7 +33,6 @@ const normalizedEmployeeNumber = computed(() => (
   /^\d+$/.test(props.employeeNumber) ? props.employeeNumber : ''
 ));
 const normalizedOverline = computed(() => props.overline?.trim() || '');
-const isProfileVariant = computed(() => props.variant === 'profile');
 </script>
 
 <template>
@@ -52,48 +51,30 @@ const isProfileVariant = computed(() => props.variant === 'profile');
     type="button"
     @click="$emit('click')"
   >
-    <template v-if="isProfileVariant">
-      <div class="entity-card__profile-row entity-card__profile-row--badge">
-        <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
-          #{{ normalizedEmployeeNumber }}
-        </small>
-      </div>
-      <div class="entity-card__profile-row entity-card__profile-row--overline">
-        <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
-          {{ normalizedOverline }}
-        </small>
-      </div>
-      <div class="entity-card__profile-row entity-card__profile-row--avatar">
-        <img
-          v-if="avatarName && !empty"
-          class="entity-card__avatar"
-          :src="getAgentAvatarUrl(avatarLookupKey)"
-          :alt="avatarAlt"
-        />
-      </div>
-      <div class="entity-card__profile-row entity-card__profile-row--title">
-        <strong class="entity-card__title" :title="title">{{ title }}</strong>
-      </div>
-      <div class="entity-card__profile-row entity-card__profile-row--subtitle">
-        <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
-      </div>
-    </template>
-    <template v-else>
-      <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
-        {{ normalizedOverline }}
-      </small>
+    <div class="entity-card__profile-row entity-card__profile-row--badge">
       <small v-if="normalizedEmployeeNumber && !empty" class="entity-card__badge">
         #{{ normalizedEmployeeNumber }}
       </small>
+    </div>
+    <div class="entity-card__profile-row entity-card__profile-row--overline">
+      <small v-if="normalizedOverline && !empty" class="entity-card__overline" :title="normalizedOverline">
+        {{ normalizedOverline }}
+      </small>
+    </div>
+    <div class="entity-card__profile-row entity-card__profile-row--avatar">
       <img
         v-if="avatarName && !empty"
         class="entity-card__avatar"
         :src="getAgentAvatarUrl(avatarLookupKey)"
         :alt="avatarAlt"
       />
+    </div>
+    <div class="entity-card__profile-row entity-card__profile-row--title">
       <strong class="entity-card__title" :title="title">{{ title }}</strong>
+    </div>
+    <div class="entity-card__profile-row entity-card__profile-row--subtitle">
       <small class="entity-card__subtitle" :title="subtitle">{{ subtitle }}</small>
-    </template>
+    </div>
   </button>
 </template>
 
@@ -342,6 +323,10 @@ const isProfileVariant = computed(() => props.variant === 'profile');
   justify-items: stretch;
   row-gap: 0;
   overflow: hidden;
+}
+
+.entity-card:not(.entity-card--profile) .entity-card__profile-row {
+  display: contents;
 }
 
 .entity-card__profile-row {
