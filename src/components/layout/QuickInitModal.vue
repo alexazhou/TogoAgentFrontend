@@ -18,8 +18,10 @@ const emit = defineEmits<{
 const baseUrl = ref('');
 const apiKey = ref('');
 const model = ref('');
+const providerParams = ref('');
 const serviceType = ref<LlmServiceType>('openai-compatible');
 const apiKeyVisible = ref(false);
+const advancedOpen = ref(false);
 const isTesting = ref(false);
 const isSaving = ref(false);
 const testResult = ref<{ status: string; message: string; detail?: string } | null>(null);
@@ -37,17 +39,39 @@ const canSave = computed(() => {
   return canTest.value && !isSaving.value;
 });
 
+function parseProviderParams(text: string): Record<string, unknown> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error('配置 JSON 必须是合法 JSON');
+  }
+
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('配置 JSON 必须是 JSON 对象');
+  }
+
+  return parsed as Record<string, unknown>;
+}
+
 async function handleTest(): Promise<void> {
   isTesting.value = true;
   testResult.value = null;
   saveError.value = '';
   try {
+    const parsedProviderParams = parseProviderParams(providerParams.value);
     const result: LlmServiceTestResult = await testLlmService({
       mode: 'temp',
       base_url: baseUrl.value.trim(),
       api_key: apiKey.value.trim(),
       type: serviceType.value,
       model: model.value.trim(),
+      provider_params: parsedProviderParams,
     });
     const detailParts: string[] = [];
     if (result.detail?.duration_ms !== undefined) detailParts.push(`${result.detail.duration_ms}ms`);
@@ -58,10 +82,10 @@ async function handleTest(): Promise<void> {
       message: result.message,
       detail: detailParts.join(' · ') || undefined,
     };
-  } catch {
+  } catch (error) {
     testResult.value = {
       status: 'error',
-      message: '测试请求异常',
+      message: error instanceof Error ? error.message : '测试请求异常',
     };
   } finally {
     isTesting.value = false;
@@ -72,19 +96,21 @@ async function handleSave(): Promise<void> {
   isSaving.value = true;
   saveError.value = '';
   try {
+    const parsedProviderParams = parseProviderParams(providerParams.value);
     const data = await quickInit({
       base_url: baseUrl.value.trim(),
       api_key: apiKey.value.trim(),
       model: model.value.trim(),
       type: serviceType.value,
+      provider_params: parsedProviderParams,
     });
     if (data.status !== 'ok') {
       saveError.value = data.message || '保存失败';
       return;
     }
     emit('done');
-  } catch {
-    saveError.value = '保存失败，请检查输入后重试';
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : '保存失败，请检查输入后重试';
   } finally {
     isSaving.value = false;
   }
@@ -156,6 +182,35 @@ async function handleSave(): Promise<void> {
           </label>
         </div>
 
+        <section class="advanced-card">
+          <button
+            type="button"
+            class="advanced-toggle"
+            :aria-expanded="advancedOpen"
+            @click="advancedOpen = !advancedOpen"
+          >
+            <div>
+              <p class="quick-init-eyebrow">Advanced</p>
+              <strong>高级配置</strong>
+            </div>
+            <span class="advanced-toggle__state">{{ advancedOpen ? '收起' : '展开' }}</span>
+          </button>
+
+          <div v-if="advancedOpen" class="advanced-body">
+            <label class="form-label">
+              <span class="label-text">配置 JSON</span>
+              <textarea
+                v-model="providerParams"
+                class="form-input form-textarea form-textarea--code"
+                rows="7"
+                placeholder="{&#10;  &quot;reasoning_effort&quot;: &quot;high&quot;&#10;}"
+                :disabled="isSaving"
+              ></textarea>
+              <span class="form-hint">会透传到模型请求中；不要填写 model、messages、api_key 等系统字段</span>
+            </label>
+          </div>
+        </section>
+
         <!-- test connection -->
         <div class="quick-init-test">
           <button
@@ -212,10 +267,12 @@ async function handleSave(): Promise<void> {
 }
 
 .quick-init-dialog {
-  width: min(480px, 100%);
+  width: min(560px, 100%);
+  max-height: calc(100vh - 56px);
   padding: 24px;
   display: grid;
   gap: 18px;
+  overflow-y: auto;
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 32%, var(--border-default) 68%);
   background:
@@ -258,6 +315,42 @@ async function handleSave(): Promise<void> {
   gap: 14px;
 }
 
+.advanced-card {
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 18%, var(--border-default) 82%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-panel-muted) 82%, var(--surface-panel) 18%);
+  overflow: hidden;
+}
+
+.advanced-toggle {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.advanced-toggle strong {
+  color: var(--text-primary);
+  font-size: 0.96rem;
+}
+
+.advanced-toggle__state {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.advanced-body {
+  padding: 0 14px 14px;
+}
+
 .form-label {
   display: grid;
   gap: 4px;
@@ -290,6 +383,18 @@ async function handleSave(): Promise<void> {
 
 .form-input:disabled {
   opacity: 0.56;
+}
+
+.form-textarea {
+  min-height: 120px;
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.form-textarea--code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  line-height: 1.5;
 }
 
 .form-hint {
@@ -407,5 +512,17 @@ async function handleSave(): Promise<void> {
 .save-button:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--state-success) 58%, var(--interactive-focus-border) 42%);
   background: color-mix(in srgb, var(--state-success) 24%, var(--surface-panel) 76%);
+}
+
+@media (max-width: 640px) {
+  .quick-init-overlay {
+    padding: 12px;
+  }
+
+  .quick-init-dialog {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    padding: 16px;
+  }
 }
 </style>

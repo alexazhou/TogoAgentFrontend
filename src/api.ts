@@ -620,6 +620,7 @@ export async function quickInit(payload: {
   api_key: string;
   model: string;
   type?: string;
+  provider_params?: Record<string, unknown>;
 }): Promise<{ status: string; message: string; detail?: { name: string; model: string } }> {
   return requestJson('/config/quick_init.json', {
     method: 'POST',
