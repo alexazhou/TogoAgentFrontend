@@ -164,7 +164,7 @@ async function handleSave(): Promise<void> {
             :disabled="!canTest"
             @click="handleTest"
           >
-            {{ isTesting ? '测试中...' : '🔌 测试连接' }}
+            {{ isTesting ? '测试中...' : '🔌 可用性测试' }}
           </button>
 
           <div

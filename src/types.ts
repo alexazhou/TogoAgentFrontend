@@ -236,6 +236,7 @@ export interface LlmServiceInfo {
   model: string;
   enable: boolean;
   extra_headers: Record<string, string>;
+  provider_params?: Record<string, unknown>;
   context_window_tokens: number;
   reserve_output_tokens: number;
   compact_trigger_ratio: number;

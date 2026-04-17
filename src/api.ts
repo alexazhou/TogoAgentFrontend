@@ -665,6 +665,7 @@ export async function testLlmService(payload: {
   type?: string;
   model?: string;
   extra_headers?: Record<string, string>;
+  provider_params?: Record<string, unknown>;
 }): Promise<LlmServiceTestResult> {
   return requestJson('/config/llm_services/test.json', {
     method: 'POST',

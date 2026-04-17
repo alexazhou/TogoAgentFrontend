@@ -23,6 +23,7 @@ type FormSnapshot = {
   model: string;
   enable: boolean;
   extra_headers: string;
+  provider_params: string;
   context_window_tokens: number;
   reserve_output_tokens: number;
   compact_trigger_ratio: number;
@@ -71,6 +72,7 @@ const form = ref({
   model: '',
   enable: true,
   extra_headers: '',
+  provider_params: '',
   context_window_tokens: 131072,
   reserve_output_tokens: 8192,
   compact_trigger_ratio: 0.85,
@@ -95,6 +97,7 @@ function buildSnapshot(target: typeof form.value): FormSnapshot {
     model: target.model.trim(),
     enable: target.enable,
     extra_headers: target.extra_headers.trim(),
+    provider_params: target.provider_params.trim(),
     context_window_tokens: target.context_window_tokens,
     reserve_output_tokens: target.reserve_output_tokens,
     compact_trigger_ratio: target.compact_trigger_ratio,
@@ -128,6 +131,33 @@ function parseHeaders(text: string): Record<string, string> {
   return headers;
 }
 
+function serializeProviderParams(params: Record<string, unknown> | undefined | null): string {
+  if (!params || Object.keys(params).length === 0) {
+    return '';
+  }
+  return JSON.stringify(params, null, 2);
+}
+
+function parseProviderParams(text: string): Record<string, unknown> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error(t('settings.models.providerParamsInvalid'));
+  }
+
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error(t('settings.models.providerParamsObjectOnly'));
+  }
+
+  return parsed as Record<string, unknown>;
+}
+
 function serviceToFormSnapshot(service: LlmServiceInfo): FormSnapshot {
   return {
     name: service.name.trim(),
@@ -137,6 +167,7 @@ function serviceToFormSnapshot(service: LlmServiceInfo): FormSnapshot {
     model: service.model.trim(),
     enable: service.enable,
     extra_headers: serializeHeaders(service.extra_headers),
+    provider_params: serializeProviderParams(service.provider_params),
     context_window_tokens: service.context_window_tokens ?? 131072,
     reserve_output_tokens: service.reserve_output_tokens ?? 8192,
     compact_trigger_ratio: service.compact_trigger_ratio ?? 0.85,
@@ -176,6 +207,7 @@ function resetForm(service?: LlmServiceInfo | null): void {
     model: service?.model ?? 'qwen-plus',
     enable: service?.enable ?? true,
     extra_headers: service ? serializeHeaders(service.extra_headers) : '',
+    provider_params: service ? serializeProviderParams(service.provider_params) : '',
     context_window_tokens: service?.context_window_tokens ?? 131072,
     reserve_output_tokens: service?.reserve_output_tokens ?? 8192,
     compact_trigger_ratio: service?.compact_trigger_ratio ?? 0.85,
@@ -225,6 +257,7 @@ async function saveService(): Promise<void> {
 
   try {
     const headers = parseHeaders(form.value.extra_headers);
+    const providerParams = parseProviderParams(form.value.provider_params);
 
     if (isCreating.value) {
       const payload: Record<string, unknown> = {
@@ -242,6 +275,9 @@ async function saveService(): Promise<void> {
 
       if (Object.keys(headers).length) {
         payload.extra_headers = headers;
+      }
+      if (Object.keys(providerParams).length) {
+        payload.provider_params = providerParams;
       }
 
       const result = await createLlmService(payload);
@@ -280,6 +316,9 @@ async function saveService(): Promise<void> {
     if (JSON.stringify(newHeaders) !== JSON.stringify(current.extra_headers)) {
       updates.extra_headers = newHeaders;
     }
+    if (JSON.stringify(providerParams) !== JSON.stringify(current.provider_params ?? {})) {
+      updates.provider_params = providerParams;
+    }
 
     if (Object.keys(updates).length > 0) {
       await modifyLlmService(currentIndex.value, updates);
@@ -290,7 +329,7 @@ async function saveService(): Promise<void> {
     closeDialog();
   } catch (error) {
     console.error(error);
-    statusText.value = t('settings.models.saveFailed');
+    statusText.value = error instanceof Error ? error.message : t('settings.models.saveFailed');
   } finally {
     isSaving.value = false;
   }
@@ -357,16 +396,16 @@ async function handleTest(): Promise<void> {
   testResult.value = null;
 
   try {
-    const result = !isCreating.value && currentIndex.value !== null
-      ? await testLlmService({ mode: 'saved', index: currentIndex.value })
-      : await testLlmService({
-        mode: 'temp',
-        base_url: form.value.base_url.trim(),
-        api_key: form.value.api_key.trim(),
-        type: form.value.type,
-        model: form.value.model.trim(),
-        extra_headers: parseHeaders(form.value.extra_headers),
-      });
+    const providerParams = parseProviderParams(form.value.provider_params);
+    const result = await testLlmService({
+      mode: 'temp',
+      base_url: form.value.base_url.trim(),
+      api_key: form.value.api_key.trim(),
+      type: form.value.type,
+      model: form.value.model.trim(),
+      extra_headers: parseHeaders(form.value.extra_headers),
+      provider_params: providerParams,
+    });
 
     const detailParts: string[] = [];
     if (result.detail?.duration_ms !== undefined) detailParts.push(`${result.detail.duration_ms}ms`);
@@ -380,8 +419,8 @@ async function handleTest(): Promise<void> {
   } catch (error) {
     testResult.value = {
       status: 'error',
-      message: t('settings.models.testError'),
-      detail: String(error),
+      message: error instanceof Error ? error.message : t('settings.models.testError'),
+      detail: error instanceof Error ? undefined : String(error),
     };
   } finally {
     isTesting.value = false;
@@ -547,6 +586,17 @@ defineExpose({
                 rows="4"
                 placeholder="X-Custom-Header: value"
               ></textarea>
+            </label>
+
+            <label class="svc-field svc-field--wide">
+              <span>{{ t('settings.models.providerParams') }}</span>
+              <textarea
+                v-model="form.provider_params"
+                class="svc-textarea svc-textarea--code"
+                rows="8"
+                :placeholder="t('settings.models.providerParamsPlaceholder')"
+              ></textarea>
+              <small class="svc-hint">{{ t('settings.models.providerParamsHint') }}</small>
             </label>
           </div>
         </section>
@@ -771,6 +821,16 @@ defineExpose({
 .svc-textarea {
   resize: vertical;
   min-height: 72px;
+}
+
+.svc-textarea--code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.svc-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .advanced-card {
