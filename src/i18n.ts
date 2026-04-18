@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n';
+import { setGlobalRequestErrorAutoDismiss } from './appUiState';
 import zhCN from './locales/zh-CN.json';
 import en from './locales/en.json';
 
@@ -27,10 +28,11 @@ export async function syncLanguageFromBackend(): Promise<void> {
   try {
     const resp = await fetch('/system/status.json');
     if (resp.ok) {
-      const data = await resp.json() as { language?: string };
+      const data = await resp.json() as { language?: string; development_mode?: boolean };
       if (data.language && isAppLocale(data.language)) {
         i18n.global.locale.value = data.language;
       }
+      setGlobalRequestErrorAutoDismiss(data.development_mode ? null : 5000);
     }
   } catch {
     // silently fall back to default language

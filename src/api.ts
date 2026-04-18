@@ -609,6 +609,7 @@ export interface SystemStatus {
   default_llm_server?: string;
   message?: string;
   schedule_state?: 'STOPPED' | 'BLOCKED' | 'RUNNING' | 'stopped' | 'blocked' | 'running';
+  development_mode?: boolean;
 }
 
 export async function getSystemStatus(): Promise<SystemStatus> {

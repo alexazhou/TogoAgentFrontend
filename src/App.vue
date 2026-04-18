@@ -5,6 +5,7 @@ import { RouterView, useRoute, useRouter } from 'vue-router';
 import {
   clearGlobalRequestError,
   connectionState,
+  setGlobalRequestErrorAutoDismiss,
   globalRequestErrors,
   globalSuccessToasts,
   reconnectProgress,
@@ -73,6 +74,7 @@ async function checkSystemStatus(): Promise<void> {
     const status = await getSystemStatus();
     showQuickInit.value = !status.initialized;
     updateScheduleState(status.schedule_state ?? '', '');
+    setGlobalRequestErrorAutoDismiss(status.development_mode ? null : 5000);
   } catch {
     // Backend unreachable — don't show init modal
     showQuickInit.value = false;
