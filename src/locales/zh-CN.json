@@ -36,6 +36,16 @@
     "connecting": "连接中"
   },
   "error": {
+    "requestFailedTitle": "请求失败",
+    "cannotConnectTitle": "连接失败",
+    "cannotConnectDetail": "无法连接到后端服务，请检查服务状态或网络连接。",
+    "requestMetaLabel": "请求信息",
+    "statusLabel": "状态码",
+    "pathLabel": "请求 URL",
+    "detailLabel": "错误信息",
+    "noDetail": "后端没有返回更详细的错误说明。",
+    "autoDismissLabel": "自动关闭",
+    "autoDismissIn": "{seconds}s",
     "cannotConnect": "无法连接后端：{path}",
     "requestFailed": "请求失败：{status} {path}",
     "requestFailedDetail": "请求失败：{status} {path}\n{detail}"

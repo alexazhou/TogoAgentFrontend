@@ -36,6 +36,16 @@
     "connecting": "Connecting"
   },
   "error": {
+    "requestFailedTitle": "Request Failed",
+    "cannotConnectTitle": "Connection Failed",
+    "cannotConnectDetail": "Cannot reach the backend service. Check server status or your network connection.",
+    "requestMetaLabel": "Request Meta",
+    "statusLabel": "Status",
+    "pathLabel": "Request URL",
+    "detailLabel": "Error Detail",
+    "noDetail": "The backend did not return additional error details.",
+    "autoDismissLabel": "Auto Close",
+    "autoDismissIn": "{seconds}s",
     "cannotConnect": "Cannot connect to backend: {path}",
     "requestFailed": "Request failed: {status} {path}",
     "requestFailedDetail": "Request failed: {status} {path}\n{detail}"

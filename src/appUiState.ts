@@ -6,10 +6,27 @@ export interface GlobalToastItem {
   message: string;
 }
 
+export interface GlobalRequestErrorToast {
+  id: number;
+  title: string;
+  path: string;
+  statusCode: number | null;
+  detail: string;
+  autoDismissMs: number | null;
+  dismissAt: number | null;
+}
+
+export interface GlobalRequestErrorPayload {
+  title: string;
+  path: string;
+  statusCode?: number | null;
+  detail?: string;
+}
+
 export const connectionState = ref<ConnectionState>('connected');
 export const reconnectProgress = ref(0);
 export const totalMessageCount = ref(0);
-export const globalRequestErrors = ref<GlobalToastItem[]>([]);
+export const globalRequestErrors = ref<GlobalRequestErrorToast[]>([]);
 export const globalSuccessToasts = ref<GlobalToastItem[]>([]);
 export const showQuickInit = ref(false);
 export const scheduleState = ref<'stopped' | 'blocked' | 'running' | ''>('');
@@ -21,6 +38,15 @@ let nextGlobalToastId = 1;
 let globalRequestErrorAutoDismissMs: number | null = 5000;
 const globalRequestErrorTimers = new Map<number, number>();
 const globalSuccessToastTimers = new Map<number, number>();
+
+function patchGlobalRequestError(
+  toastId: number,
+  patch: Partial<Pick<GlobalRequestErrorToast, 'autoDismissMs' | 'dismissAt'>>,
+): void {
+  globalRequestErrors.value = globalRequestErrors.value.map((toast) => (
+    toast.id === toastId ? { ...toast, ...patch } : toast
+  ));
+}
 
 function removeGlobalRequestError(toastId: number): void {
   globalRequestErrors.value = globalRequestErrors.value.filter((toast) => toast.id !== toastId);
@@ -39,9 +65,18 @@ function scheduleGlobalRequestErrorRemoval(toastId: number): void {
   }
 
   if (globalRequestErrorAutoDismissMs === null) {
+    patchGlobalRequestError(toastId, {
+      autoDismissMs: null,
+      dismissAt: null,
+    });
     return;
   }
 
+  const dismissAt = Date.now() + globalRequestErrorAutoDismissMs;
+  patchGlobalRequestError(toastId, {
+    autoDismissMs: globalRequestErrorAutoDismissMs,
+    dismissAt,
+  });
   const timer = window.setTimeout(() => {
     removeGlobalRequestError(toastId);
   }, globalRequestErrorAutoDismissMs);
@@ -57,9 +92,20 @@ function removeGlobalSuccessToast(toastId: number): void {
   }
 }
 
-export function showGlobalRequestError(message: string): void {
+export function showGlobalRequestError(message: GlobalRequestErrorPayload): void {
   const toastId = nextGlobalToastId++;
-  globalRequestErrors.value = [...globalRequestErrors.value, { id: toastId, message }];
+  globalRequestErrors.value = [
+    ...globalRequestErrors.value,
+    {
+      id: toastId,
+      title: message.title,
+      path: message.path,
+      statusCode: message.statusCode ?? null,
+      detail: message.detail?.trim() ?? '',
+      autoDismissMs: null,
+      dismissAt: null,
+    },
+  ];
   scheduleGlobalRequestErrorRemoval(toastId);
 }
 

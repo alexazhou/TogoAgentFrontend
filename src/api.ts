@@ -100,6 +100,15 @@ function makeUrl(path: string): string {
   return API_BASE_URL ? `${API_BASE_URL}${path}` : path;
 }
 
+function makeDisplayUrl(path: string): string {
+  const target = makeUrl(path);
+  try {
+    return new URL(target, window.location.origin).toString();
+  } catch {
+    return target;
+  }
+}
+
 function withSearch(path: string, params: Record<string, string | number | undefined | null>): string {
   const search = new URLSearchParams();
 
@@ -126,8 +135,10 @@ function makeWsUrl(path: string): string {
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const requestUrl = makeUrl(path);
+  const displayUrl = makeDisplayUrl(path);
   try {
-    const response = await fetch(makeUrl(path), {
+    const response = await fetch(requestUrl, {
       headers: {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
@@ -172,14 +183,21 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
         || response.headers.get('x-proxy-error') === 'backend-unavailable';
 
       if (isProxyConnectionFailure) {
-        showGlobalRequestError(t('error.cannotConnect', { path }));
+        showGlobalRequestError({
+          title: t('error.cannotConnectTitle'),
+          path: displayUrl,
+          statusCode: response.status,
+          detail: t('error.cannotConnectDetail'),
+        });
         throw new Error('Backend unavailable');
       }
 
-      const message = errorDetail
-        ? t('error.requestFailedDetail', { status: response.status, path, detail: errorDetail })
-        : t('error.requestFailed', { status: response.status, path });
-      showGlobalRequestError(message);
+      showGlobalRequestError({
+        title: t('error.requestFailedTitle'),
+        path: displayUrl,
+        statusCode: response.status,
+        detail: errorDetail,
+      });
       throw new Error(
         errorDetail
           ? `Request failed: ${response.status} ${errorDetail}`
@@ -193,7 +211,11 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
       throw error;
     }
 
-    showGlobalRequestError(t('error.cannotConnect', { path }));
+    showGlobalRequestError({
+      title: t('error.cannotConnectTitle'),
+      path: displayUrl,
+      detail: t('error.cannotConnectDetail'),
+    });
     throw error;
   }
 }

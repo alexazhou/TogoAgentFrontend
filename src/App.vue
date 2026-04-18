@@ -8,6 +8,7 @@ import {
   setGlobalRequestErrorAutoDismiss,
   globalRequestErrors,
   globalSuccessToasts,
+  type GlobalRequestErrorToast,
   reconnectProgress,
   scheduleNotRunningReason,
   scheduleState,
@@ -69,6 +70,30 @@ const isLightMode = computed(() => themeMode.value === 'light');
 const scheduleResumePending = ref(false);
 
 // ── V13: Quick Init Modal ──
+
+function getRequestErrorCountdownStyle(toast: GlobalRequestErrorToast): Record<string, string> | undefined {
+  if (toast.dismissAt === null || toast.autoDismissMs === null) {
+    return undefined;
+  }
+
+  const startAt = toast.dismissAt - toast.autoDismissMs;
+  const elapsedMs = Math.max(0, Math.min(toast.autoDismissMs, Date.now() - startAt));
+  return {
+    '--countdown-duration': `${toast.autoDismissMs}ms`,
+    '--countdown-delay': `-${elapsedMs}ms`,
+  };
+}
+
+function formatRequestErrorDetail(toast: GlobalRequestErrorToast): string {
+  const parts: string[] = [];
+  if (toast.statusCode !== null) {
+    parts.push(`${t('error.statusLabel')} ${toast.statusCode}`);
+  }
+  if (toast.detail) {
+    parts.push(toast.detail);
+  }
+  return parts.join(' · ');
+}
 
 async function checkSystemStatus(): Promise<void> {
   try {
@@ -274,10 +299,39 @@ onBeforeUnmount(() => {
           class="global-error-toast"
           role="alert"
         >
-          <span>{{ toast.message }}</span>
-          <button type="button" :aria-label="t('common.closeAlert')" @click="clearGlobalRequestError(toast.id)">
-            ×
-          </button>
+          <div class="global-error-toast__header">
+            <strong class="global-error-toast__title">{{ toast.title }}</strong>
+            <div class="global-error-toast__actions">
+              <button
+                type="button"
+                class="global-error-toast__close"
+                :aria-label="t('common.closeAlert')"
+                @click="clearGlobalRequestError(toast.id)"
+              >
+                <svg
+                  v-if="toast.dismissAt !== null"
+                  viewBox="0 0 36 36"
+                  class="global-error-toast__countdown-svg"
+                  :style="getRequestErrorCountdownStyle(toast)"
+                  aria-hidden="true"
+                >
+                  <circle class="global-error-toast__countdown-track" cx="18" cy="18" r="15"></circle>
+                  <circle class="global-error-toast__countdown-progress" cx="18" cy="18" r="15"></circle>
+                </svg>
+                <span class="global-error-toast__close-icon">×</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="global-error-toast__line">
+            <span class="global-error-toast__line-label">{{ t('error.pathLabel') }}</span>
+            <code class="global-error-toast__path">{{ toast.path }}</code>
+          </div>
+
+          <div class="global-error-toast__line">
+            <span class="global-error-toast__line-label">{{ t('error.detailLabel') }}</span>
+            <p class="global-error-toast__detail">{{ formatRequestErrorDetail(toast) || t('error.noDetail') }}</p>
+          </div>
         </div>
       </div>
     </Teleport>
@@ -365,41 +419,145 @@ onBeforeUnmount(() => {
 }
 
 .global-error-toast {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  width: min(345px, calc(100vw - 16px));
-  min-height: 96px;
-  padding: 18px 20px;
-  border: 2px dashed color-mix(in srgb, var(--state-danger) 45%, var(--border-default) 55%);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--state-danger) 12%, var(--surface-panel) 88%);
-  color: color-mix(in srgb, var(--state-danger) 88%, var(--text-primary) 12%);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-  font-size: 1rem;
-  line-height: 1.5;
+  display: grid;
+  gap: 10px;
+  width: min(392px, calc(100vw - 16px));
+  padding: 14px 15px;
+  border: 1px solid color-mix(in srgb, var(--state-danger) 38%, var(--border-default) 62%);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--state-danger) 10%, var(--surface-overlay) 90%) 0%, color-mix(in srgb, var(--surface-panel-deep) 82%, var(--state-danger) 18%) 100%);
+  color: color-mix(in srgb, var(--state-danger) 72%, var(--text-primary) 28%);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(16px);
   pointer-events: auto;
 }
 
-.global-error-toast span {
-  flex: 1;
+.global-error-toast__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.global-error-toast__title {
   min-width: 0;
+  margin: 0;
+  color: color-mix(in srgb, var(--state-danger) 92%, var(--text-primary) 8%);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.global-error-toast__actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.global-error-toast__close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-panel) 82%, transparent);
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 1.08rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+  isolation: isolate;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--border-default) 72%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--state-danger) 10%, transparent);
+}
+
+.global-error-toast__countdown-svg {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 34px;
+  height: 34px;
+  transform: rotate(-90deg);
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.global-error-toast__countdown-track,
+.global-error-toast__countdown-progress {
+  fill: none;
+  stroke-width: 4;
+}
+
+.global-error-toast__countdown-track {
+  stroke: color-mix(in srgb, var(--state-danger) 14%, var(--border-default) 86%);
+}
+
+.global-error-toast__countdown-progress {
+  stroke: color-mix(in srgb, var(--state-danger) 82%, white 18%);
+  stroke-linecap: round;
+  stroke-dasharray: 94.2478;
+  stroke-dashoffset: 94.2478;
+  animation-name: error-toast-countdown;
+  animation-duration: var(--countdown-duration, 5000ms);
+  animation-timing-function: linear;
+  animation-delay: var(--countdown-delay, 0ms);
+  animation-fill-mode: forwards;
+  will-change: stroke-dashoffset;
+}
+
+.global-error-toast__close:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--state-danger) 10%, var(--surface-panel) 90%);
+}
+
+.global-error-toast__close-icon {
+  position: relative;
+  z-index: 1;
+  display: block;
+  transform: translateY(-0.5px);
+}
+
+.global-error-toast__line-label {
+  display: block;
+  margin-bottom: 2px;
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--state-danger) 30%);
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.global-error-toast__line {
+  display: grid;
+  gap: 3px;
+}
+
+.global-error-toast__path {
+  display: block;
+  color: color-mix(in srgb, var(--state-info) 68%, var(--text-primary) 32%);
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.42;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-.global-error-toast button {
-  flex-shrink: 0;
-  align-self: flex-start;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  font-size: 1.2rem;
+.global-error-toast__detail {
+  margin: 0;
+  color: color-mix(in srgb, var(--state-danger) 88%, var(--text-primary) 12%);
+  font-size: 0.92rem;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .global-success-toast {
@@ -444,6 +602,16 @@ onBeforeUnmount(() => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes error-toast-countdown {
+  from {
+    stroke-dashoffset: 94.2478;
+  }
+
+  to {
+    stroke-dashoffset: 0;
   }
 }
 </style>
