@@ -16,7 +16,7 @@ import {
   totalMessageCount,
   updateScheduleState,
 } from './appUiState';
-import { getSystemStatus, setTeamEnabled } from './api';
+import { getSystemStatus, resumeSchedule, setTeamEnabled } from './api';
 import QuickInitModal from './components/layout/QuickInitModal.vue';
 import TopBar from './components/layout/TopBar.vue';
 import ConfirmDialog from './components/ui/ConfirmDialog.vue';
@@ -66,6 +66,7 @@ const showTeamDisabledPill = computed(() => route.name === 'console' && !activeT
 const showTopbarConnectionStatus = computed(() => route.name === 'console');
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
+const scheduleResumePending = ref(false);
 
 // ── V13: Quick Init Modal ──
 
@@ -73,7 +74,7 @@ async function checkSystemStatus(): Promise<void> {
   try {
     const status = await getSystemStatus();
     showQuickInit.value = !status.initialized;
-    updateScheduleState(status.schedule_state ?? '', '');
+    updateScheduleState(status.schedule_state ?? '', status.not_running_reason ?? '');
     setGlobalRequestErrorAutoDismiss(status.development_mode ? null : 5000);
   } catch {
     // Backend unreachable — don't show init modal
@@ -163,6 +164,25 @@ function confirmTeamToggle(): void {
   void updateTeamEnabledState(targetTeamId, enabled);
 }
 
+async function handleResumeSchedule(): Promise<void> {
+  if (scheduleResumePending.value) {
+    return;
+  }
+
+  scheduleResumePending.value = true;
+  try {
+    const result = await resumeSchedule();
+    updateScheduleState(result.schedule_state ?? '', result.not_running_reason ?? '');
+    if (String(result.schedule_state ?? '').trim().toLowerCase() === 'running') {
+      showGlobalSuccessToast(t('topbar.resumeScheduleSuccess'));
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    scheduleResumePending.value = false;
+  }
+}
+
 function redirectToTeam(teamId: number | null): void {
   if (teamId === null) {
     return;
@@ -238,10 +258,12 @@ onBeforeUnmount(() => {
       :show-connection-status="showTopbarConnectionStatus"
       :schedule-state="scheduleState"
       :schedule-not-running-reason="scheduleNotRunningReason"
+      :schedule-resume-pending="scheduleResumePending"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @toggle-active-team-enabled="requestActiveTeamEnabledToggle"
       @open-settings="openSettings"
+      @resume-schedule="handleResumeSchedule"
     />
 
     <Teleport to="body">

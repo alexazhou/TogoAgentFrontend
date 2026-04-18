@@ -24,6 +24,7 @@ const props = defineProps<{
   showConnectionStatus?: boolean;
   scheduleState?: string;
   scheduleNotRunningReason?: string;
+  scheduleResumePending?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -31,6 +32,7 @@ const emit = defineEmits<{
   selectTeam: [teamId: number];
   toggleActiveTeamEnabled: [enabled: boolean];
   openSettings: [];
+  resumeSchedule: [];
 }>();
 
 const teamMenuOpen = ref(false);
@@ -59,7 +61,7 @@ const activeTeamToggleAriaLabel = computed(() => (
 ));
 const scheduleLabel = computed(() => {
   switch (props.scheduleState) {
-    case 'blocked': return t('topbar.scheduleBlocked');
+    case 'blocked': return t('topbar.scheduleStopped');
     case 'stopped': return t('topbar.scheduleStopped');
     default: return '';
   }
@@ -289,7 +291,18 @@ function optionLabel(team: TeamSummary): string {
           <span class="schedule-dot"></span>
           {{ scheduleLabel }}
         </div>
-        <div v-if="scheduleTooltip" class="schedule-tooltip">{{ scheduleTooltip }}</div>
+        <div v-if="scheduleTooltip" class="schedule-tooltip" role="dialog" aria-live="polite">
+          <p class="schedule-tooltip__label">{{ t('topbar.scheduleReasonLabel') }}</p>
+          <p class="schedule-tooltip__reason">{{ scheduleTooltip }}</p>
+          <button
+            type="button"
+            class="schedule-tooltip__action"
+            :disabled="scheduleResumePending"
+            @click="emit('resumeSchedule')"
+          >
+            {{ scheduleResumePending ? t('topbar.resumeSchedulePending') : t('topbar.resumeSchedule') }}
+          </button>
+        </div>
       </div>
       <div v-if="showConnectionStatus" class="status-pill" :data-state="connectionState">
         <span
@@ -682,6 +695,7 @@ function optionLabel(team: TeamSummary): string {
 .schedule-state-pill-wrapper {
   position: relative;
   display: inline-flex;
+  align-items: center;
 }
 
 .schedule-state-pill {
@@ -701,24 +715,72 @@ function optionLabel(team: TeamSummary): string {
   top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%) scale(0.95);
-  padding: 6px 10px;
-  border-radius: 6px;
+  min-width: 220px;
+  max-width: 280px;
+  padding: 10px;
+  border-radius: 10px;
   background: var(--surface-overlay);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
   font-size: 0.75rem;
-  white-space: nowrap;
+  white-space: normal;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 100;
+  display: grid;
+  gap: 8px;
 }
 
 .schedule-state-pill-wrapper:hover .schedule-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) scale(1);
+}
+
+.schedule-state-pill-wrapper:focus-within .schedule-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) scale(1);
+}
+
+.schedule-tooltip__label,
+.schedule-tooltip__reason {
+  margin: 0;
+}
+
+.schedule-tooltip__label {
+  color: var(--text-tertiary);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.schedule-tooltip__action {
+  justify-self: start;
+  min-height: 28px;
+  border: 1px solid var(--interactive-focus-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--interactive-selected) 58%, var(--surface-pill) 42%);
+  color: var(--text-primary);
+  padding: 0 10px;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    opacity 140ms ease;
+}
+
+.schedule-tooltip__action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--interactive-selected) 72%, var(--surface-pill) 28%);
+}
+
+.schedule-tooltip__action:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .schedule-dot {

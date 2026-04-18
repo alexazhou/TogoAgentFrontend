@@ -43,8 +43,12 @@
   "topbar": {
     "selectTeam": "Select Team",
     "settings": "Settings",
-    "scheduleBlocked": "Schedule Blocked",
+    "scheduleBlocked": "Schedule Stopped",
     "scheduleStopped": "Schedule Stopped",
+    "scheduleReasonLabel": "Reason",
+    "resumeSchedule": "Resume Schedule",
+    "resumeSchedulePending": "Resuming...",
+    "resumeScheduleSuccess": "Schedule resume requested",
     "switchToDark": "Switch to Dark Mode",
     "switchToLight": "Switch to Light Mode",
     "teamDisabled": "This team is disabled",
