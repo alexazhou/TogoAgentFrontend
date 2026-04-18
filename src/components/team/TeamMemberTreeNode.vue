@@ -287,7 +287,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
   position: absolute;
   top: calc(-1 * var(--member-child-offset));
   left: 50%;
-  width: 1px;
+  width: 2px;
   height: var(--member-child-offset);
   transform: translateX(-50%);
   background: var(--member-connector-line);
@@ -311,14 +311,14 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
   left: var(--child-rail-left, calc(var(--member-card-width) / 2));
   right: var(--child-rail-right, calc(var(--member-card-width) / 2));
   height: var(--member-child-offset);
-  border-top: 1px solid var(--member-connector-line);
+  border-top: 2px solid var(--member-connector-line);
 }
 
 .member-child-link {
   position: absolute;
   top: calc(-1 * var(--member-child-offset));
   left: 50%;
-  width: 1px;
+  width: 2px;
   height: var(--member-child-offset);
   transform: translateX(-50%);
   background: var(--member-connector-line);

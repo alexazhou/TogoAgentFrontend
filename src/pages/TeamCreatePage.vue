@@ -350,12 +350,12 @@ onMounted(() => {
 
 .nav-link:hover {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 52%, var(--panel-bg) 48%);
+  background: var(--backend-selected-hover, color-mix(in srgb, var(--selected) 52%, var(--panel-bg) 48%));
 }
 
 .nav-link.active {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 60%, var(--panel-bg) 40%);
+  background: var(--backend-selected-active, color-mix(in srgb, var(--selected) 60%, var(--panel-bg) 40%));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 40%, transparent);
 }
 

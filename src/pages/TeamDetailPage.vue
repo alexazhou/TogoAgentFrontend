@@ -252,7 +252,7 @@ onMounted(() => {
 
 .room-tile:hover {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 70%, var(--surface-soft) 30%);
+  background: var(--backend-selected-strong, color-mix(in srgb, var(--selected) 70%, var(--surface-soft) 30%));
   transform: translateY(-1px);
 }
 

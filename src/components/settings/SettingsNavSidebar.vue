@@ -103,13 +103,13 @@ const { t } = useI18n();
 
 .nav-link:hover {
   border-color: color-mix(in srgb, var(--focus-border) 18%, transparent);
-  background: color-mix(in srgb, var(--selected) 28%, transparent);
+  background: var(--backend-selected-hover, color-mix(in srgb, var(--selected) 28%, transparent));
   transform: translateX(2px);
 }
 
 .nav-link.active {
   border-color: var(--focus-border);
-  background: color-mix(in srgb, var(--selected) 44%, var(--panel-bg) 56%);
+  background: var(--backend-selected-active, color-mix(in srgb, var(--selected) 44%, var(--panel-bg) 56%));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 26%, transparent);
 }
 

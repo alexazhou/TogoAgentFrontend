@@ -470,7 +470,7 @@ defineExpose({
 
 .role-chip--system {
   border-color: color-mix(in srgb, var(--focus-border) 26%, var(--panel-border) 74%);
-  background: color-mix(in srgb, var(--selected) 72%, var(--panel-bg) 28%);
+  background: var(--backend-selected-strong, color-mix(in srgb, var(--selected) 72%, var(--panel-bg) 28%));
   color: color-mix(in srgb, var(--text-strong) 82%, var(--accent) 18%);
 }
 
