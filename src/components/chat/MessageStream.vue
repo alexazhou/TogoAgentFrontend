@@ -268,11 +268,15 @@ onBeforeUnmount(() => {
 .bubble {
   background: var(--bubble-left);
   color: var(--bubble-left-text, inherit);
+  border: 1px solid color-mix(in srgb, var(--border-default) 18%, transparent);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .side-right .bubble {
   background: var(--bubble-right);
   color: var(--bubble-right-text);
+  border: 1px solid color-mix(in srgb, var(--interactive-focus-border) 22%, transparent);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .system-note {
