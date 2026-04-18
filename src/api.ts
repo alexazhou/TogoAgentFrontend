@@ -609,11 +609,22 @@ export interface SystemStatus {
   default_llm_server?: string;
   message?: string;
   schedule_state?: 'STOPPED' | 'BLOCKED' | 'RUNNING' | 'stopped' | 'blocked' | 'running';
+  not_running_reason?: string;
   development_mode?: boolean;
 }
 
 export async function getSystemStatus(): Promise<SystemStatus> {
   return requestJson<SystemStatus>('/system/status.json');
+}
+
+export async function resumeSchedule(): Promise<{
+  status: string;
+  schedule_state: 'STOPPED' | 'BLOCKED' | 'RUNNING' | 'stopped' | 'blocked' | 'running';
+  not_running_reason?: string;
+}> {
+  return requestJson('/system/schedule/resume.json', {
+    method: 'POST',
+  });
 }
 
 export async function quickInit(payload: {

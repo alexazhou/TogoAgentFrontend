@@ -43,8 +43,12 @@
   "topbar": {
     "selectTeam": "选择团队",
     "settings": "系统设置",
-    "scheduleBlocked": "调度阻塞",
+    "scheduleBlocked": "调度停止",
     "scheduleStopped": "调度停止",
+    "scheduleReasonLabel": "停止原因",
+    "resumeSchedule": "恢复调度",
+    "resumeSchedulePending": "恢复中...",
+    "resumeScheduleSuccess": "已触发恢复调度",
     "switchToDark": "切换到暗色模式",
     "switchToLight": "切换到亮色模式",
     "teamDisabled": "本团队已停用",
@@ -54,7 +58,7 @@
     "teamGroupDisabled": "已停用",
     "teamsCount": "{count} 团队",
     "messagesCount": "{count} 条消息",
-    "scheduleBlockedReason": "未配置大模型服务",
+    "scheduleBlockedReason": "未配置大模型服务，请到后台配置大模型服务",
     "scheduleStoppedReason": "调度已停止"
   },
   "agent": {
