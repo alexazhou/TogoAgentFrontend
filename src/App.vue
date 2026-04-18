@@ -375,7 +375,7 @@ onBeforeUnmount(() => {
 .shell {
   position: relative;
   height: 100vh;
-  padding: 10px;
+  padding: 8px 10px;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
