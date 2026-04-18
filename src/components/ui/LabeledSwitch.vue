@@ -49,7 +49,7 @@ function handleClick(): void {
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 6px 0 9px;
+  padding: 0 6px 0 6px;
   border: 1px solid var(--room-card-border);
   border-radius: 8px;
   background: var(--surface-pill);
