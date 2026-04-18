@@ -332,7 +332,7 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 8px;
   right: 8px;
-  z-index: 100;
+  z-index: 140;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -399,7 +399,7 @@ onBeforeUnmount(() => {
   top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 100;
+  z-index: 140;
   display: flex;
   flex-direction: column;
   align-items: center;

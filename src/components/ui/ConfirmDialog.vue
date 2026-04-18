@@ -51,7 +51,7 @@ const { t } = useI18n();
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 120;
   display: grid;
   place-items: center;
   padding: 28px;
