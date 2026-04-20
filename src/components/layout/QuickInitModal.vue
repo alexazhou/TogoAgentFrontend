@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { testLlmService, quickInit } from '../../api';
 import type { LlmServiceTestResult, LlmServiceType } from '../../types';
 
@@ -14,6 +15,8 @@ const emit = defineEmits<{
   skip: [];
   done: [];
 }>();
+
+const { t } = useI18n();
 
 const baseUrl = ref('');
 const apiKey = ref('');
@@ -49,11 +52,11 @@ function parseProviderParams(text: string): Record<string, unknown> {
   try {
     parsed = JSON.parse(trimmed);
   } catch {
-    throw new Error('配置 JSON 必须是合法 JSON');
+    throw new Error(t('settings.models.providerParamsInvalid'));
   }
 
   if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
-    throw new Error('配置 JSON 必须是 JSON 对象');
+    throw new Error(t('settings.models.providerParamsObjectOnly'));
   }
 
   return parsed as Record<string, unknown>;
@@ -85,7 +88,7 @@ async function handleTest(): Promise<void> {
   } catch (error) {
     testResult.value = {
       status: 'error',
-      message: error instanceof Error ? error.message : '测试请求异常',
+      message: error instanceof Error ? error.message : t('quickInit.testError'),
     };
   } finally {
     isTesting.value = false;
@@ -105,12 +108,12 @@ async function handleSave(): Promise<void> {
       provider_params: parsedProviderParams,
     });
     if (data.status !== 'ok') {
-      saveError.value = data.message || '保存失败';
+      saveError.value = data.message || t('quickInit.saveFailed');
       return;
     }
     emit('done');
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : '保存失败，请检查输入后重试';
+    saveError.value = error instanceof Error ? error.message : t('quickInit.saveFailedRetry');
   } finally {
     isSaving.value = false;
   }
@@ -122,16 +125,16 @@ async function handleSave(): Promise<void> {
     <div class="quick-init-overlay">
       <section class="quick-init-dialog panel">
         <div class="quick-init-head">
-          <p class="quick-init-eyebrow">Quick Setup</p>
-          <h3>快速初始化</h3>
+          <p class="quick-init-eyebrow">{{ t('quickInit.eyebrow') }}</p>
+          <h3>{{ t('quickInit.title') }}</h3>
           <p class="quick-init-desc">
-            检测到当前未配置大模型服务，请先完成基础配置以启用 Agent 对话能力。
+            {{ t('quickInit.description') }}
           </p>
         </div>
 
         <div class="quick-init-form">
           <label class="form-label">
-            <span class="label-text">API 地址</span>
+            <span class="label-text">{{ t('quickInit.apiUrl') }}</span>
             <input
               v-model="baseUrl"
               type="text"
@@ -139,18 +142,18 @@ async function handleSave(): Promise<void> {
               placeholder="https://api.openai.com/v1"
               :disabled="isSaving"
             />
-            <span class="form-hint">示例：OpenAI / DeepSeek / Qwen 等兼容接口</span>
+            <span class="form-hint">{{ t('quickInit.apiUrlHint') }}</span>
           </label>
 
           <label class="form-label">
-            <span class="label-text">服务接口类型</span>
+            <span class="label-text">{{ t('quickInit.serviceType') }}</span>
             <select v-model="serviceType" class="form-input form-select" :disabled="isSaving">
               <option v-for="t in SERVICE_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
             </select>
           </label>
 
           <label class="form-label">
-            <span class="label-text">API Key</span>
+            <span class="label-text">{{ t('quickInit.apiKey') }}</span>
             <div class="input-with-toggle">
               <input
                 v-model="apiKey"
@@ -162,7 +165,7 @@ async function handleSave(): Promise<void> {
               <button
                 type="button"
                 class="toggle-visibility"
-                :title="apiKeyVisible ? '隐藏' : '显示'"
+                :title="apiKeyVisible ? t('quickInit.apiKeyHide') : t('quickInit.apiKeyShow')"
                 @click="apiKeyVisible = !apiKeyVisible"
               >
                 {{ apiKeyVisible ? '🙈' : '👁' }}
@@ -171,12 +174,12 @@ async function handleSave(): Promise<void> {
           </label>
 
           <label class="form-label">
-            <span class="label-text">模型名称</span>
+            <span class="label-text">{{ t('quickInit.modelName') }}</span>
             <input
               v-model="model"
               type="text"
               class="form-input"
-              placeholder="使用的模型名称，例如: gpt-4o, deepseek-chat, qwen-plus..."
+              :placeholder="t('quickInit.modelPlaceholder')"
               :disabled="isSaving"
             />
           </label>
@@ -190,23 +193,23 @@ async function handleSave(): Promise<void> {
             @click="advancedOpen = !advancedOpen"
           >
             <div>
-              <p class="quick-init-eyebrow">Advanced</p>
-              <strong>高级配置</strong>
+              <p class="quick-init-eyebrow">{{ t('settings.models.advanced') }}</p>
+              <strong>{{ t('settings.models.advanced') }}</strong>
             </div>
-            <span class="advanced-toggle__state">{{ advancedOpen ? '收起' : '展开' }}</span>
+            <span class="advanced-toggle__state">{{ advancedOpen ? t('common.collapse') : t('common.expand') }}</span>
           </button>
 
           <div v-if="advancedOpen" class="advanced-body">
             <label class="form-label">
-              <span class="label-text">配置 JSON</span>
+              <span class="label-text">{{ t('settings.models.providerParams') }}</span>
               <textarea
                 v-model="providerParams"
                 class="form-input form-textarea form-textarea--code"
                 rows="7"
-                placeholder="{&#10;  &quot;reasoning_effort&quot;: &quot;high&quot;&#10;}"
+                :placeholder="t('settings.models.providerParamsPlaceholder')"
                 :disabled="isSaving"
               ></textarea>
-              <span class="form-hint">会透传到模型请求中；不要填写 model、messages、api_key 等系统字段</span>
+              <span class="form-hint">{{ t('settings.models.providerParamsHint') }}</span>
             </label>
           </div>
         </section>
@@ -219,7 +222,7 @@ async function handleSave(): Promise<void> {
             :disabled="!canTest"
             @click="handleTest"
           >
-            {{ isTesting ? '测试中...' : '🔌 可用性测试' }}
+            {{ isTesting ? t('quickInit.testing') : t('quickInit.testButton') }}
           </button>
 
           <div
@@ -238,7 +241,7 @@ async function handleSave(): Promise<void> {
         <!-- actions -->
         <div class="quick-init-actions">
           <button type="button" class="ghost-button" :disabled="isSaving" @click="emit('skip')">
-            跳过
+            {{ t('quickInit.skip') }}
           </button>
           <button
             type="button"
@@ -246,7 +249,7 @@ async function handleSave(): Promise<void> {
             :disabled="!canSave"
             @click="handleSave"
           >
-            {{ isSaving ? '保存中...' : '完成' }}
+            {{ isSaving ? t('quickInit.completing') : t('quickInit.complete') }}
           </button>
         </div>
       </section>

@@ -7,6 +7,7 @@ export type MemberEditorMode = 'view' | 'edit';
 export type MemberTemplateOption = {
   id: number;
   name: string;
+  displayName: string;
   model: string;
   soul: string;
 };
@@ -69,7 +70,9 @@ export function useMemberEditorDialog(options: UseMemberEditorDialogOptions) {
       return options.templateOptions.value;
     }
 
-    return options.templateOptions.value.filter((item) => item.name.toLowerCase().includes(keyword));
+    return options.templateOptions.value.filter((item) => (
+      `${item.displayName} ${item.name}`.toLowerCase().includes(keyword)
+    ));
   });
   const memberDriverOptions = computed(() => {
     const optionsMap = new Map<string, string>();

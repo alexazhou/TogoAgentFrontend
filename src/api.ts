@@ -9,6 +9,7 @@ import type {
   CreateTeamPayload,
   DeptTreeNode,
   DirectoriesConfig,
+  EntityI18n,
   FrontendConfig,
   FrontendDriverType,
   FrontendModelOption,
@@ -19,6 +20,8 @@ import type {
   RoleTemplateDetail,
   RoleTemplateSummary,
   RoomInfo,
+  TeamMember,
+  TeamRoomDetail,
   TeamDetail,
   TeamSummary,
 } from './types';
@@ -30,13 +33,17 @@ type RawRoomInfo = {
   gt_room?: {
     id?: unknown;
     name?: unknown;
+    i18n?: unknown;
     type?: unknown;
+    initial_topic?: unknown;
     biz_id?: unknown;
     tags?: unknown;
+    max_turns?: unknown;
+    agent_ids?: unknown;
   };
   state?: string;
   need_scheduling?: boolean;
-  current_turn_agent?: AgentSnapshot | null;
+  current_turn_agent?: unknown;
   agents?: unknown;
 };
 
@@ -81,10 +88,47 @@ type RawDeptTreeResponse = {
 type RawRoleTemplateSummary = Partial<RoleTemplateSummary> & {
   id?: unknown;
   name?: unknown;
+  i18n?: unknown;
   model?: unknown;
   soul?: unknown;
   type?: string | null;
   allowed_tools?: unknown;
+};
+
+type RawTeamSummary = {
+  id?: unknown;
+  name?: unknown;
+  i18n?: unknown;
+  working_directory?: unknown;
+  config?: unknown;
+  enabled?: unknown;
+  created_at?: unknown;
+  updated_at?: unknown;
+};
+
+type RawTeamMember = {
+  id?: unknown;
+  name?: unknown;
+  i18n?: unknown;
+  role_template_id?: unknown;
+};
+
+type RawTeamRoomDetail = {
+  id?: unknown;
+  name?: unknown;
+  i18n?: unknown;
+  type?: unknown;
+  initial_topic?: unknown;
+  max_turns?: unknown;
+  agents?: unknown;
+  agent_ids?: unknown;
+  biz_id?: unknown;
+  tags?: unknown;
+};
+
+type RawTeamDetail = RawTeamSummary & {
+  agents?: RawTeamMember[];
+  rooms?: RawTeamRoomDetail[];
 };
 type RawFrontendModelOption = Partial<FrontendModelOption>;
 type RawFrontendDriverType = Partial<FrontendDriverType>;
@@ -220,6 +264,54 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
+function normalizeEntityI18n(value: unknown): EntityI18n {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const normalized: EntityI18n = {};
+  for (const [field, rawTextMap] of Object.entries(value as Record<string, unknown>)) {
+    if (!rawTextMap || typeof rawTextMap !== 'object') {
+      continue;
+    }
+
+    const textMap: Record<string, string> = {};
+    for (const [locale, text] of Object.entries(rawTextMap as Record<string, unknown>)) {
+      if (typeof text === 'string') {
+        textMap[locale] = text;
+      }
+    }
+
+    normalized[field] = textMap;
+  }
+
+  return normalized;
+}
+
+function normalizeAgentSnapshot(value: unknown): AgentSnapshot | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  const id = Number(raw.id ?? 0);
+  if (!Number.isFinite(id) || id <= 0) {
+    return null;
+  }
+
+  return {
+    id,
+    name: String(raw.name ?? ''),
+    i18n: normalizeEntityI18n(raw.i18n),
+    ...(typeof raw.team_id === 'number' && { team_id: raw.team_id }),
+    ...(typeof raw.model === 'string' && { model: raw.model }),
+    ...(typeof raw.driver === 'string' && { driver: raw.driver }),
+    ...(typeof raw.employ_status === 'string' && { employ_status: raw.employ_status }),
+    ...(typeof raw.employee_number === 'number' && { employee_number: raw.employee_number }),
+    ...(typeof raw.role_template_id === 'number' && { role_template_id: raw.role_template_id }),
+  };
+}
+
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const gtRoom = room.gt_room;
   const roomName = String(gtRoom?.name ?? '');
@@ -228,6 +320,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
   return {
     room_id: Number(gtRoom?.id ?? 0),
     room_name: roomName,
+    i18n: normalizeEntityI18n(gtRoom?.i18n),
     room_type: roomType === 'private' ? 'private' : 'group',
     state: (room.state ?? 'idle').toLowerCase(),
     need_scheduling: Boolean(room.need_scheduling),
@@ -240,7 +333,7 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
       ? gtRoom.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
     biz_id: typeof gtRoom?.biz_id === 'string' && gtRoom.biz_id.trim() ? gtRoom.biz_id : null,
-    current_turn_agent: room.current_turn_agent ?? null,
+    current_turn_agent: normalizeAgentSnapshot(room.current_turn_agent),
   };
 }
 
@@ -284,6 +377,7 @@ function normalizeAgent(agent: RawAgentInfo): AgentInfo {
   return {
     id: typeof agent.id === 'number' ? agent.id : null,
     name: String(agent.name ?? ''),
+    i18n: normalizeEntityI18n(agent.i18n),
     employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
     role_template_id: typeof agent.role_template_id === 'number' ? agent.role_template_id : null,
     model: String(agent.model ?? ''),
@@ -332,6 +426,82 @@ function normalizeAgentActivity(activity: RawAgentActivity): AgentActivity {
       : {},
     created_at: typeof activity.created_at === 'string' ? activity.created_at : null,
     updated_at: typeof activity.updated_at === 'string' ? activity.updated_at : null,
+  };
+}
+
+function normalizeTeamSummary(team: RawTeamSummary): TeamSummary {
+  return {
+    id: Number(team.id ?? 0),
+    name: String(team.name ?? ''),
+    i18n: normalizeEntityI18n(team.i18n),
+    working_directory: typeof team.working_directory === 'string' ? team.working_directory : '',
+    config: typeof team.config === 'object' && team.config !== null
+      ? team.config as Record<string, unknown>
+      : {},
+    max_function_calls: null,
+    enabled: Boolean(team.enabled),
+    created_at: String(team.created_at ?? ''),
+    updated_at: String(team.updated_at ?? ''),
+  };
+}
+
+function normalizeTeamMember(member: RawTeamMember): TeamMember {
+  return {
+    id: Number(member.id ?? 0),
+    name: String(member.name ?? ''),
+    i18n: normalizeEntityI18n(member.i18n),
+    role_template_id: Number(member.role_template_id ?? 0),
+  };
+}
+
+function normalizeTeamRoomDetail(room: RawTeamRoomDetail): TeamRoomDetail {
+  return {
+    id: Number(room.id ?? 0),
+    name: String(room.name ?? ''),
+    i18n: normalizeEntityI18n(room.i18n),
+    type: typeof room.type === 'string' ? room.type : undefined,
+    initial_topic: typeof room.initial_topic === 'string' ? room.initial_topic : null,
+    max_turns: Number(room.max_turns ?? 0),
+    agents: Array.isArray(room.agents)
+      ? room.agents.map((agent) => String(agent))
+      : [],
+    agent_ids: Array.isArray(room.agent_ids)
+      ? room.agent_ids.map((agentId) => Number(agentId)).filter((agentId) => Number.isFinite(agentId))
+      : [],
+    biz_id: typeof room.biz_id === 'string' && room.biz_id.trim() ? room.biz_id : null,
+    tags: Array.isArray(room.tags)
+      ? room.tags.filter((tag): tag is string => typeof tag === 'string')
+      : [],
+  };
+}
+
+function normalizeTeamDetail(team: RawTeamDetail): TeamDetail {
+  return {
+    ...normalizeTeamSummary(team),
+    members: Array.isArray(team.agents) ? team.agents.map(normalizeTeamMember) : [],
+    rooms: Array.isArray(team.rooms) ? team.rooms.map(normalizeTeamRoomDetail) : [],
+  };
+}
+
+function normalizeRoleTemplateSummary(template: RawRoleTemplateSummary): RoleTemplateSummary {
+  return {
+    id: Number(template.id ?? 0),
+    name: String(template.name ?? ''),
+    i18n: normalizeEntityI18n(template.i18n),
+    model: String(template.model ?? ''),
+    soul: String(template.soul ?? ''),
+    type: template.type,
+  };
+}
+
+function normalizeRoleTemplateDetail(template: RawRoleTemplateSummary, templateId?: number): RoleTemplateDetail {
+  return {
+    ...normalizeRoleTemplateSummary(template),
+    id: Number(template.id ?? templateId ?? 0),
+    soul: String(template.soul ?? ''),
+    allowed_tools: Array.isArray(template.allowed_tools)
+      ? template.allowed_tools.map((item) => String(item))
+      : null,
   };
 }
 
@@ -407,33 +577,18 @@ export async function createTeamRoom(teamId: number, payload: {
 }
 
 export async function getTeams(): Promise<TeamSummary[]> {
-  const data = await requestJson<{ teams: TeamSummary[] }>('/teams/list.json');
-  return data.teams;
+  const data = await requestJson<{ teams: RawTeamSummary[] }>('/teams/list.json');
+  return data.teams.map(normalizeTeamSummary);
 }
 
 export async function getRoleTemplates(): Promise<RoleTemplateSummary[]> {
   const data = await requestJson<{ role_templates: RawRoleTemplateSummary[] }>('/role_templates/list.json');
-  return data.role_templates.map((template) => ({
-    id: Number(template.id ?? 0),
-    name: String(template.name ?? ''),
-    model: String(template.model ?? ''),
-    soul: String(template.soul ?? ''),
-    type: template.type,
-  }));
+  return data.role_templates.map(normalizeRoleTemplateSummary);
 }
 
 export async function getRoleTemplateDetail(templateId: number): Promise<RoleTemplateDetail> {
   const data = await requestJson<RawRoleTemplateSummary>(`/role_templates/${templateId}.json`);
-  return {
-    id: Number(data.id ?? templateId),
-    name: String(data.name ?? ''),
-    model: String(data.model ?? ''),
-    soul: String(data.soul ?? ''),
-    type: data.type,
-    allowed_tools: Array.isArray(data.allowed_tools)
-      ? data.allowed_tools.map((item) => String(item))
-      : null,
-  };
+  return normalizeRoleTemplateDetail(data, templateId);
 }
 
 export async function createRoleTemplate(payload: {
@@ -446,16 +601,7 @@ export async function createRoleTemplate(payload: {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  return {
-    id: Number(data.id ?? 0),
-    name: String(data.name ?? ''),
-    model: String(data.model ?? ''),
-    soul: String(data.soul ?? ''),
-    type: data.type,
-    allowed_tools: Array.isArray(data.allowed_tools)
-      ? data.allowed_tools.map((item) => String(item))
-      : null,
-  };
+  return normalizeRoleTemplateDetail(data);
 }
 
 export async function updateRoleTemplate(templateId: number, payload: {
@@ -468,16 +614,7 @@ export async function updateRoleTemplate(templateId: number, payload: {
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  return {
-    id: Number(data.id ?? templateId),
-    name: String(data.name ?? ''),
-    model: String(data.model ?? ''),
-    soul: String(data.soul ?? ''),
-    type: data.type,
-    allowed_tools: Array.isArray(data.allowed_tools)
-      ? data.allowed_tools.map((item) => String(item))
-      : null,
-  };
+  return normalizeRoleTemplateDetail(data, templateId);
 }
 
 export async function deleteRoleTemplate(templateId: number): Promise<{ status: string; id: number; name: string }> {
@@ -509,7 +646,8 @@ export async function getDirectories(): Promise<DirectoriesConfig> {
 }
 
 export async function getTeamDetail(teamId: number): Promise<TeamDetail> {
-  return requestJson<TeamDetail>(`/teams/${teamId}.json`);
+  const data = await requestJson<RawTeamDetail>(`/teams/${teamId}.json`);
+  return normalizeTeamDetail(data);
 }
 
 export async function getDeptTree(teamId: number): Promise<DeptTreeNode | null> {

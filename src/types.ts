@@ -2,11 +2,13 @@ export type AgentStatus = 'active' | 'idle' | 'failed';
 export type AgentActivityType = 'llm_infer' | 'tool_call' | 'compact' | 'agent_state';
 export type AgentActivityStatus = 'started' | 'succeeded' | 'failed' | 'cancelled';
 export type RoomType = 'private' | 'group';
+export type I18nText = Record<string, string>;
+export type EntityI18n = Record<string, I18nText>;
 
 export interface AgentInfo {
   id?: number | null;
   name: string;
-  display_name?: string;
+  i18n: EntityI18n;
   employee_number?: number | null;
   role_template_id?: number | null;
   model: string;
@@ -45,7 +47,7 @@ export interface AgentActivity {
 export interface AgentSnapshot {
   id: number;
   name: string;
-  display_name?: string;
+  i18n: EntityI18n;
   team_id?: number;
   model?: string;
   driver?: string;
@@ -57,6 +59,7 @@ export interface AgentSnapshot {
 export interface RoomInfo {
   room_id: number;
   room_name: string;
+  i18n: EntityI18n;
   room_type: RoomType;
   state: string;
   need_scheduling: boolean;
@@ -67,7 +70,7 @@ export interface RoomInfo {
 }
 
 export interface MessageInfo {
-  sender: string;
+  sender_id: number;
   content: string;
   time: string;
 }
@@ -126,8 +129,9 @@ export interface RoomState extends RoomInfo {
 }
 
 export interface RoomMemberProfile {
+  id: number;
   name: string;
-  display_name?: string;
+  i18n: EntityI18n;
   employee_number: number | null;
   role_template_name: string | null;
   is_leader: boolean;
@@ -136,7 +140,7 @@ export interface RoomMemberProfile {
 export interface TeamSummary {
   id: number;
   name: string;
-  display_name?: string;
+  i18n: EntityI18n;
   working_directory: string;
   config: Record<string, unknown>;
   max_function_calls: number | null;
@@ -148,7 +152,7 @@ export interface TeamSummary {
 export interface TeamRoomDetail {
   id: number;
   name: string;
-  display_name?: string;
+  i18n: EntityI18n;
   type?: string;
   initial_topic: string | null;
   max_turns: number;
@@ -197,8 +201,9 @@ export interface TeamDetail extends TeamSummary {
 }
 
 export interface TeamMember {
+  id: number;
   name: string;
-  display_name?: string;
+  i18n: EntityI18n;
   role_template_id: number;
 }
 
@@ -221,6 +226,7 @@ export interface CreateTeamPayload {
 export interface RoleTemplateSummary {
   id: number;
   name: string;
+  i18n: EntityI18n;
   model: string;
   soul?: string;
   type?: string | null;

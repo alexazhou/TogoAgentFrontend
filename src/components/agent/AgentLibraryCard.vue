@@ -34,7 +34,10 @@ const { t } = useI18n();
       <AgentTemplateCard
         v-for="agentName in filteredAgents"
         :key="agentName"
-        :agent-name="agentName"
+        :title="agentName"
+        :subtitle="t('agent.cardSubtitle')"
+        :avatar-name="agentName"
+        :avatar-seed="agentName"
         :selected="selectedAgents.includes(agentName)"
         @click="emit('toggleAgent', agentName)"
       />

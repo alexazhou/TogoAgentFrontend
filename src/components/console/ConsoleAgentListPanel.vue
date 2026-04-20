@@ -8,7 +8,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  selectAgent: [agentName: string];
+  selectAgent: [agentId: number];
 }>();
 
 const agents = useTeamAgents(() => props.teamId);

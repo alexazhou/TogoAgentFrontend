@@ -1,6 +1,7 @@
 import { computed, ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AgentInfo, AgentStatus, RoleTemplateSummary } from '../types';
+import { displayName } from '../utils';
 
 export function useAgentActivityDialogState(
   agents: Ref<AgentInfo[]>,
@@ -9,11 +10,15 @@ export function useAgentActivityDialogState(
   const { t } = useI18n();
   const open = ref(false);
   const selectedAgentId = ref<number | null>(null);
-  const selectedAgentName = ref<string | null>(null);
 
   const roleTemplateNameMap = computed(
-    () => new Map(roleTemplates.value.map((template) => [template.id, template.name])),
+    () => new Map(roleTemplates.value.map((template) => [template.id, displayName(template)])),
   );
+
+  const selectedAgentName = computed<string | null>(() => {
+    const agent = agents.value.find((item) => item.id === selectedAgentId.value);
+    return agent ? displayName(agent) : null;
+  });
 
   const selectedAgentStatus = computed<AgentStatus | null>(
     () => agents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
@@ -28,16 +33,14 @@ export function useAgentActivityDialogState(
     return roleTemplateNameMap.value.get(roleTemplateId) ?? t('agent.templateFallback', { id: roleTemplateId });
   });
 
-  function openAgent(agentName: string): void {
-    selectedAgentId.value = agents.value.find((agent) => agent.name === agentName)?.id ?? null;
-    selectedAgentName.value = agentName;
+  function openAgent(agentId: number): void {
+    selectedAgentId.value = agentId;
     open.value = true;
   }
 
   function closeAgentDetail(): void {
     open.value = false;
     selectedAgentId.value = null;
-    selectedAgentName.value = null;
   }
 
   return {

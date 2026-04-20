@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AgentCardBase from '../agent/AgentCardBase.vue';
 import AgentTemplateCard from '../agent/AgentTemplateCard.vue';
 import type { MemberDriverOption, MemberModelOption, MemberTemplateOption } from '../../composables/useMemberEditorDialog';
@@ -33,12 +34,14 @@ const emit = defineEmits<{
   'update:driver': [value: string];
 }>();
 
+const { t } = useI18n();
+
 const memberNameModel = computed({
   get: () => props.memberName,
   set: (value: string) => emit('update:memberName', value),
 });
 
-const memberModelValue = computed(() => props.memberModel || props.currentTemplateModel || '自动');
+const memberModelValue = computed(() => props.memberModel || props.currentTemplateModel || t('common.auto'));
 const memberModelModel = computed({
   get: () => props.memberModel,
   set: (value: string) => emit('update:memberModel', value),
@@ -59,9 +62,9 @@ const driverModel = computed({
   set: (value: string) => emit('update:driver', value),
 });
 
-const employeeNumberDisplay = computed(() => props.employeeNumber || '待分配');
+const employeeNumberDisplay = computed(() => props.employeeNumber || t('member.employeePending'));
 const canSaveMember = computed(() => Boolean(props.memberName.trim() && props.selectedTemplateId !== null));
-const memberTemplateSoul = computed(() => props.currentTemplateSoul.trim() || '当前模板未配置 soul。');
+const memberTemplateSoul = computed(() => props.currentTemplateSoul.trim() || t('member.noSoul'));
 const selectedMemberAvatarSeed = computed(() => (
   props.teamName && props.memberName.trim()
     ? `${props.teamName}::${props.memberName.trim()}`
@@ -78,37 +81,37 @@ const selectedMemberAvatarSeed = computed(() => (
       >
         <div class="member-editor-head">
           <div class="member-editor-title-row">
-            <h2 class="member-editor-title">团队成员</h2>
-            <p class="section-eyebrow">Team Member</p>
+            <h2 class="member-editor-title">{{ t('member.title') }}</h2>
+            <p class="section-eyebrow">{{ t('member.eyebrow') }}</p>
           </div>
           <p v-if="status" class="member-editor-status">{{ status }}</p>
         </div>
 
         <div class="member-editor-summary">
           <label class="member-editor-field">
-            <span>工号</span>
+            <span>{{ t('member.employeeId') }}</span>
             <input
               :value="employeeNumberDisplay"
               class="member-editor-input member-editor-input--readonly"
               type="text"
               readonly
             />
-            <small class="member-editor-field-note">工号入职时自动生成，不支持修改</small>
+            <small class="member-editor-field-note">{{ t('member.employeeNote') }}</small>
           </label>
           <label class="member-editor-field">
-            <span>成员名称</span>
+            <span>{{ t('member.name') }}</span>
             <input
               v-model="memberNameModel"
               class="member-editor-input"
               :class="editable ? 'member-editor-input--editable' : 'member-editor-input--readonly'"
               type="text"
-              placeholder="请输入名称"
+              :placeholder="t('member.namePlaceholder')"
               :readonly="!editable"
             />
-            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
+            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">{{ t('member.employeeNote') }}</small>
           </label>
           <label class="member-editor-field">
-            <span>模型</span>
+            <span>{{ t('member.model') }}</span>
             <select
               v-if="editable"
               v-model="memberModelModel"
@@ -125,10 +128,10 @@ const selectedMemberAvatarSeed = computed(() => (
               type="text"
               readonly
             />
-            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
+            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">{{ t('member.employeeNote') }}</small>
           </label>
           <label class="member-editor-field">
-            <span>驱动</span>
+            <span>{{ t('member.driver') }}</span>
             <select
               v-model="driverModel"
               class="member-editor-input"
@@ -139,14 +142,14 @@ const selectedMemberAvatarSeed = computed(() => (
                 {{ driverOption.label }}
               </option>
             </select>
-            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">占位说明</small>
+            <small class="member-editor-field-note member-editor-field-note--placeholder" aria-hidden="true">{{ t('member.employeeNote') }}</small>
           </label>
         </div>
 
         <div class="member-editor-body">
           <section class="member-selected-panel">
             <div class="member-selected-head">
-              <span class="panel-label">已选角色</span>
+              <span class="panel-label">{{ t('member.selectedRole') }}</span>
             </div>
             <div class="member-selected-body">
               <AgentCardBase
@@ -161,14 +164,14 @@ const selectedMemberAvatarSeed = computed(() => (
                 variant="graph"
               />
               <div v-else class="member-template-empty member-selected-empty">
-                当前还没有选中模板
+                {{ t('member.noTemplateSelected') }}
               </div>
             </div>
           </section>
 
           <section class="member-soul-panel">
             <div class="member-soul-head">
-              <span class="panel-label">Soul</span>
+              <span class="panel-label">{{ t('member.soul') }}</span>
             </div>
             <textarea
               :value="memberTemplateSoul"
@@ -180,12 +183,12 @@ const selectedMemberAvatarSeed = computed(() => (
 
         <section v-if="editable" class="member-template-panel">
           <div class="member-template-head">
-            <span class="panel-label">可选角色</span>
+            <span class="panel-label">{{ t('member.availableRoles') }}</span>
             <label class="member-template-search">
               <input
                 v-model="keywordModel"
                 type="text"
-                placeholder="搜索角色"
+                :placeholder="t('member.searchRole')"
               />
             </label>
           </div>
@@ -197,7 +200,10 @@ const selectedMemberAvatarSeed = computed(() => (
               class="member-template-option"
             >
               <AgentTemplateCard
-                :agent-name="item.name"
+                :title="item.displayName"
+                :subtitle="item.name"
+                :avatar-name="item.name"
+                :avatar-seed="item.name"
                 :selected="false"
               />
               <button
@@ -205,19 +211,19 @@ const selectedMemberAvatarSeed = computed(() => (
                 class="member-template-use"
                 @click="selectedTemplateModel = item.id"
               >
-                使用
+                {{ t('common.use') }}
               </button>
             </div>
 
             <div v-if="!templateOptions.length" class="member-template-empty">
-              当前没有可用模板
+              {{ t('member.noAvailableTemplates') }}
             </div>
           </div>
         </section>
 
         <div class="member-editor-actions">
           <button type="button" class="ghost-button" @click="emit('close')">
-            {{ editable ? '取消' : '关闭' }}
+            {{ editable ? t('common.cancel') : t('common.close') }}
           </button>
           <button
             v-if="editable"
@@ -226,7 +232,7 @@ const selectedMemberAvatarSeed = computed(() => (
             :disabled="!canSaveMember"
             @click="emit('save')"
           >
-            保存
+            {{ t('common.save') }}
           </button>
         </div>
       </section>

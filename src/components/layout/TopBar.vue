@@ -42,7 +42,7 @@ const currentLocale = computed<AppLocale>(() => i18n.global.locale.value);
 
 const activeTeamName = computed(() => {
   const team = props.teams.find((team) => team.id === props.activeTeamId);
-  return team ? displayName(team.name, team.display_name) : t('topbar.selectTeam');
+  return team ? displayName(team) : t('topbar.selectTeam');
 });
 const enabledTeams = computed(() => props.teams
   .filter((team) => team.enabled)
@@ -177,7 +177,7 @@ function activeOptionId(): string | undefined {
 }
 
 function optionLabel(team: TeamSummary): string {
-  return `${displayName(team.name, team.display_name)} #${team.id}`;
+  return `${displayName(team)} #${team.id}`;
 }
 
 </script>
@@ -239,7 +239,7 @@ function optionLabel(team: TeamSummary): string {
               @click="selectTeam(team.id)"
               @keydown="handleTeamOptionKeydown($event, team.id)"
             >
-              <span class="team-switcher-option__name">{{ displayName(team.name, team.display_name) }}</span>
+              <span class="team-switcher-option__name">{{ displayName(team) }}</span>
               <span class="team-switcher-option__meta">#{{ team.id }}</span>
             </button>
           </section>
@@ -263,7 +263,7 @@ function optionLabel(team: TeamSummary): string {
               @click="selectTeam(team.id)"
               @keydown="handleTeamOptionKeydown($event, team.id)"
             >
-              <span class="team-switcher-option__name">{{ displayName(team.name, team.display_name) }}</span>
+              <span class="team-switcher-option__name">{{ displayName(team) }}</span>
               <span class="team-switcher-option__meta">#{{ team.id }}</span>
             </button>
           </section>

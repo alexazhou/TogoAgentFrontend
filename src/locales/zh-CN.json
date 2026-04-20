@@ -114,6 +114,7 @@
     "parseFailed": "解析失败",
     "sendToRoomPrefix": "To 房间【{room}】: ",
     "backupLabel": "备选Agent",
+    "cardSubtitle": "智能体",
     "searchPlaceholder": "搜索Agent",
     "agentLoadFailed": "Agent 加载失败",
     "teamMembersLabel": "团队成员"
@@ -191,6 +192,7 @@
   },
   "member": {
     "title": "团队成员",
+    "eyebrow": "团队成员",
     "employeeId": "工号",
     "employeeNote": "工号入职时自动生成，不支持修改",
     "employeePending": "待分配",
@@ -202,11 +204,13 @@
     "noTemplateSelected": "当前还没有选中模板",
     "availableRoles": "可选角色",
     "searchRole": "搜索角色",
+    "soul": "Soul",
     "noSoul": "暂无 Soul 预览",
     "noAvailableTemplates": "当前没有可用模板",
     "newMember": "新成员"
   },
   "dept": {
+    "eyebrow": "部门",
     "editTitle": "编辑部门",
     "viewTitle": "查看部门",
     "manager": "主管：{name}",
@@ -236,11 +240,13 @@
     "noRole": "未配置角色"
   },
   "quickInit": {
+    "eyebrow": "快速初始化",
     "title": "快速初始化",
     "description": "检测到当前未配置大模型服务，请先完成基础配置以启用 Agent 对话能力。",
     "apiUrl": "API 地址",
     "apiUrlHint": "示例：OpenAI / DeepSeek / Qwen 等兼容接口",
     "serviceType": "服务接口类型",
+    "apiKey": "API Key",
     "apiKeyHide": "隐藏",
     "apiKeyShow": "显示",
     "modelName": "模型名称",

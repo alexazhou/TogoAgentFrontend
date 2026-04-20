@@ -9,7 +9,7 @@ import TeamInfoCard from '../components/team/TeamInfoCard.vue';
 import TeamMembersCard from '../components/team/TeamMembersCard.vue';
 import { loadRoleTemplates } from '../realtime/runtimeStore';
 import { useRoleTemplates } from '../realtime/selectors';
-import { displayName } from '../utils';
+import { displayName, i18nText } from '../utils';
 import type { AgentInfo, AgentStatus, TeamDetail } from '../types';
 
 const route = useRoute();
@@ -21,11 +21,14 @@ const errorMessage = ref('');
 const agentDetailOpen = ref(false);
 const teamAgents = ref<AgentInfo[]>([]);
 const selectedAgentId = ref<number | null>(null);
-const selectedAgentName = ref<string | null>(null);
 
 const teamId = computed(() => Number(route.params.teamId));
 const roleTemplates = useRoleTemplates();
 const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
+const selectedAgentName = computed<string | null>(() => {
+  const agent = teamAgents.value.find((item) => item.id === selectedAgentId.value);
+  return agent ? displayName(agent) : null;
+});
 const selectedAgentStatus = computed<AgentStatus | null>(() =>
   teamAgents.value.find((agent) => agent.id === selectedAgentId.value)?.status ?? null,
 );
@@ -34,14 +37,31 @@ const selectedAgentTemplateName = computed<string | null>(() => {
   if (typeof roleTemplateId !== 'number') {
     return null;
   }
-  return roleTemplates.value.find((template) => template.id === roleTemplateId)?.name ?? `模板 #${roleTemplateId}`;
+  const template = roleTemplates.value.find((item) => item.id === roleTemplateId);
+  return template ? displayName(template) : `模板 #${roleTemplateId}`;
 });
 const selectedAgentTemplates = computed<Record<string, string>>(() =>
   Object.fromEntries((team.value?.members ?? []).map((member) => [
     member.name,
-    roleTemplates.value.find((template) => template.id === member.role_template_id)?.name || `模板 #${member.role_template_id}`,
+    (() => {
+      const template = roleTemplates.value.find((item) => item.id === member.role_template_id);
+      return template ? displayName(template) : `模板 #${member.role_template_id}`;
+    })(),
   ])),
 );
+
+function roomMemberNames(roomId: number): string[] {
+  const room = team.value?.rooms.find((item) => item.id === roomId);
+  if (!room) {
+    return [];
+  }
+
+  const memberMap = new Map((team.value?.members ?? []).map((member) => [member.id, member]));
+  return (room.agent_ids ?? []).map((agentId) => {
+    const member = memberMap.get(agentId);
+    return member ? displayName(member) : String(agentId);
+  });
+}
 
 async function loadDetail(): Promise<void> {
   loading.value = true;
@@ -70,14 +90,12 @@ function openRoom(roomId: number): void {
 
 function openAgentDetail(agentName: string): void {
   selectedAgentId.value = teamAgents.value.find((agent) => agent.name === agentName)?.id ?? null;
-  selectedAgentName.value = agentName;
   agentDetailOpen.value = true;
 }
 
 function closeAgentDetail(): void {
   agentDetailOpen.value = false;
   selectedAgentId.value = null;
-  selectedAgentName.value = null;
 }
 
 watch(() => route.params.teamId, () => {
@@ -97,7 +115,7 @@ onMounted(() => {
     <template v-else-if="team">
       <div class="form-grid">
         <TeamInfoCard
-          :name="team.name"
+          :name="displayName(team)"
           :working-directory="team.working_directory || ''"
           :slogan="String(team.config?.slogan || '')"
           :rules="String(team.config?.rules || '')"
@@ -130,13 +148,13 @@ onMounted(() => {
               @click="openRoom(room.id)"
             >
               <div class="room-tile-head">
-                <strong>{{ displayName(room.name, room.display_name) }}</strong>
+                <strong>{{ i18nText(room.i18n, 'display_name', room.name) }}</strong>
                 <span>{{ room.agents.length }} 人</span>
               </div>
-              <p>{{ room.initial_topic || '无初始话题' }}</p>
+              <p>{{ i18nText(room.i18n, 'initial_topic', room.initial_topic || '无初始话题') }}</p>
               <div class="room-tile-meta">
                 <span>max_turns {{ room.max_turns }}</span>
-                <span>{{ room.agents.join(' / ') }}</span>
+                <span>{{ roomMemberNames(room.id).join(' / ') }}</span>
               </div>
             </button>
 

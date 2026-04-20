@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
+
 defineProps<{
   open: boolean;
   editable?: boolean;
@@ -13,6 +15,8 @@ const emit = defineEmits<{
   'update:departmentName': [value: string];
   'update:departmentResponsibility': [value: string];
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -24,41 +28,41 @@ const emit = defineEmits<{
       >
         <div class="department-editor-head">
           <div class="department-editor-title-row">
-            <h2 class="department-editor-title">{{ editable ? '编辑部门' : '查看部门' }}</h2>
-            <p class="section-eyebrow">Department</p>
+            <h2 class="department-editor-title">{{ editable ? t('dept.editTitle') : t('dept.viewTitle') }}</h2>
+            <p class="section-eyebrow">{{ t('dept.eyebrow') }}</p>
           </div>
-          <p class="department-editor-meta">主管：{{ memberName }}</p>
+          <p class="department-editor-meta">{{ t('dept.manager', { name: memberName }) }}</p>
         </div>
 
         <label class="department-editor-field">
-          <span>部门名称</span>
+          <span>{{ t('dept.name') }}</span>
           <input
             :value="departmentName"
             class="department-editor-input"
             :class="{ 'department-editor-input--readonly': !editable }"
             type="text"
-            :placeholder="editable ? '请输入部门名称' : ''"
+            :placeholder="editable ? t('dept.namePlaceholderEditable') : ''"
             :readonly="!editable"
             @input="emit('update:departmentName', ($event.target as HTMLInputElement).value)"
           />
         </label>
 
         <label class="department-editor-field">
-          <span>部门责任</span>
+          <span>{{ t('dept.responsibility') }}</span>
           <textarea
             :value="departmentResponsibility"
             class="department-editor-input department-editor-textarea"
             :class="{ 'department-editor-input--readonly': !editable }"
             rows="4"
-            :placeholder="editable ? '请输入部门责任' : ''"
+            :placeholder="editable ? t('dept.responsibilityPlaceholderEditable') : ''"
             :readonly="!editable"
             @input="emit('update:departmentResponsibility', ($event.target as HTMLTextAreaElement).value)"
           ></textarea>
         </label>
 
         <div class="department-editor-actions">
-          <button type="button" class="ghost-button" @click="emit('close')">{{ editable ? '取消' : '关闭' }}</button>
-          <button v-if="editable" type="button" class="secondary-button" @click="emit('save')">保存</button>
+          <button type="button" class="ghost-button" @click="emit('close')">{{ editable ? t('common.cancel') : t('common.close') }}</button>
+          <button v-if="editable" type="button" class="secondary-button" @click="emit('save')">{{ t('common.save') }}</button>
         </div>
       </section>
     </div>

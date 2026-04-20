@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import type { RoomState } from '../../types';
+import { i18nText } from '../../utils';
 
 defineProps<{
   loading: boolean;
@@ -59,7 +60,7 @@ function isDeptRoom(room: RoomState): boolean {
               >
                 {{ room.room_type === 'private' ? t('room.private') : t('room.group') }}
               </span>
-              <strong>{{ room.room_name }}</strong>
+              <strong>{{ i18nText(room.i18n, 'display_name', room.room_name) }}</strong>
               <span v-if="room.unread > 0" class="unread-inline active">{{ room.unread }}</span>
             </div>
             <div class="room-head-right">

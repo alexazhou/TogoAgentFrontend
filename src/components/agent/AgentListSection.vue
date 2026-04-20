@@ -9,7 +9,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  selectAgent: [agentName: string];
+  selectAgent: [agentId: number];
 }>();
 
 const { t } = useI18n();
@@ -23,6 +23,10 @@ function statusLabel(status: AgentInfo['status']): string {
   }
   return t('agent.status.idle');
 }
+
+function selectAgent(agent: AgentInfo): void {
+  emit('selectAgent', agent.id as number);
+}
 </script>
 
 <template>
@@ -35,16 +39,16 @@ function statusLabel(status: AgentInfo['status']): string {
     <div class="sidebar-scroll agent-list">
       <button
         v-for="agent in agents"
-        :key="agent.name"
+        :key="agent.id ?? agent.name"
         class="agent-card sidebar-item-card"
         type="button"
-        @click="emit('selectAgent', agent.name)"
+        @click="selectAgent(agent)"
       >
         <div class="agent-primary">
-          <img class="agent-avatar" :src="getAgentAvatarUrl(agent.name)" :alt="`${displayName(agent.name, agent.display_name)} avatar`" />
+          <img class="agent-avatar" :src="getAgentAvatarUrl(agent.name)" :alt="`${displayName(agent)} avatar`" />
           <div class="agent-copy">
             <strong class="agent-name-line">
-              <span class="agent-name">{{ displayName(agent.name, agent.display_name) }}</span>
+              <span class="agent-name">{{ displayName(agent) }}</span>
             </strong>
             <p>{{ agent.model }}</p>
           </div>

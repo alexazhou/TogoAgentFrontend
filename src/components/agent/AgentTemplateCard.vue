@@ -2,7 +2,10 @@
 import AgentCardBase from './AgentCardBase.vue';
 
 defineProps<{
-  agentName: string;
+  title: string;
+  subtitle: string;
+  avatarName: string;
+  avatarSeed?: string;
   selected: boolean;
   variant?: 'graph';
 }>();
@@ -15,9 +18,10 @@ defineEmits<{
 <template>
   <AgentCardBase
     class="agent-card"
-    :title="agentName"
-    subtitle="Agent"
-    :avatar-name="agentName"
+    :title="title"
+    :subtitle="subtitle"
+    :avatar-name="avatarName"
+    :avatar-seed="avatarSeed"
     :selected="selected"
     :variant="variant || 'graph'"
     @click="$emit('click')"

@@ -44,6 +44,30 @@ export type FrontendRealtimeEvent =
 
 type RawRecord = Record<string, unknown>;
 
+function normalizeEntityI18n(value: unknown) {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const normalized: Record<string, Record<string, string>> = {};
+  for (const [field, rawTextMap] of Object.entries(value as RawRecord)) {
+    if (!rawTextMap || typeof rawTextMap !== 'object') {
+      continue;
+    }
+
+    const textMap: Record<string, string> = {};
+    for (const [locale, text] of Object.entries(rawTextMap as RawRecord)) {
+      if (typeof text === 'string') {
+        textMap[locale] = text;
+      }
+    }
+
+    normalized[field] = textMap;
+  }
+
+  return normalized;
+}
+
 function normalizeAgentStatus(value: unknown): AgentStatus {
   const normalized = String(value ?? '').trim().toLowerCase();
   if (normalized === 'active' || normalized === 'failed') {
@@ -76,6 +100,7 @@ function normalizeAgentSnapshot(value: unknown): AgentSnapshot | null {
   return {
     id,
     name: String(raw.name ?? ''),
+    i18n: normalizeEntityI18n(raw.i18n),
     ...(typeof raw.team_id === 'number' && { team_id: raw.team_id }),
     ...(typeof raw.model === 'string' && { model: raw.model }),
     ...(typeof raw.driver === 'string' && { driver: raw.driver }),
@@ -139,7 +164,7 @@ export function normalizeWsEventPayload(payload: unknown): FrontendRealtimeEvent
       roomName: String(gtRoom?.name ?? ''),
       senderId: Number(raw.sender_id ?? 0),
       message: {
-        sender: '',
+        sender_id: Number(raw.sender_id ?? 0),
         content: String(raw.content ?? ''),
         time: String(raw.time ?? ''),
       },

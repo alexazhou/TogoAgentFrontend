@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch }
 import { useI18n } from 'vue-i18n';
 import { postRoomMessage } from '../../api';
 import { useConsoleMessageScroll } from '../../composables/useConsoleMessageScroll';
+import { displayName } from '../../utils';
 import ChatPanel from '../chat/ChatPanel.vue';
 import type {
   AgentInfo,
@@ -26,7 +27,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   updateError: [value: string];
-  clickWorkingAgent: [agentName: string];
+  clickWorkingAgent: [agentId: number];
 }>();
 
 const messageViewport = useTemplateRef('messageViewport');
@@ -96,7 +97,7 @@ function findDeptNodeByName(tree: DeptTreeNode | null, deptName: string): DeptTr
   return null;
 }
 
-const currentDeptLeaderName = computed<string | null>(() => {
+const currentDeptLeaderId = computed<number | null>(() => {
   const room = props.currentRoom;
   if (!room || !isDeptRoom(room)) {
     return null;
@@ -109,9 +110,7 @@ const currentDeptLeaderName = computed<string | null>(() => {
   if (!deptNode || typeof deptNode.manager_id !== 'number') {
     return null;
   }
-
-  const leader = props.agents.find((agent) => agent.id === deptNode.manager_id);
-  return leader?.name ?? null;
+  return deptNode.manager_id;
 });
 
 const memberProfiles = computed<RoomMemberProfile[]>(() => {
@@ -120,7 +119,7 @@ const memberProfiles = computed<RoomMemberProfile[]>(() => {
   }
 
   const agentMap = new Map(props.agents.map((agent) => [agent.id, agent]));
-  const templateMap = new Map(props.roleTemplates.map((template) => [template.id, template.name]));
+  const templateMap = new Map(props.roleTemplates.map((template) => [template.id, displayName(template)]));
   const memberAgents: AgentInfo[] = [];
 
   for (const agentId of props.currentRoom.agents) {
@@ -133,10 +132,12 @@ const memberProfiles = computed<RoomMemberProfile[]>(() => {
   return memberAgents.map((agent) => {
     const templateName = agent.role_template_id ? (templateMap.get(agent.role_template_id) ?? null) : null;
     return {
+      id: agent.id as number,
       name: agent.name,
+      i18n: agent.i18n,
       employee_number: typeof agent.employee_number === 'number' ? agent.employee_number : null,
       role_template_name: templateName,
-      is_leader: agent.name === currentDeptLeaderName.value,
+      is_leader: agent.id === currentDeptLeaderId.value,
     };
   });
 });

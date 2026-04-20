@@ -114,6 +114,7 @@
     "parseFailed": "Parse Failed",
     "sendToRoomPrefix": "To Room [{room}]: ",
     "backupLabel": "Backup Agents",
+    "cardSubtitle": "Agent",
     "searchPlaceholder": "Search Agents",
     "agentLoadFailed": "Failed to load agents",
     "teamMembersLabel": "Team Members"
@@ -191,6 +192,7 @@
   },
   "member": {
     "title": "Team Member",
+    "eyebrow": "Team Member",
     "employeeId": "Employee ID",
     "employeeNote": "Employee ID is auto-generated and cannot be modified",
     "employeePending": "Pending",
@@ -202,11 +204,13 @@
     "noTemplateSelected": "No template selected",
     "availableRoles": "Available Roles",
     "searchRole": "Search roles",
+    "soul": "Soul",
     "noSoul": "No soul preview",
     "noAvailableTemplates": "No available templates",
     "newMember": "New Member"
   },
   "dept": {
+    "eyebrow": "Department",
     "editTitle": "Edit Department",
     "viewTitle": "View Department",
     "manager": "Manager: {name}",
@@ -236,11 +240,13 @@
     "noRole": "No role configured"
   },
   "quickInit": {
+    "eyebrow": "Quick Setup",
     "title": "Quick Init",
     "description": "No LLM service detected. Please complete basic configuration to enable Agent conversations.",
     "apiUrl": "API URL",
     "apiUrlHint": "Example: OpenAI / DeepSeek / Qwen compatible APIs",
     "serviceType": "Service Type",
+    "apiKey": "API Key",
     "apiKeyHide": "Hide",
     "apiKeyShow": "Show",
     "modelName": "Model Name",

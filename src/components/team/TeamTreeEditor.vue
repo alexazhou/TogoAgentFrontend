@@ -9,6 +9,7 @@ import {
   type MemberModelOption,
   type MemberTemplateOption,
 } from '../../composables/useMemberEditorDialog';
+import { displayName } from '../../utils';
 import DepartmentEditorDialog from './DepartmentEditorDialog.vue';
 import TeamMembersCard from './TeamMembersCard.vue';
 import MemberEditorDialog from './MemberEditorDialog.vue';
@@ -106,6 +107,7 @@ function createPendingNode(): DraftOrgNode {
 }
 
 function createDepartmentNameAllocator(initialDepartmentNames: string[] = []): () => string {
+  const newDeptPrefix = t('teamTree.newDeptPrefix');
   const usedDepartmentNames = new Set<string>();
   let maxDepartmentIndex = 0;
 
@@ -116,7 +118,7 @@ function createDepartmentNameAllocator(initialDepartmentNames: string[] = []): (
     }
 
     usedDepartmentNames.add(trimmedDepartmentName);
-    const matched = trimmedDepartmentName.match(/^新部门(\d+)$/);
+    const matched = trimmedDepartmentName.match(new RegExp(`^${newDeptPrefix}(\\d+)$`));
     if (!matched) {
       return;
     }
@@ -126,11 +128,11 @@ function createDepartmentNameAllocator(initialDepartmentNames: string[] = []): (
 
   return () => {
     let nextDepartmentIndex = maxDepartmentIndex + 1;
-    while (usedDepartmentNames.has(`新部门${nextDepartmentIndex}`)) {
+    while (usedDepartmentNames.has(`${newDeptPrefix}${nextDepartmentIndex}`)) {
       nextDepartmentIndex += 1;
     }
 
-    const nextDepartmentName = `新部门${nextDepartmentIndex}`;
+    const nextDepartmentName = `${newDeptPrefix}${nextDepartmentIndex}`;
     usedDepartmentNames.add(nextDepartmentName);
     maxDepartmentIndex = nextDepartmentIndex;
     return nextDepartmentName;
@@ -147,10 +149,10 @@ function parseDriverTypeValue(driver: string): string {
 
 function resolveDefaultModelLabel(config: FrontendConfig | null): string {
   if (!config?.default_model) {
-    return '自动';
+    return t('common.auto');
   }
 
-  return '自动';
+  return t('common.auto');
 }
 
 function buildModelCatalog(config: FrontendConfig | null): MemberModelOption[] {
@@ -170,7 +172,7 @@ function buildModelCatalog(config: FrontendConfig | null): MemberModelOption[] {
 
 function buildDriverCatalog(config: FrontendConfig | null): MemberDriverOption[] {
   return [
-    { value: '', label: '自动' },
+    { value: '', label: t('common.auto') },
     ...((config?.driver_types ?? []).map((item) => ({
       value: item.name,
       label: item.description ? `${item.name} · ${item.description}` : item.name,
@@ -209,6 +211,7 @@ function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
   return collectMemberIdsFromDeptTree(tree).map((agentId) => ({
     id: agentId,
     name: `Agent #${agentId}`,
+    i18n: {},
     employee_number: null,
     role_template_id: null,
     model: '',
@@ -375,9 +378,10 @@ function buildNextAutoDepartmentName(): string {
 
 function resolveRoleTemplateNameById(templateId: number | null | undefined): string {
   if (typeof templateId !== 'number' || templateId <= 0) {
-    return '未选择模板';
+    return t('teamTree.noTemplate');
   }
-  return roleTemplateCatalog.value.find((template) => template.id === templateId)?.name || `模板 #${templateId}`;
+  return roleTemplateCatalog.value.find((template) => template.id === templateId)?.displayName
+    || t('agent.templateFallback', { id: templateId });
 }
 
 function buildMembersSavePayload(root: DraftOrgNode | null = draftOrgTree.value): Array<{
@@ -490,10 +494,10 @@ const selectedTeamMemberTemplates = computed<Record<string, string>>(() => (
 
 const memberPanelStatus = computed(() => {
   if (isLoading.value) {
-    return '正在加载组织结构...';
+    return t('teamTree.loading');
   }
 
-  if (teamMemberStatus.value === '加载失败') {
+  if (teamMemberStatus.value === t('teamTree.loadFailed')) {
     return teamMemberStatus.value;
   }
 
@@ -516,7 +520,8 @@ const memberTemplateOptions = computed(() => {
       definitions.set(template.id, {
         id: template.id,
         name: template.name,
-        model: template.model || '自动',
+        displayName: template.displayName,
+        model: template.model || '',
         soul: template.soul || '',
       });
     }
@@ -526,14 +531,15 @@ const memberTemplateOptions = computed(() => {
     if (typeof node.roleTemplateId === 'number' && node.roleTemplateId > 0 && !definitions.has(node.roleTemplateId)) {
       definitions.set(node.roleTemplateId, {
         id: node.roleTemplateId,
-        name: `模板 #${node.roleTemplateId}`,
-        model: '自动',
+        name: t('agent.templateFallback', { id: node.roleTemplateId }),
+        displayName: t('agent.templateFallback', { id: node.roleTemplateId }),
+        model: '',
         soul: '',
       });
     }
   });
 
-  return Array.from(definitions.values()).sort((left, right) => left.name.localeCompare(right.name));
+  return Array.from(definitions.values()).sort((left, right) => left.displayName.localeCompare(right.displayName));
 });
 
 function resolveMemberRoleTemplateId(memberName: string): number | null {
@@ -573,12 +579,10 @@ const {
 
 const currentTemplateModelLabel = computed(() => {
   const templateModel = currentMemberTemplateOption.value?.model || '';
-  return (templateModel && templateModel !== '未设置') || templateModel === '自动'
-    ? templateModel
-    : resolveDefaultModelLabel(frontendConfig.value);
+  return templateModel || resolveDefaultModelLabel(frontendConfig.value);
 });
 
-const currentTemplateName = computed(() => currentMemberTemplateOption.value?.name || '');
+const currentTemplateName = computed(() => currentMemberTemplateOption.value?.displayName || '');
 const currentTemplateSoul = computed(() => currentMemberTemplateOption.value?.soul || '');
 
 watch(
@@ -597,7 +601,7 @@ function toGraphNode(node: DraftOrgNode, teamName: string): TeamGraphNode {
       kind: 'pending',
       name: '',
       departmentName: '',
-      subtitle: '成员',
+      subtitle: t('teamTree.subtitle'),
       avatarName: '',
       children: [],
     };
@@ -694,7 +698,8 @@ watch(
       roleTemplateCatalog.value = roleTemplates.map((template) => ({
         id: template.id,
         name: template.name,
-        model: template.model || '自动',
+        displayName: displayName(template),
+        model: template.model || '',
         soul: template.soul || '',
       }));
       const nextMembers = teamAgents.map((agent) => ({
@@ -727,7 +732,7 @@ watch(
       editingDepartmentMemberName.value = '';
       departmentEditorName.value = '';
       departmentEditorResponsibility.value = '';
-      teamMemberStatus.value = '加载失败';
+      teamMemberStatus.value = t('teamTree.loadFailed');
       isReadonly.value = true;
       resetDialogState();
     } finally {
@@ -777,14 +782,14 @@ async function saveTeamMembers(): Promise<void> {
     editingDepartmentMemberName.value = '';
     departmentEditorName.value = '';
     departmentEditorResponsibility.value = '';
-    teamMemberStatus.value = '已保存';
+    teamMemberStatus.value = t('teamTree.saved');
     isReadonly.value = true;
-    showGlobalSuccessToast('团队成员已保存');
+    showGlobalSuccessToast(t('teamTree.saveSuccess'));
     closeMemberEditor();
     emit('saved');
   } catch (error) {
     console.error(error);
-    teamMemberStatus.value = '保存失败';
+    teamMemberStatus.value = t('teamTree.saveFailed');
   } finally {
     isSavingTeamMembers.value = false;
   }
@@ -868,14 +873,14 @@ function saveMemberEditor(): void {
 
   const nextMemberName = memberEditorName.value.trim();
   if (!nextMemberName) {
-    memberEditorStatus.value = '成员名称不能为空';
+    memberEditorStatus.value = t('teamTree.emptyNameError');
     return;
   }
 
   const allMemberNames = collectMemberNodes(draftOrgTree.value).map((node) => node.memberName);
   const originalName = editingPendingSlotId.value ? '' : editingMemberName.value;
   if (allMemberNames.some((memberName) => memberName === nextMemberName && memberName !== originalName)) {
-    memberEditorStatus.value = `成员名称“${nextMemberName}”已存在`;
+    memberEditorStatus.value = t('teamTree.duplicateNameError', { name: nextMemberName });
     return;
   }
 
@@ -902,7 +907,7 @@ function saveMemberEditor(): void {
 
     editingPendingSlotId.value = null;
     memberEditorStatus.value = '';
-    showGlobalSuccessToast('已经更新到组织树');
+    showGlobalSuccessToast(t('teamTree.updatedToTree'));
     closeMemberEditor();
     return;
   }
@@ -918,7 +923,7 @@ function saveMemberEditor(): void {
   targetNode.driver = memberEditorDriver.value || targetNode.driver || '';
   draftOrgTree.value = nextTree;
   memberEditorStatus.value = '';
-  showGlobalSuccessToast('已经更新到组织树');
+  showGlobalSuccessToast(t('teamTree.updatedToTree'));
   closeMemberEditor();
 }
 
@@ -983,7 +988,7 @@ function saveDepartmentEditor(): void {
     return;
   }
   if (!nextDepartmentName) {
-    teamMemberStatus.value = '部门名称不能为空';
+    teamMemberStatus.value = t('teamTree.emptyDeptNameError');
     return;
   }
 
@@ -996,7 +1001,7 @@ function saveDepartmentEditor(): void {
   memberNode.deptName = nextDepartmentName;
   memberNode.deptResponsibility = nextDepartmentResponsibility;
   draftOrgTree.value = nextTree;
-  showGlobalSuccessToast('已经更新到组织树');
+  showGlobalSuccessToast(t('teamTree.updatedToTree'));
   closeDepartmentEditor();
 }
 

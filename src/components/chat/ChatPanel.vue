@@ -2,8 +2,8 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getAgentAvatarUrl } from '../../avatar';
-import { displayName } from '../../utils';
-import type { MessageInfo, RoomMemberProfile, RoomState } from '../../types';
+import { displayName, i18nText } from '../../utils';
+import type { AgentSnapshot, MessageInfo, RoomMemberProfile, RoomState } from '../../types';
 import { useAgentStatus } from '../../realtime/selectors';
 import MessageStream from './MessageStream.vue';
 
@@ -20,7 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   updateDraft: [value: string];
   submit: [];
-  clickWorkingAgent: [agentName: string];
+  clickWorkingAgent: [agentId: number];
 }>();
 
 const { t } = useI18n();
@@ -34,20 +34,19 @@ const currentMembers = computed(() => props.memberProfiles);
 const isScheduling = computed(() => props.currentRoom?.state === 'scheduling');
 const currentSpeaker = computed(() => {
   const agent = props.currentRoom?.current_turn_agent;
-  return agent ? displayName(agent.name, agent.display_name) : null;
+  return agent ? displayName(agent) : null;
 });
 
 const currentTurnAgentId = computed(() => props.currentRoom?.current_turn_agent?.id ?? null);
 const turnAgentStatus = useAgentStatus(currentTurnAgentId);
-
-const workingAgentName = computed<string | null>(() => {
+const workingAgent = computed<AgentSnapshot | null>(() => {
   if (
     props.currentRoom?.need_scheduling
     && isScheduling.value
-    && currentSpeaker.value
+    && props.currentRoom.current_turn_agent
     && turnAgentStatus.value === 'active'
   ) {
-    return currentSpeaker.value;
+    return props.currentRoom.current_turn_agent;
   }
   return null;
 });
@@ -90,7 +89,7 @@ function handleEnterKey(e: KeyboardEvent): void {
   <section class="chat panel" :class="{ 'has-banner': hasBanner, 'no-banner': !hasBanner }">
     <div class="chat-head">
       <div class="chat-head-title">
-        <h2>{{ currentRoom?.room_name ?? t('chat.noRoom') }}</h2>
+        <h2>{{ currentRoom ? i18nText(currentRoom.i18n, 'display_name', currentRoom.room_name) : t('chat.noRoom') }}</h2>
       </div>
       <div class="chat-side-info">
         <template v-if="currentRoom">
@@ -119,7 +118,8 @@ function handleEnterKey(e: KeyboardEvent): void {
     <div class="message-viewport">
       <MessageStream
         :messages="messages"
-        :working-agent-name="workingAgentName"
+        :member-profiles="memberProfiles"
+        :working-agent="workingAgent"
         @click-working-agent="emit('clickWorkingAgent', $event)"
       />
     </div>
@@ -163,9 +163,9 @@ function handleEnterKey(e: KeyboardEvent): void {
               <span v-if="member.employee_number !== null" class="chat-member-card__employee">#{{ member.employee_number }}</span>
               <div class="chat-member-card__avatar-wrap">
                 <span v-if="member.is_leader" class="chat-member-card__leader-flag">Leader</span>
-                <img class="chat-member-card__avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${displayName(member.name, member.display_name)} avatar`" />
+                <img class="chat-member-card__avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${displayName(member)} avatar`" />
               </div>
-              <strong>{{ displayName(member.name, member.display_name) }}</strong>
+              <strong>{{ displayName(member) }}</strong>
               <span v-if="member.role_template_name" class="chat-member-card__meta">{{ member.role_template_name }}</span>
             </article>
           </div>

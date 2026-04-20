@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getAgentDetail, resumeAgent, stopAgent } from '../../api';
 import { connectionState, showGlobalSuccessToast } from '../../appUiState';
-import { formatConnectionState } from '../../utils';
+import { displayName, formatConnectionState } from '../../utils';
 import { loadAgentActivities } from '../../realtime/runtimeStore';
 import { useAgentActivities, useAgentStatus } from '../../realtime/selectors';
 import AgentCardBase from './AgentCardBase.vue';
@@ -102,7 +102,12 @@ const agentTemplateLabel = computed(() => {
   return t('agent.noTemplate');
 });
 
-const displayAgentName = computed(() => displayAgent.value?.name ?? props.agentName ?? 'Agent');
+const displayAgentName = computed(() => {
+  if (displayAgent.value) {
+    return displayName(displayAgent.value);
+  }
+  return props.agentName ?? 'Agent';
+});
 const displayTeamName = computed(() => displayAgent.value?.team_name ?? '');
 const displayEmployeeNumber = computed(() => String(displayAgent.value?.employee_number ?? ''));
 const activityRealtimeState = computed(() => connectionState.value);

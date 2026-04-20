@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AgentCardBase from '../agent/AgentCardBase.vue';
 import type { TeamGraphNode } from './teamGraphTypes';
 
@@ -21,6 +22,8 @@ const emit = defineEmits<{
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
 }>();
+
+const { t } = useI18n();
 
 const showDepartmentAction = computed(() => props.node.kind === 'member' && !!props.node.children.length);
 
@@ -125,7 +128,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
             @pointerdown.stop
             @click.stop="emit('editPendingSlot', node.id)"
           >
-            编辑
+            {{ t('teamTree.edit') }}
           </button>
           <button
             class="member-action-button member-action-button--danger"
@@ -133,7 +136,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
             @pointerdown.stop
             @click.stop="emit('removePendingSlot', node.id)"
           >
-            删除
+            {{ t('teamTree.delete') }}
           </button>
         </template>
 
@@ -146,7 +149,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               @pointerdown.stop
               @click.stop="emit('viewDepartment', node.name)"
             >
-              查看部门
+              {{ t('teamTree.viewDept') }}
             </button>
             <button
               class="member-action-button"
@@ -154,7 +157,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               @pointerdown.stop
               @click.stop="handleViewAction"
             >
-              查看
+              {{ t('teamTree.viewMember') }}
             </button>
           </template>
           <template v-else-if="showEditAction">
@@ -165,7 +168,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               @pointerdown.stop
               @click.stop="emit('editDepartment', node.name)"
             >
-              编辑部门
+              {{ t('teamTree.editDept') }}
             </button>
             <button
               class="member-action-button"
@@ -173,7 +176,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               @pointerdown.stop
               @click.stop="handleEditAction"
             >
-              编辑成员
+              {{ t('teamTree.editMember') }}
             </button>
             <button
               class="member-action-button"
@@ -181,7 +184,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               @pointerdown.stop
               @click.stop="emit('addSubordinate', node.name)"
             >
-              添加下属
+              {{ t('teamTree.addSubordinate') }}
             </button>
             <button
               v-if="!root"
@@ -190,7 +193,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               @pointerdown.stop
               @click.stop="emit('toggleAgent', node.name)"
             >
-              移除
+              {{ t('teamTree.removeMember') }}
             </button>
           </template>
           <button
@@ -200,7 +203,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
             @pointerdown.stop
             @click.stop="emit('toggleAgent', node.name)"
           >
-            移除
+            {{ t('teamTree.removeMember') }}
           </button>
         </template>
       </div>

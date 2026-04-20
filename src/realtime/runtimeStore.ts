@@ -19,7 +19,7 @@ import type {
   RoleTemplateSummary,
   RoomState,
 } from '../types';
-import { formatPreview } from '../utils';
+import { displayName, formatPreview } from '../utils';
 import type { FrontendRealtimeEvent } from './eventNormalizer';
 import { subscribeRealtimeEvents } from './wsClient';
 
@@ -45,13 +45,13 @@ function syncTotalMessageCount(): void {
 
 function normalizeMessage(teamId: number, raw: RawMessageInfo): MessageInfo {
   return {
-    sender: resolveMessageSenderName(teamId, raw.agent_id),
+    sender_id: raw.agent_id,
     content: raw.content,
     time: raw.send_time,
   };
 }
 
-function resolveMessageSenderName(teamId: number, senderId: number): string {
+function resolveMessageSenderDisplayName(teamId: number, senderId: number): string {
   if (senderId === -1) {
     return 'OPERATOR';
   }
@@ -60,8 +60,8 @@ function resolveMessageSenderName(teamId: number, senderId: number): string {
   }
 
   const matchedAgent = (teamAgentsState.value[teamId] ?? []).find((agent) => agent.id === senderId);
-  if (matchedAgent?.name) {
-    return matchedAgent.name;
+  if (matchedAgent) {
+    return displayName(matchedAgent);
   }
 
   return String(senderId);
@@ -148,7 +148,12 @@ export async function loadTeamRooms(teamId: number): Promise<RoomState[]> {
         const lastMessage = roomMessages[roomMessages.length - 1];
         return {
           room_id: room.room_id,
-          preview: lastMessage ? formatPreview(normalizeMessage(teamId, lastMessage)) : t('message.noMessage'),
+          preview: lastMessage
+            ? formatPreview(
+              resolveMessageSenderDisplayName(teamId, lastMessage.agent_id),
+              lastMessage.content,
+            )
+            : t('message.noMessage'),
         };
       } catch (error) {
         console.error(error);
@@ -282,11 +287,7 @@ export function getRoleTemplatesState(): RoleTemplateSummary[] {
 
 export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
   if (event.type === 'message') {
-    const senderName = resolveMessageSenderName(event.teamId, event.senderId);
-    const nextMessage: MessageInfo = {
-      ...event.message,
-      sender: senderName,
-    };
+    const nextMessage: MessageInfo = event.message;
 
     updateTeamRooms(event.teamId, (rooms) =>
       rooms.map((room) => {
@@ -299,7 +300,10 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
 
         return {
           ...room,
-          preview: formatPreview(nextMessage),
+          preview: formatPreview(
+            resolveMessageSenderDisplayName(event.teamId, nextMessage.sender_id),
+            nextMessage.content,
+          ),
           unread: shouldResetUnread ? 0 : room.unread + 1,
         };
       }),
@@ -307,7 +311,7 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
 
     const currentMessages = roomMessagesState.value[event.roomId] ?? [];
     const alreadyExists = currentMessages.some((message) =>
-      message.sender === nextMessage.sender
+      message.sender_id === nextMessage.sender_id
       && message.content === nextMessage.content
       && message.time === nextMessage.time,
     );
@@ -338,7 +342,7 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
     teamAgentsState.value = {
       ...teamAgentsState.value,
       [event.teamId]: currentAgents.map((agent) =>
-        (agent.id === event.agentId || agent.name === event.agentName)
+        agent.id === event.agentId
           ? { ...agent, status: event.status }
           : agent,
       ),

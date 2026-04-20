@@ -1,5 +1,5 @@
-import type { MessageInfo } from './types';
-import { t } from './i18n';
+import type { EntityI18n } from './types';
+import i18n, { t } from './i18n';
 
 export type ConnectionState =
   | 'connecting'
@@ -9,15 +9,20 @@ export type ConnectionState =
   | 'disconnected';
 export type BubbleSide = 'left' | 'right' | 'center';
 
-/**
- * 获取显示名称，优先使用 display_name，fallback 到 name
- */
-export function displayName(name: string, display_name?: string): string {
-  return display_name?.trim() || name;
+export function i18nText(i18nData: EntityI18n, field: string, fallback: string): string {
+  const locale = i18n.global.locale.value;
+  const textMap = i18nData[field];
+  return textMap?.[locale]?.trim()
+    || textMap?.['zh-CN']?.trim()
+    || fallback;
 }
 
-export function formatPreview(message: Pick<MessageInfo, 'sender' | 'content'>): string {
-  return `${message.sender}: ${message.content.replace(/\n/g, ' ')}`;
+export function displayName(entity: { name: string; i18n: EntityI18n }): string {
+  return i18nText(entity.i18n, 'display_name', entity.name);
+}
+
+export function formatPreview(senderDisplayName: string, content: string): string {
+  return `${senderDisplayName}: ${content.replace(/\n/g, ' ')}`;
 }
 
 export function formatTime(time: string): string {
@@ -35,12 +40,11 @@ export function formatTime(time: string): string {
   }).format(date);
 }
 
-export function bubbleSide(sender: string): BubbleSide {
-  const normalizedSender = sender.trim().toUpperCase();
-  if (normalizedSender === 'SYSTEM') {
+export function bubbleSide(senderId: number): BubbleSide {
+  if (senderId === -2) {
     return 'center';
   }
-  if (normalizedSender === 'OPERATOR') {
+  if (senderId === -1) {
     return 'right';
   }
   return 'left';

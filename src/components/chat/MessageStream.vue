@@ -2,16 +2,17 @@
 import { getAgentAvatarUrl } from '../../avatar';
 import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { MessageInfo } from '../../types';
-import { bubbleSide, formatTime } from '../../utils';
+import type { AgentSnapshot, MessageInfo, RoomMemberProfile } from '../../types';
+import { bubbleSide, displayName, formatTime } from '../../utils';
 
 const props = defineProps<{
   messages: MessageInfo[];
-  workingAgentName?: string | null;
+  memberProfiles: RoomMemberProfile[];
+  workingAgent?: AgentSnapshot | null;
 }>();
 
 const emit = defineEmits<{
-  clickWorkingAgent: [agentName: string];
+  clickWorkingAgent: [agentId: number];
 }>();
 
 const { t } = useI18n();
@@ -44,6 +45,31 @@ function senderColor(sender: string): string {
   }
   const hash = Array.from(sender).reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return NAME_COLORS[hash % NAME_COLORS.length];
+}
+
+function resolveSenderProfile(senderId: number): RoomMemberProfile | null {
+  return props.memberProfiles.find((member) => member.id === senderId) ?? null;
+}
+
+function resolveSenderStableName(senderId: number): string {
+  if (senderId === -1) {
+    return 'OPERATOR';
+  }
+  if (senderId === -2) {
+    return 'SYSTEM';
+  }
+  return resolveSenderProfile(senderId)?.name ?? String(senderId);
+}
+
+function resolveSenderDisplayName(senderId: number): string {
+  if (senderId === -1) {
+    return 'OPERATOR';
+  }
+  if (senderId === -2) {
+    return 'SYSTEM';
+  }
+  const profile = resolveSenderProfile(senderId);
+  return profile ? displayName(profile) : String(senderId);
 }
 
 function updateScrollbarState(): void {
@@ -79,7 +105,7 @@ watch(
 );
 
 watch(
-  () => props.workingAgentName,
+  () => props.workingAgent,
   async () => {
     const shouldScroll = isAtBottom();
     await nextTick();
@@ -111,34 +137,34 @@ onBeforeUnmount(() => {
   <div ref="streamRef" class="message-stream" :class="{ 'has-scrollbar': hasScrollbar }">
     <div
       v-for="(message, index) in messages"
-      :key="`${message.time}-${message.sender}-${index}`"
+      :key="`${message.time}-${message.sender_id}-${index}`"
       class="message-row"
-      :class="`side-${bubbleSide(message.sender)}`"
+      :class="`side-${bubbleSide(message.sender_id)}`"
     >
-      <template v-if="bubbleSide(message.sender) === 'center'">
+      <template v-if="bubbleSide(message.sender_id) === 'center'">
         <div class="system-note">{{ message.content }}</div>
       </template>
       <template v-else>
         <div class="message-meta">
-          <template v-if="bubbleSide(message.sender) === 'left'">
+          <template v-if="bubbleSide(message.sender_id) === 'left'">
             <img
               class="sender-avatar"
-              :src="getAgentAvatarUrl(message.sender)"
-              :alt="`${message.sender} avatar`"
+              :src="getAgentAvatarUrl(resolveSenderStableName(message.sender_id))"
+              :alt="`${resolveSenderDisplayName(message.sender_id)} avatar`"
             />
-            <span class="sender" :style="{ color: senderColor(message.sender) }">
-              {{ message.sender }}
+            <span class="sender" :style="{ color: senderColor(resolveSenderStableName(message.sender_id)) }">
+              {{ resolveSenderDisplayName(message.sender_id) }}
             </span>
           </template>
           <span class="time">{{ formatTime(message.time) }}</span>
-          <template v-if="bubbleSide(message.sender) === 'right'">
-            <span class="sender" :style="{ color: senderColor(message.sender) }">
-              {{ message.sender }}
+          <template v-if="bubbleSide(message.sender_id) === 'right'">
+            <span class="sender" :style="{ color: senderColor(resolveSenderStableName(message.sender_id)) }">
+              {{ resolveSenderDisplayName(message.sender_id) }}
             </span>
             <img
               class="sender-avatar"
-              :src="getAgentAvatarUrl(message.sender)"
-              :alt="`${message.sender} avatar`"
+              :src="getAgentAvatarUrl(resolveSenderStableName(message.sender_id))"
+              :alt="`${resolveSenderDisplayName(message.sender_id)} avatar`"
             />
           </template>
         </div>
@@ -147,19 +173,19 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      v-if="workingAgentName"
+      v-if="workingAgent"
       class="working-indicator working-indicator--clickable"
       role="button"
       tabindex="0"
-      @click="emit('clickWorkingAgent', workingAgentName!)"
-      @keydown.enter="emit('clickWorkingAgent', workingAgentName!)"
+      @click="emit('clickWorkingAgent', workingAgent.id)"
+      @keydown.enter="emit('clickWorkingAgent', workingAgent.id)"
     >
       <img
         class="working-indicator-avatar"
-        :src="getAgentAvatarUrl(workingAgentName)"
-        :alt="`${workingAgentName} avatar`"
+        :src="getAgentAvatarUrl(workingAgent.name)"
+        :alt="`${displayName(workingAgent)} avatar`"
       />
-      <span class="working-indicator-text">{{ t('chat.processing', { name: workingAgentName }) }}</span>
+      <span class="working-indicator-text">{{ t('chat.processing', { name: displayName(workingAgent) }) }}</span>
       <span class="working-indicator-dots">
         <span class="dot"></span>
         <span class="dot"></span>
