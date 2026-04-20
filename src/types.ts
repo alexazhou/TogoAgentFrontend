@@ -6,6 +6,7 @@ export type RoomType = 'private' | 'group';
 export interface AgentInfo {
   id?: number | null;
   name: string;
+  display_name?: string;
   employee_number?: number | null;
   role_template_id?: number | null;
   model: string;
@@ -44,6 +45,7 @@ export interface AgentActivity {
 export interface AgentSnapshot {
   id: number;
   name: string;
+  display_name?: string;
   team_id?: number;
   model?: string;
   driver?: string;
@@ -125,6 +127,7 @@ export interface RoomState extends RoomInfo {
 
 export interface RoomMemberProfile {
   name: string;
+  display_name?: string;
   employee_number: number | null;
   role_template_name: string | null;
   is_leader: boolean;
@@ -145,6 +148,7 @@ export interface TeamSummary {
 export interface TeamRoomDetail {
   id: number;
   name: string;
+  display_name?: string;
   type?: string;
   initial_topic: string | null;
   max_turns: number;
@@ -194,6 +198,7 @@ export interface TeamDetail extends TeamSummary {
 
 export interface TeamMember {
   name: string;
+  display_name?: string;
   role_template_id: number;
 }
 

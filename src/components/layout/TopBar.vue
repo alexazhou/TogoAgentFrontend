@@ -6,6 +6,7 @@ import { setLanguage } from '../../api';
 import LabeledSwitch from '../ui/LabeledSwitch.vue';
 import type { TeamSummary } from '../../types';
 import type { ConnectionState } from '../../utils';
+import { displayName } from '../../utils';
 import type { AppLocale } from '../../i18n';
 
 const { t } = useI18n();
@@ -39,9 +40,10 @@ const teamMenuOpen = ref(false);
 const languageMenuOpen = ref(false);
 const currentLocale = computed<AppLocale>(() => i18n.global.locale.value);
 
-const activeTeamName = computed(() => (
-  props.teams.find((team) => team.id === props.activeTeamId)?.name ?? t('topbar.selectTeam')
-));
+const activeTeamName = computed(() => {
+  const team = props.teams.find((team) => team.id === props.activeTeamId);
+  return team ? displayName(team.name, team.display_name) : t('topbar.selectTeam');
+});
 const enabledTeams = computed(() => props.teams
   .filter((team) => team.enabled)
   .slice()
@@ -175,7 +177,7 @@ function activeOptionId(): string | undefined {
 }
 
 function optionLabel(team: TeamSummary): string {
-  return `${team.name} #${team.id}`;
+  return `${displayName(team.name, team.display_name)} #${team.id}`;
 }
 
 </script>
@@ -237,7 +239,7 @@ function optionLabel(team: TeamSummary): string {
               @click="selectTeam(team.id)"
               @keydown="handleTeamOptionKeydown($event, team.id)"
             >
-              <span class="team-switcher-option__name">{{ team.name }}</span>
+              <span class="team-switcher-option__name">{{ displayName(team.name, team.display_name) }}</span>
               <span class="team-switcher-option__meta">#{{ team.id }}</span>
             </button>
           </section>
@@ -261,7 +263,7 @@ function optionLabel(team: TeamSummary): string {
               @click="selectTeam(team.id)"
               @keydown="handleTeamOptionKeydown($event, team.id)"
             >
-              <span class="team-switcher-option__name">{{ team.name }}</span>
+              <span class="team-switcher-option__name">{{ displayName(team.name, team.display_name) }}</span>
               <span class="team-switcher-option__meta">#{{ team.id }}</span>
             </button>
           </section>

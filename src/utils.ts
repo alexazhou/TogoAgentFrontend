@@ -9,6 +9,13 @@ export type ConnectionState =
   | 'disconnected';
 export type BubbleSide = 'left' | 'right' | 'center';
 
+/**
+ * 获取显示名称，优先使用 display_name，fallback 到 name
+ */
+export function displayName(name: string, display_name?: string): string {
+  return display_name?.trim() || name;
+}
+
 export function formatPreview(message: Pick<MessageInfo, 'sender' | 'content'>): string {
   return `${message.sender}: ${message.content.replace(/\n/g, ' ')}`;
 }

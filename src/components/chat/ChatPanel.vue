@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getAgentAvatarUrl } from '../../avatar';
+import { displayName } from '../../utils';
 import type { MessageInfo, RoomMemberProfile, RoomState } from '../../types';
 import { useAgentStatus } from '../../realtime/selectors';
 import MessageStream from './MessageStream.vue';
@@ -31,7 +32,10 @@ const isDraftComposing = ref(false);
 const currentMembers = computed(() => props.memberProfiles);
 
 const isScheduling = computed(() => props.currentRoom?.state === 'scheduling');
-const currentSpeaker = computed(() => props.currentRoom?.current_turn_agent?.name ?? null);
+const currentSpeaker = computed(() => {
+  const agent = props.currentRoom?.current_turn_agent;
+  return agent ? displayName(agent.name, agent.display_name) : null;
+});
 
 const currentTurnAgentId = computed(() => props.currentRoom?.current_turn_agent?.id ?? null);
 const turnAgentStatus = useAgentStatus(currentTurnAgentId);
@@ -159,9 +163,9 @@ function handleEnterKey(e: KeyboardEvent): void {
               <span v-if="member.employee_number !== null" class="chat-member-card__employee">#{{ member.employee_number }}</span>
               <div class="chat-member-card__avatar-wrap">
                 <span v-if="member.is_leader" class="chat-member-card__leader-flag">Leader</span>
-                <img class="chat-member-card__avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${member.name} avatar`" />
+                <img class="chat-member-card__avatar" :src="getAgentAvatarUrl(member.name)" :alt="`${displayName(member.name, member.display_name)} avatar`" />
               </div>
-              <strong>{{ member.name }}</strong>
+              <strong>{{ displayName(member.name, member.display_name) }}</strong>
               <span v-if="member.role_template_name" class="chat-member-card__meta">{{ member.role_template_name }}</span>
             </article>
           </div>

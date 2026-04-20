@@ -9,6 +9,7 @@ import TeamInfoCard from '../components/team/TeamInfoCard.vue';
 import TeamMembersCard from '../components/team/TeamMembersCard.vue';
 import { loadRoleTemplates } from '../realtime/runtimeStore';
 import { useRoleTemplates } from '../realtime/selectors';
+import { displayName } from '../utils';
 import type { AgentInfo, AgentStatus, TeamDetail } from '../types';
 
 const route = useRoute();
@@ -129,7 +130,7 @@ onMounted(() => {
               @click="openRoom(room.id)"
             >
               <div class="room-tile-head">
-                <strong>{{ room.name }}</strong>
+                <strong>{{ displayName(room.name, room.display_name) }}</strong>
                 <span>{{ room.agents.length }} 人</span>
               </div>
               <p>{{ room.initial_topic || '无初始话题' }}</p>

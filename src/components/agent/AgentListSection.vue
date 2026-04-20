@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { getAgentAvatarUrl } from '../../avatar';
+import { displayName } from '../../utils';
 import type { AgentInfo } from '../../types';
 
 defineProps<{
@@ -40,10 +41,10 @@ function statusLabel(status: AgentInfo['status']): string {
         @click="emit('selectAgent', agent.name)"
       >
         <div class="agent-primary">
-          <img class="agent-avatar" :src="getAgentAvatarUrl(agent.name)" :alt="`${agent.name} avatar`" />
+          <img class="agent-avatar" :src="getAgentAvatarUrl(agent.name)" :alt="`${displayName(agent.name, agent.display_name)} avatar`" />
           <div class="agent-copy">
             <strong class="agent-name-line">
-              <span class="agent-name">{{ agent.name }}</span>
+              <span class="agent-name">{{ displayName(agent.name, agent.display_name) }}</span>
             </strong>
             <p>{{ agent.model }}</p>
           </div>

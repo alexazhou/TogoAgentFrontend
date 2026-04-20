@@ -5,6 +5,7 @@ import TeamInfoCard from '../team/TeamInfoCard.vue';
 import TeamTreeEditor from '../team/TeamTreeEditor.vue';
 import SettingsBreadcrumb from './SettingsBreadcrumb.vue';
 import ToggleSwitch from '../ui/ToggleSwitch.vue';
+import { displayName } from '../../utils';
 import type { SettingsBreadcrumbItem } from './types';
 import type { TeamDetail, TeamSummary } from '../../types';
 
@@ -140,7 +141,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
           <article v-for="team in enabledTeams" :key="team.id" class="team-card">
             <div class="team-card-head">
               <div class="team-card-title-group">
-                <strong>{{ team.name }}</strong>
+                <strong>{{ displayName(team.name, team.display_name) }}</strong>
                 <span class="team-card-id">#{{ team.id }}</span>
               </div>
               <ToggleSwitch
@@ -183,7 +184,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
           <article v-for="team in disabledTeams" :key="team.id" class="team-card team-card--disabled">
             <div class="team-card-head">
               <div class="team-card-title-group">
-                <strong>{{ team.name }}</strong>
+                <strong>{{ displayName(team.name, team.display_name) }}</strong>
                 <span class="team-card-id">#{{ team.id }}</span>
               </div>
               <ToggleSwitch
