@@ -43,6 +43,8 @@ const SERVICE_TYPES: { value: LlmServiceType; label: string }[] = [
   { value: 'deepseek', label: 'DeepSeek' },
 ];
 
+const PROVIDER_PARAMS_PLACEHOLDER = '{\n  "reasoning_effort": "high"\n}';
+
 const emit = defineEmits<{
   changed: [payload: { preferredIndex: number | null }];
 }>();
@@ -594,7 +596,7 @@ defineExpose({
                 v-model="form.provider_params"
                 class="svc-textarea svc-textarea--code"
                 rows="8"
-                :placeholder="t('settings.models.providerParamsPlaceholder')"
+                :placeholder="PROVIDER_PARAMS_PLACEHOLDER"
               ></textarea>
               <small class="svc-hint">{{ t('settings.models.providerParamsHint') }}</small>
             </label>
