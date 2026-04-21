@@ -11,6 +11,8 @@ const SERVICE_TYPES: { value: LlmServiceType; label: string }[] = [
   { value: 'deepseek', label: 'DeepSeek' },
 ];
 
+const PROVIDER_PARAMS_PLACEHOLDER = '{\n  "reasoning_effort": "high"\n}';
+
 const emit = defineEmits<{
   skip: [];
   done: [];
@@ -206,7 +208,7 @@ async function handleSave(): Promise<void> {
                 v-model="providerParams"
                 class="form-input form-textarea form-textarea--code"
                 rows="7"
-                :placeholder="t('settings.models.providerParamsPlaceholder')"
+                :placeholder="PROVIDER_PARAMS_PLACEHOLDER"
                 :disabled="isSaving"
               ></textarea>
               <span class="form-hint">{{ t('settings.models.providerParamsHint') }}</span>
