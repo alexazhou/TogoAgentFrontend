@@ -16,6 +16,7 @@ import MemberEditorDialog from './MemberEditorDialog.vue';
 import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import type { DeptTreeNode, FrontendConfig } from '../../types';
 import type { AgentInfo } from '../../types';
+import type { RoleTemplateSummary } from '../../types';
 import type { TeamGraphNode } from './teamGraphTypes';
 
 type DraftOrgNode = {
@@ -45,7 +46,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const driverCatalog = ref<MemberDriverOption[]>([]);
 const modelCatalog = ref<MemberModelOption[]>([]);
-const roleTemplateCatalog = ref<MemberTemplateOption[]>([]);
+const roleTemplateCatalog = ref<RoleTemplateSummary[]>([]);
 const frontendConfig = ref<FrontendConfig | null>(null);
 const isLoading = ref(false);
 const isSavingTeamMembers = ref(false);
@@ -380,8 +381,8 @@ function resolveRoleTemplateNameById(templateId: number | null | undefined): str
   if (typeof templateId !== 'number' || templateId <= 0) {
     return t('teamTree.noTemplate');
   }
-  return roleTemplateCatalog.value.find((template) => template.id === templateId)?.displayName
-    || t('agent.templateFallback', { id: templateId });
+  const template = roleTemplateCatalog.value.find((item) => item.id === templateId);
+  return template ? displayName(template) : t('agent.templateFallback', { id: templateId });
 }
 
 function buildMembersSavePayload(root: DraftOrgNode | null = draftOrgTree.value): Array<{
@@ -520,7 +521,7 @@ const memberTemplateOptions = computed(() => {
       definitions.set(template.id, {
         id: template.id,
         name: template.name,
-        displayName: template.displayName,
+        displayName: displayName(template),
         model: template.model || '',
         soul: template.soul || '',
       });
@@ -696,11 +697,7 @@ watch(
       modelCatalog.value = buildModelCatalog(nextFrontendConfig);
       driverCatalog.value = buildDriverCatalog(nextFrontendConfig);
       roleTemplateCatalog.value = roleTemplates.map((template) => ({
-        id: template.id,
-        name: template.name,
-        displayName: displayName(template),
-        model: template.model || '',
-        soul: template.soul || '',
+        ...template,
       }));
       const nextMembers = teamAgents.map((agent) => ({
         ...agent,
