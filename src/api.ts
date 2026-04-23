@@ -520,22 +520,6 @@ export async function getAgentsByTeamId(teamId: number, options?: { includeSpeci
   return data.agents.map(normalizeAgent);
 }
 
-export async function setAgentsByTeamId(
-  teamId: number,
-  payload: Array<{
-    id: number;
-    name: string;
-    role_template_id: number;
-    model: string;
-    driver: string;
-  }>,
-): Promise<{ status: string }> {
-  return requestJson(`/teams/${teamId}/agents/batch_update.json`, {
-    method: 'PUT',
-    body: JSON.stringify({ agents: payload }),
-  });
-}
-
 export async function saveMembersByTeamId(
   teamId: number,
   payload: Array<{
