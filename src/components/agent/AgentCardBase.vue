@@ -108,7 +108,7 @@ const normalizedOverline = computed(() => props.overline?.trim() || '');
 .entity-card.selected {
   border-color: var(--focus-border);
   background: var(--selected);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--focus-border) 55%, transparent);
+  box-shadow: inset 0 0 0 1px var(--focus-border);
 }
 
 .entity-card.is-readonly {

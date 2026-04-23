@@ -198,18 +198,21 @@ const selectedMemberAvatarSeed = computed(() => (
               v-for="item in templateOptions"
               :key="item.id"
               class="member-template-option"
+              :class="{ 'is-selected': selectedTemplateId === item.id }"
+              :aria-pressed="selectedTemplateId === item.id"
             >
               <AgentTemplateCard
                 :title="item.displayName"
                 :subtitle="item.name"
                 :avatar-name="item.name"
                 :avatar-seed="item.name"
-                :selected="false"
+                :selected="selectedTemplateId === item.id"
               />
               <button
                 type="button"
                 class="member-template-use"
-                @click="selectedTemplateModel = item.id"
+                :aria-pressed="selectedTemplateId === item.id"
+                @click.stop="selectedTemplateModel = item.id"
               >
                 {{ t('common.use') }}
               </button>
