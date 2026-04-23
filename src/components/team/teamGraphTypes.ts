@@ -1,5 +1,6 @@
 export type TeamGraphNode = {
   id: string;
+  agentId?: number | null;
   kind: 'member' | 'pending';
   name: string;
   departmentName?: string;

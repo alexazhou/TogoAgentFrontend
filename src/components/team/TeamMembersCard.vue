@@ -13,6 +13,7 @@ type MemberPanelAction = {
 withDefaults(defineProps<{
   teamName: string;
   selectedAgents: string[];
+  selectedAgentIds?: Record<string, number | null>;
   memberTemplates?: Record<string, string>;
   rootNode?: TeamGraphNode | null;
   statusMessage?: string;
@@ -29,12 +30,12 @@ withDefaults(defineProps<{
 });
 
 const emit = defineEmits<{
-  toggleAgent: [agentName: string];
-  viewAgent: [agentName: string];
-  editAgent: [agentName: string];
-  editDepartment: [agentName: string];
-  viewDepartment: [agentName: string];
-  addSubordinate: [agentName: string];
+  toggleAgent: [nodeId: string];
+  viewAgent: [agentId: number | null, nodeId: string, agentName: string];
+  editAgent: [nodeId: string];
+  editDepartment: [nodeId: string];
+  viewDepartment: [nodeId: string];
+  addSubordinate: [nodeId: string];
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
   action: [key: string];
@@ -73,12 +74,13 @@ const { t } = useI18n();
       v-else
       :team-name="teamName"
       :selected-agents="selectedAgents"
+      :selected-agent-ids="selectedAgentIds"
       :member-templates="memberTemplates"
       :root-node="rootNode"
       :readonly="readonly"
       :show-edit-action="showEditAction"
       @toggle-agent="emit('toggleAgent', $event)"
-      @view-agent="emit('viewAgent', $event)"
+      @view-agent="(agentId, nodeId, agentName) => emit('viewAgent', agentId, nodeId, agentName)"
       @edit-agent="emit('editAgent', $event)"
       @edit-department="emit('editDepartment', $event)"
       @view-department="emit('viewDepartment', $event)"

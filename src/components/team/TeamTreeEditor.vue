@@ -57,7 +57,7 @@ const committedAgents = ref<AgentInfo[]>([]);
 const committedOrgTree = ref<DraftOrgNode | null>(null);
 const draftOrgTree = ref<DraftOrgNode | null>(null);
 const editingPendingSlotId = ref<string | null>(null);
-const editingDepartmentMemberName = ref('');
+const editingDepartmentNodeId = ref('');
 const memberEditorStatus = ref('');
 const departmentEditorName = ref('');
 const departmentEditorResponsibility = ref('');
@@ -67,7 +67,7 @@ const confirmState = ref<{
   message: string;
   confirmLabel: string;
   danger: boolean;
-  action: null | { type: 'remove-member'; agentName: string };
+  action: null | { type: 'remove-member'; nodeId: string; memberName: string };
 }>({
   title: '',
   message: '',
@@ -149,6 +149,10 @@ function parseDriverTypeValue(driver: string): string {
   return '';
 }
 
+function isOnBoardAgent(agent: AgentInfo): boolean {
+  return agent.employ_status === 'ON_BOARD' || !agent.employ_status;
+}
+
 function resolveDefaultModelLabel(config: FrontendConfig | null): string {
   if (!config?.default_model) {
     return t('common.auto');
@@ -182,46 +186,8 @@ function buildDriverCatalog(config: FrontendConfig | null): MemberDriverOption[]
   ];
 }
 
-function collectMemberIdsFromDeptTree(tree: DeptTreeNode | null): number[] {
-  if (!tree) {
-    return [];
-  }
-
-  const ids: number[] = [];
-  const stack = [tree];
-  while (stack.length) {
-    const current = stack.pop()!;
-    if (current.manager_id !== null && !ids.includes(current.manager_id)) {
-      ids.push(current.manager_id);
-    }
-
-    current.agent_ids.forEach((agentId) => {
-      if (!ids.includes(agentId)) {
-        ids.push(agentId);
-      }
-    });
-
-    for (let index = current.children.length - 1; index >= 0; index -= 1) {
-      stack.push(current.children[index]);
-    }
-  }
-
-  return ids;
-}
-
-function buildFallbackAgentsFromTree(tree: DeptTreeNode | null): AgentInfo[] {
-  return collectMemberIdsFromDeptTree(tree).map((agentId) => ({
-    id: agentId,
-    name: `Agent #${agentId}`,
-    i18n: {},
-    employee_number: null,
-    role_template_id: null,
-    model: '',
-    team_name: props.teamName,
-    status: 'idle' as const,
-    employ_status: null,
-    driver: '',
-  }));
+function createDraftNodeIdFromAgentId(agentId: number): string {
+  return `agent-${agentId}`;
 }
 
 function createMemberNode(
@@ -235,7 +201,7 @@ function createMemberNode(
   },
 ): DraftOrgNode {
   return {
-    id: createDraftNodeId('member'),
+    id: typeof agent?.id === 'number' ? createDraftNodeIdFromAgentId(agent.id) : createDraftNodeId('member'),
     kind: 'member',
     agentId: typeof agent?.id === 'number' ? agent.id : null,
     deptId: typeof options?.deptId === 'number' ? options.deptId : null,
@@ -267,7 +233,7 @@ function buildDraftOrgNodeFromDeptTree(
   visitedIds: Set<number>,
 ): DraftOrgNode | null {
   const managerId = node.manager_id;
-  if (managerId === null) {
+  if (managerId === null || !agentsById.has(managerId)) {
     return null;
   }
 
@@ -279,11 +245,11 @@ function buildDraftOrgNodeFromDeptTree(
   );
 
   const extraMemberNodes = node.agent_ids
-    .filter((agentId) => agentId !== managerId && !childManagerIds.has(agentId))
+    .filter((agentId) => agentId !== managerId && !childManagerIds.has(agentId) && agentsById.has(agentId))
     .map((agentId) => {
       visitedIds.add(agentId);
       return createMemberNode(
-        agentsById.get(agentId)?.name ?? `Agent #${agentId}`,
+        agentsById.get(agentId)!.name,
         agentsById.get(agentId),
       );
     });
@@ -294,7 +260,7 @@ function buildDraftOrgNodeFromDeptTree(
 
   const managerAgent = agentsById.get(managerId);
   return createMemberNode(
-    managerAgent?.name ?? `Agent #${managerId}`,
+    managerAgent!.name,
     managerAgent,
     {
       deptId: node.id ?? null,
@@ -348,7 +314,7 @@ function collectMemberNodes(root: DraftOrgNode | null): DraftOrgNode[] {
   return result;
 }
 
-function findMemberNode(root: DraftOrgNode | null, memberName: string): DraftOrgNode | null {
+function findNodeById(root: DraftOrgNode | null, nodeId: string): DraftOrgNode | null {
   if (!root) {
     return null;
   }
@@ -356,7 +322,7 @@ function findMemberNode(root: DraftOrgNode | null, memberName: string): DraftOrg
   const stack = [root];
   while (stack.length) {
     const current = stack.pop()!;
-    if (current.kind === 'member' && current.memberName === memberName) {
+    if (current.id === nodeId) {
       return current;
     }
     for (let index = current.children.length - 1; index >= 0; index -= 1) {
@@ -411,6 +377,79 @@ function buildMembersSavePayload(root: DraftOrgNode | null = draftOrgTree.value)
     });
 }
 
+function normalizeSavedAgentForDraft(agent: AgentInfo): AgentInfo {
+  return {
+    ...agent,
+    model: agent.model || '',
+    driver: parseDriverTypeValue(agent.driver || ''),
+  };
+}
+
+function hydrateDraftTreeAgentIds(root: DraftOrgNode | null, savedAgents: AgentInfo[]): DraftOrgNode | null {
+  const nextRoot = cloneDraftOrgNode(root);
+  if (!nextRoot) {
+    return null;
+  }
+
+  const savedById = new Map<number, AgentInfo>();
+  const savedByName = new Map<string, AgentInfo[]>();
+  savedAgents.forEach((agent) => {
+    if (typeof agent.id !== 'number') {
+      return;
+    }
+
+    const normalizedAgent = normalizeSavedAgentForDraft(agent);
+    savedById.set(agent.id, normalizedAgent);
+    const nameAgents = savedByName.get(agent.name) ?? [];
+    nameAgents.push(normalizedAgent);
+    savedByName.set(agent.name, nameAgents);
+  });
+
+  const existingAgentIds = new Set(
+    collectMemberNodes(root)
+      .map((node) => node.agentId)
+      .filter((agentId): agentId is number => agentId !== null),
+  );
+  const consumedAgentIds = new Set<number>();
+
+  collectMemberNodes(nextRoot).forEach((node) => {
+    let matchedAgent: AgentInfo | undefined;
+    if (node.agentId !== null) {
+      matchedAgent = savedById.get(node.agentId);
+    } else {
+      matchedAgent = (savedByName.get(node.memberName) ?? []).find((agent) => (
+        typeof agent.id === 'number'
+        && !existingAgentIds.has(agent.id)
+        && !consumedAgentIds.has(agent.id)
+      ));
+    }
+
+    if (!matchedAgent || typeof matchedAgent.id !== 'number') {
+      return;
+    }
+
+    consumedAgentIds.add(matchedAgent.id);
+    node.id = createDraftNodeIdFromAgentId(matchedAgent.id);
+    node.agentId = matchedAgent.id;
+    node.memberName = matchedAgent.name;
+    node.roleTemplateId = matchedAgent.role_template_id ?? node.roleTemplateId;
+    node.model = matchedAgent.model || node.model;
+    node.driver = parseDriverTypeValue(matchedAgent.driver || '') || node.driver;
+    node.employeeNumber = typeof matchedAgent.employee_number === 'number'
+      ? String(matchedAgent.employee_number)
+      : node.employeeNumber;
+  });
+
+  return nextRoot;
+}
+
+function assertDraftTreeAgentIdsReady(root: DraftOrgNode | null): void {
+  const missingAgentNode = collectMemberNodes(root).find((node) => node.agentId === null);
+  if (missingAgentNode) {
+    throw new Error(`Missing agent id for member: ${missingAgentNode.memberName}`);
+  }
+}
+
 function buildCommittedMembersSaveBaseline(): Array<{
   id: number | null;
   name: string;
@@ -447,13 +486,13 @@ function buildDeptTreePayload(root: DraftOrgNode | null = draftOrgTree.value): D
     const children: DeptTreeNode[] = [];
 
     childMembers.forEach((child) => {
+      if (child.agentId !== null) {
+        agentIds.push(child.agentId);
+      }
+
       if (countManagedChildren(child) > 0) {
         children.push(buildNode(child));
         return;
-      }
-
-      if (child.agentId !== null) {
-        agentIds.push(child.agentId);
       }
     });
 
@@ -475,7 +514,7 @@ function buildCommittedTreeBaseline(): DeptTreeNode | null {
 }
 
 function syncCommittedState(tree: DeptTreeNode | null, agents: AgentInfo[]): void {
-  const nextAgents = agents.length ? agents : buildFallbackAgentsFromTree(tree);
+  const nextAgents = agents;
   committedAgents.value = nextAgents.map((agent) => ({ ...agent }));
   committedOrgTree.value = buildDraftOrgTree(tree, committedAgents.value);
   draftOrgTree.value = cloneDraftOrgNode(committedOrgTree.value);
@@ -511,7 +550,7 @@ const inlineTeamMemberStatus = computed(() => (
 ));
 
 const currentEditingMemberEmployeeNumber = computed(() => (
-  findMemberNode(draftOrgTree.value, editingMemberName.value)?.employeeNumber || ''
+  findNodeById(draftOrgTree.value, editingNodeId.value)?.employeeNumber || ''
 ));
 
 const memberTemplateOptions = computed(() => {
@@ -544,12 +583,8 @@ const memberTemplateOptions = computed(() => {
   return Array.from(definitions.values()).sort((left, right) => left.displayName.localeCompare(right.displayName));
 });
 
-function resolveMemberRoleTemplateId(memberName: string): number | null {
-  return findMemberNode(draftOrgTree.value, memberName)?.roleTemplateId ?? null;
-}
-
 const {
-  editingMemberName,
+  editingMemberName: editingNodeId,
   memberEditorName,
   memberEditorKeyword,
   memberEditorTemplateId,
@@ -571,12 +606,12 @@ const {
   templateOptions: memberTemplateOptions,
   driverCatalog,
   modelCatalog,
-  resolveId: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.agentId ?? null,
-  resolveName: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.memberName || memberName,
-  resolveModel: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.model || '',
-  resolveDriver: (memberName: string) => findMemberNode(draftOrgTree.value, memberName)?.driver || '',
-  resolveTemplateId: resolveMemberRoleTemplateId,
-  canLoadMemberDetail: (memberName: string) => Boolean(findMemberNode(draftOrgTree.value, memberName)?.agentId),
+  resolveId: (nodeId: string) => findNodeById(draftOrgTree.value, nodeId)?.agentId ?? null,
+  resolveName: (nodeId: string) => findNodeById(draftOrgTree.value, nodeId)?.memberName || nodeId,
+  resolveModel: (nodeId: string) => findNodeById(draftOrgTree.value, nodeId)?.model || '',
+  resolveDriver: (nodeId: string) => findNodeById(draftOrgTree.value, nodeId)?.driver || '',
+  resolveTemplateId: (nodeId: string) => findNodeById(draftOrgTree.value, nodeId)?.roleTemplateId ?? null,
+  canLoadMemberDetail: (nodeId: string) => Boolean(findNodeById(draftOrgTree.value, nodeId)?.agentId),
 });
 
 const currentTemplateModelLabel = computed(() => {
@@ -610,8 +645,9 @@ function toGraphNode(node: DraftOrgNode, teamName: string): TeamGraphNode {
   }
 
   return {
-    id: node.memberName,
+    id: node.id,
     kind: 'member',
+    agentId: node.agentId,
     name: node.memberName,
     departmentName: node.deptName,
     subtitle: resolveRoleTemplateNameById(node.roleTemplateId),
@@ -657,7 +693,10 @@ const hasTeamMemberChanges = computed(() =>
   hasMemberConfigChanges.value || hasDeptTreeChanges.value,
 );
 
-const departmentEditorOpen = computed(() => !!editingDepartmentMemberName.value);
+const departmentEditorOpen = computed(() => !!editingDepartmentNodeId.value);
+const currentDepartmentMemberName = computed(() => (
+  findNodeById(draftOrgTree.value, editingDepartmentNodeId.value)?.memberName || ''
+));
 
 const memberPanelActions = computed(() => {
   if (isReadonly.value) {
@@ -705,14 +744,16 @@ watch(
       roleTemplateCatalog.value = roleTemplates.map((template) => ({
         ...template,
       }));
-      const nextMembers = teamAgents.map((agent) => ({
-        ...agent,
-      }));
+      const nextMembers = teamAgents
+        .filter(isOnBoardAgent)
+        .map((agent) => ({
+          ...agent,
+        }));
 
       syncCommittedState(deptTree, nextMembers);
       editingPendingSlotId.value = null;
       memberEditorStatus.value = '';
-      editingDepartmentMemberName.value = '';
+      editingDepartmentNodeId.value = '';
       departmentEditorName.value = '';
       departmentEditorResponsibility.value = '';
       teamMemberStatus.value = '';
@@ -732,7 +773,7 @@ watch(
       draftOrgTree.value = null;
       editingPendingSlotId.value = null;
       memberEditorStatus.value = '';
-      editingDepartmentMemberName.value = '';
+      editingDepartmentNodeId.value = '';
       departmentEditorName.value = '';
       departmentEditorResponsibility.value = '';
       teamMemberStatus.value = t('teamTree.loadFailed');
@@ -751,7 +792,7 @@ function cancelTeamMemberEdit(): void {
   draftOrgTree.value = cloneDraftOrgNode(committedOrgTree.value);
   editingPendingSlotId.value = null;
   memberEditorStatus.value = '';
-  editingDepartmentMemberName.value = '';
+  editingDepartmentNodeId.value = '';
   departmentEditorName.value = '';
   departmentEditorResponsibility.value = '';
   teamMemberStatus.value = '';
@@ -768,21 +809,26 @@ async function saveTeamMembers(): Promise<void> {
   teamMemberStatus.value = '';
 
   try {
-    const nextMembers = buildMembersSavePayload();
-    const nextDeptTree = buildDeptTreePayload();
+    const draftBeforeSave = cloneDraftOrgNode(draftOrgTree.value);
+    const nextMembers = buildMembersSavePayload(draftBeforeSave);
+    const baselineDeptTree = buildCommittedTreeBaseline();
 
     const savedMembers = await saveMembersByTeamId(props.teamId, nextMembers);
+    const activeSavedMembers = savedMembers.filter(isOnBoardAgent);
+    const draftWithAgentIds = hydrateDraftTreeAgentIds(draftBeforeSave, activeSavedMembers);
+    assertDraftTreeAgentIdsReady(draftWithAgentIds);
+    const nextDeptTree = buildDeptTreePayload(draftWithAgentIds);
 
-    if (nextDeptTree && hasDeptTreeChanges.value) {
+    if (nextDeptTree && JSON.stringify(nextDeptTree) !== JSON.stringify(baselineDeptTree)) {
       await setDeptTree(props.teamId, nextDeptTree);
     }
 
-    const nextAgents = savedMembers.map((agent) => ({ ...agent }));
+    const nextAgents = activeSavedMembers.map((agent) => ({ ...agent }));
 
     syncCommittedState(nextDeptTree, nextAgents);
     editingPendingSlotId.value = null;
     memberEditorStatus.value = '';
-    editingDepartmentMemberName.value = '';
+    editingDepartmentNodeId.value = '';
     departmentEditorName.value = '';
     departmentEditorResponsibility.value = '';
     teamMemberStatus.value = t('teamTree.saved');
@@ -822,9 +868,9 @@ function handleMemberPanelAction(actionKey: string): void {
   }
 }
 
-function toggleTeamMember(agentName: string): void {
-  if (findMemberNode(draftOrgTree.value, agentName)) {
-    requestRemoveMember(agentName);
+function toggleTeamMember(nodeId: string): void {
+  if (findNodeById(draftOrgTree.value, nodeId)) {
+    requestRemoveMember(nodeId);
   }
 }
 
@@ -858,14 +904,14 @@ function removePendingNode(root: DraftOrgNode, pendingId: string): boolean {
   return false;
 }
 
-function removeMemberNode(root: DraftOrgNode, memberName: string): boolean {
+function removeNodeById(root: DraftOrgNode, nodeId: string): boolean {
   for (let index = 0; index < root.children.length; index += 1) {
     const child = root.children[index];
-    if (child.kind === 'member' && child.memberName === memberName) {
+    if (child.id === nodeId) {
       root.children.splice(index, 1);
       return true;
     }
-    if (removeMemberNode(child, memberName)) {
+    if (removeNodeById(child, nodeId)) {
       return true;
     }
   }
@@ -884,9 +930,11 @@ function saveMemberEditor(): void {
     return;
   }
 
-  const allMemberNames = collectMemberNodes(draftOrgTree.value).map((node) => node.memberName);
-  const originalName = editingPendingSlotId.value ? '' : editingMemberName.value;
-  if (allMemberNames.some((memberName) => memberName === nextMemberName && memberName !== originalName)) {
+  const currentNodeId = editingPendingSlotId.value || editingNodeId.value;
+  const hasDuplicateName = collectMemberNodes(draftOrgTree.value).some((node) => (
+    node.memberName === nextMemberName && node.id !== currentNodeId
+  ));
+  if (hasDuplicateName) {
     memberEditorStatus.value = t('teamTree.duplicateNameError', { name: nextMemberName });
     return;
   }
@@ -919,7 +967,7 @@ function saveMemberEditor(): void {
     return;
   }
 
-  const targetNode = findMemberNode(nextTree, editingMemberName.value);
+  const targetNode = findNodeById(nextTree, editingNodeId.value);
   if (!targetNode) {
     return;
   }
@@ -934,13 +982,13 @@ function saveMemberEditor(): void {
   closeMemberEditor();
 }
 
-function addSubordinate(parentName: string): void {
+function addSubordinate(parentNodeId: string): void {
   const nextTree = cloneDraftOrgNode(draftOrgTree.value);
   if (!nextTree) {
     return;
   }
 
-  const parentNode = findMemberNode(nextTree, parentName);
+  const parentNode = findNodeById(nextTree, parentNodeId);
   if (!parentNode) {
     return;
   }
@@ -954,27 +1002,27 @@ function addSubordinate(parentName: string): void {
   teamMemberStatus.value = '';
 }
 
-function openDepartmentEditor(memberName: string): void {
-  const memberNode = findMemberNode(draftOrgTree.value, memberName);
+function openDepartmentEditor(nodeId: string): void {
+  const memberNode = findNodeById(draftOrgTree.value, nodeId);
   if (!memberNode) {
     return;
   }
 
   departmentEditorEditable.value = true;
-  editingDepartmentMemberName.value = memberName;
+  editingDepartmentNodeId.value = nodeId;
   departmentEditorName.value = memberNode.deptName;
   departmentEditorResponsibility.value = memberNode.deptResponsibility;
   teamMemberStatus.value = '';
 }
 
-function openDepartmentViewer(memberName: string): void {
-  const memberNode = findMemberNode(draftOrgTree.value, memberName);
+function openDepartmentViewer(nodeId: string): void {
+  const memberNode = findNodeById(draftOrgTree.value, nodeId);
   if (!memberNode) {
     return;
   }
 
   departmentEditorEditable.value = false;
-  editingDepartmentMemberName.value = memberName;
+  editingDepartmentNodeId.value = nodeId;
   departmentEditorName.value = memberNode.deptName;
   departmentEditorResponsibility.value = memberNode.deptResponsibility;
   teamMemberStatus.value = '';
@@ -982,16 +1030,16 @@ function openDepartmentViewer(memberName: string): void {
 
 function closeDepartmentEditor(): void {
   departmentEditorEditable.value = true;
-  editingDepartmentMemberName.value = '';
+  editingDepartmentNodeId.value = '';
   departmentEditorName.value = '';
   departmentEditorResponsibility.value = '';
 }
 
 function saveDepartmentEditor(): void {
-  const memberName = editingDepartmentMemberName.value;
+  const nodeId = editingDepartmentNodeId.value;
   const nextDepartmentName = departmentEditorName.value.trim();
   const nextDepartmentResponsibility = departmentEditorResponsibility.value.trim();
-  if (!memberName) {
+  if (!nodeId) {
     return;
   }
   if (!nextDepartmentName) {
@@ -1000,7 +1048,7 @@ function saveDepartmentEditor(): void {
   }
 
   const nextTree = cloneDraftOrgNode(draftOrgTree.value);
-  const memberNode = findMemberNode(nextTree, memberName);
+  const memberNode = findNodeById(nextTree, nodeId);
   if (!memberNode) {
     return;
   }
@@ -1036,15 +1084,21 @@ function removePendingSlot(slotId: string): void {
   }
 }
 
-function requestRemoveMember(agentName: string): void {
+function requestRemoveMember(nodeId: string): void {
+  const memberNode = findNodeById(draftOrgTree.value, nodeId);
+  if (!memberNode) {
+    return;
+  }
+
   confirmState.value = {
     title: t('teamTree.removeMemberTitle'),
-    message: t('teamTree.removeMemberConfirm', { name: agentName }),
+    message: t('teamTree.removeMemberConfirm', { name: memberNode.memberName }),
     confirmLabel: t('teamTree.removeMember'),
     danger: true,
     action: {
       type: 'remove-member',
-      agentName,
+      nodeId,
+      memberName: memberNode.memberName,
     },
   };
 }
@@ -1071,21 +1125,25 @@ function confirmDangerAction(): void {
     return;
   }
 
-  if (nextTree.kind === 'member' && nextTree.memberName === action.agentName) {
+  if (nextTree.id === action.nodeId) {
     draftOrgTree.value = null;
   } else {
-    removeMemberNode(nextTree, action.agentName);
+    removeNodeById(nextTree, action.nodeId);
     draftOrgTree.value = nextTree;
   }
 
-  if (editingMemberName.value === action.agentName) {
+  if (editingNodeId.value === action.nodeId) {
     closeMemberEditor();
   }
-  if (editingDepartmentMemberName.value === action.agentName) {
+  if (editingDepartmentNodeId.value === action.nodeId) {
     closeDepartmentEditor();
   }
 
   closeConfirmDialog();
+}
+
+function openMemberViewerByNode(_agentId: number | null, nodeId: string, _agentName: string): void {
+  openMemberViewer(nodeId);
 }
 </script>
 
@@ -1104,7 +1162,7 @@ function confirmDangerAction(): void {
       :show-edit-action="!isReadonly"
       @action="handleMemberPanelAction"
       @toggle-agent="toggleTeamMember"
-      @view-agent="openMemberViewer"
+      @view-agent="openMemberViewerByNode"
       @edit-agent="openMemberEditor"
       @edit-department="openDepartmentEditor"
       @view-department="openDepartmentViewer"
@@ -1152,7 +1210,7 @@ function confirmDangerAction(): void {
     <DepartmentEditorDialog
       :open="departmentEditorOpen"
       :editable="departmentEditorEditable"
-      :member-name="editingDepartmentMemberName"
+      :member-name="currentDepartmentMemberName"
       :department-name="departmentEditorName"
       :department-responsibility="departmentEditorResponsibility"
       @close="closeDepartmentEditor"

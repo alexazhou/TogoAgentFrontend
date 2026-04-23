@@ -13,12 +13,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  toggleAgent: [agentName: string];
-  viewAgent: [agentName: string];
-  editAgent: [agentName: string];
-  editDepartment: [agentName: string];
-  viewDepartment: [agentName: string];
-  addSubordinate: [agentName: string];
+  toggleAgent: [nodeId: string];
+  viewAgent: [agentId: number | null, nodeId: string, agentName: string];
+  editAgent: [nodeId: string];
+  editDepartment: [nodeId: string];
+  viewDepartment: [nodeId: string];
+  addSubordinate: [nodeId: string];
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
 }>();
@@ -32,7 +32,7 @@ function handlePrimaryAction(): void {
     return;
   }
 
-  emit('toggleAgent', props.node.name);
+  emit('toggleAgent', props.node.id);
 }
 
 function handleViewAction(): void {
@@ -41,11 +41,11 @@ function handleViewAction(): void {
   }
 
   if (props.readonly) {
-    emit('viewAgent', props.node.name);
+    emit('viewAgent', props.node.agentId ?? null, props.node.id, props.node.name);
     return;
   }
 
-  emit('toggleAgent', props.node.name);
+  emit('toggleAgent', props.node.id);
 }
 
 function handleEditAction(): void {
@@ -54,7 +54,7 @@ function handleEditAction(): void {
     return;
   }
 
-  emit('editAgent', props.node.name);
+  emit('editAgent', props.node.id);
 }
 
 function getNodeSpan(node: TeamGraphNode): number {
@@ -147,7 +147,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               class="member-action-button"
               type="button"
               @pointerdown.stop
-              @click.stop="emit('viewDepartment', node.name)"
+              @click.stop="emit('viewDepartment', node.id)"
             >
               {{ t('teamTree.viewDept') }}
             </button>
@@ -166,7 +166,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               class="member-action-button"
               type="button"
               @pointerdown.stop
-              @click.stop="emit('editDepartment', node.name)"
+              @click.stop="emit('editDepartment', node.id)"
             >
               {{ t('teamTree.editDept') }}
             </button>
@@ -182,7 +182,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               class="member-action-button"
               type="button"
               @pointerdown.stop
-              @click.stop="emit('addSubordinate', node.name)"
+              @click.stop="emit('addSubordinate', node.id)"
             >
               {{ t('teamTree.addSubordinate') }}
             </button>
@@ -191,7 +191,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
               class="member-action-button member-action-button--danger"
               type="button"
               @pointerdown.stop
-              @click.stop="emit('toggleAgent', node.name)"
+              @click.stop="emit('toggleAgent', node.id)"
             >
               {{ t('teamTree.removeMember') }}
             </button>
@@ -201,7 +201,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
             class="member-action-button"
             type="button"
             @pointerdown.stop
-            @click.stop="emit('toggleAgent', node.name)"
+            @click.stop="emit('toggleAgent', node.id)"
           >
             {{ t('teamTree.removeMember') }}
           </button>
@@ -238,7 +238,7 @@ function buildChildShellStyle(child: TeamGraphNode): Record<string, string> {
             :show-edit-action="showEditAction"
             :top-level="root"
             @toggle-agent="emit('toggleAgent', $event)"
-            @view-agent="emit('viewAgent', $event)"
+            @view-agent="(agentId, nodeId, agentName) => emit('viewAgent', agentId, nodeId, agentName)"
             @edit-agent="emit('editAgent', $event)"
             @edit-department="emit('editDepartment', $event)"
             @view-department="emit('viewDepartment', $event)"

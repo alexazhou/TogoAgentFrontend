@@ -24,7 +24,13 @@ const selectedAgentId = ref<number | null>(null);
 
 const teamId = computed(() => Number(route.params.teamId));
 const roleTemplates = useRoleTemplates();
-const selectedAgents = computed(() => team.value?.members.map((member) => member.name) ?? []);
+const activeTeamAgents = computed(() => (
+  teamAgents.value.filter((agent) => agent.employ_status === 'ON_BOARD' || !agent.employ_status)
+));
+const selectedAgents = computed(() => activeTeamAgents.value.map((agent) => agent.name));
+const selectedAgentIds = computed<Record<string, number | null>>(() => (
+  Object.fromEntries(activeTeamAgents.value.map((agent) => [agent.name, agent.id ?? null]))
+));
 const selectedAgentName = computed<string | null>(() => {
   const agent = teamAgents.value.find((item) => item.id === selectedAgentId.value);
   return agent ? displayName(agent) : null;
@@ -41,11 +47,11 @@ const selectedAgentTemplateName = computed<string | null>(() => {
   return template ? displayName(template) : `模板 #${roleTemplateId}`;
 });
 const selectedAgentTemplates = computed<Record<string, string>>(() =>
-  Object.fromEntries((team.value?.members ?? []).map((member) => [
-    member.name,
+  Object.fromEntries(activeTeamAgents.value.map((agent) => [
+    agent.name,
     (() => {
-      const template = roleTemplates.value.find((item) => item.id === member.role_template_id);
-      return template ? displayName(template) : `模板 #${member.role_template_id}`;
+      const template = roleTemplates.value.find((item) => item.id === agent.role_template_id);
+      return template ? displayName(template) : `模板 #${agent.role_template_id}`;
     })(),
   ])),
 );
@@ -88,8 +94,8 @@ function openRoom(roomId: number): void {
   router.push({ name: 'console', params: { teamId: teamId.value, roomId } }).catch(console.error);
 }
 
-function openAgentDetail(agentName: string): void {
-  selectedAgentId.value = teamAgents.value.find((agent) => agent.name === agentName)?.id ?? null;
+function openAgentDetail(agentId: number | null, _nodeId: string, agentName: string): void {
+  selectedAgentId.value = agentId ?? teamAgents.value.find((agent) => agent.name === agentName)?.id ?? null;
   agentDetailOpen.value = true;
 }
 
@@ -125,6 +131,7 @@ onMounted(() => {
         <TeamMembersCard
           :team-name="team.name"
           :selected-agents="selectedAgents"
+          :selected-agent-ids="selectedAgentIds"
           :member-templates="selectedAgentTemplates"
           readonly
           @view-agent="openAgentDetail"

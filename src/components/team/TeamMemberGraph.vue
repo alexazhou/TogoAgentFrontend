@@ -8,6 +8,7 @@ import { useTeamGraphLayout } from './useTeamGraphLayout';
 const props = defineProps<{
   teamName: string;
   selectedAgents: string[];
+  selectedAgentIds?: Record<string, number | null>;
   memberTemplates?: Record<string, string>;
   rootNode?: TeamGraphNode | null;
   readonly?: boolean;
@@ -15,12 +16,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  toggleAgent: [agentName: string];
-  viewAgent: [agentName: string];
-  editAgent: [agentName: string];
-  editDepartment: [agentName: string];
-  viewDepartment: [agentName: string];
-  addSubordinate: [agentName: string];
+  toggleAgent: [nodeId: string];
+  viewAgent: [agentId: number | null, nodeId: string, agentName: string];
+  editAgent: [nodeId: string];
+  editDepartment: [nodeId: string];
+  viewDepartment: [nodeId: string];
+  addSubordinate: [nodeId: string];
   editPendingSlot: [slotId: string];
   removePendingSlot: [slotId: string];
 }>();
@@ -28,6 +29,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const readonly = computed(() => !!props.readonly);
 const memberTemplates = computed(() => props.memberTemplates ?? {});
+const selectedAgentIds = computed(() => props.selectedAgentIds ?? {});
 
 function buildFallbackRootNode(): TeamGraphNode | null {
   const leaderName = props.selectedAgents[0] ?? '';
@@ -40,6 +42,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
 
   return {
     id: leaderName,
+    agentId: selectedAgentIds.value[leaderName] ?? null,
     kind: 'member',
     name: leaderName,
     departmentName: leaderName,
@@ -49,6 +52,7 @@ function buildFallbackRootNode(): TeamGraphNode | null {
     avatarSeed: buildMemberAvatarSeed(leaderName),
     children: props.selectedAgents.slice(1).map((agentName) => ({
       id: agentName,
+      agentId: selectedAgentIds.value[agentName] ?? null,
       kind: 'member',
       name: agentName,
       departmentName: agentName,
@@ -125,7 +129,7 @@ const {
           :show-edit-action="!!props.showEditAction"
           :root="true"
           @toggle-agent="emit('toggleAgent', $event)"
-          @view-agent="emit('viewAgent', $event)"
+          @view-agent="(agentId, nodeId, agentName) => emit('viewAgent', agentId, nodeId, agentName)"
           @edit-agent="emit('editAgent', $event)"
           @edit-department="emit('editDepartment', $event)"
           @view-department="emit('viewDepartment', $event)"
