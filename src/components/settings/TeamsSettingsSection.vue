@@ -114,6 +114,7 @@ const disabledTeams = computed(() => props.teams.filter((team) => !team.enabled)
         <TeamTreeEditor
           :team-id="selectedTeamDetail.id"
           :team-name="selectedTeamDetail.name"
+          :team-enabled="selectedTeamDetail.enabled"
           @saved="emit('treeSaved')"
         />
 

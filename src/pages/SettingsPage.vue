@@ -736,7 +736,9 @@ function handleTeamTreeSaved(): void {
     <ConfirmDialog
       :open="teamToggleConfirm.open"
       :title="teamToggleConfirm.enabled ? t('settings.page.toggleEnableTitle') : t('settings.page.toggleDisableTitle')"
-      :message="teamToggleConfirm.enabled ? t('settings.page.toggleEnableMsg') : t('settings.page.toggleDisableMsg')"
+      :message="teamToggleConfirm.enabled
+        ? t('settings.page.toggleEnableMsg', { name: teamToggleConfirm.teamName })
+        : t('settings.page.toggleDisableMsg', { name: teamToggleConfirm.teamName })"
       :confirm-label="teamToggleConfirm.enabled ? t('settings.page.toggleEnableBtn') : t('settings.page.toggleDisableBtn')"
       @close="closeTeamToggleConfirm"
       @confirm="confirmTeamToggle"

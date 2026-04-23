@@ -37,6 +37,7 @@ type DraftOrgNode = {
 const props = defineProps<{
   teamId: number;
   teamName: string;
+  teamEnabled: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -661,7 +662,12 @@ const departmentEditorOpen = computed(() => !!editingDepartmentMemberName.value)
 const memberPanelActions = computed(() => {
   if (isReadonly.value) {
     return [
-      { key: 'edit', label: t('teamTree.editTeamOrg'), primary: true, disabled: isLoading.value },
+      {
+        key: 'edit',
+        label: t('teamTree.editTeamOrg'),
+        primary: true,
+        disabled: isLoading.value,
+      },
     ];
   }
 
@@ -794,6 +800,10 @@ async function saveTeamMembers(): Promise<void> {
 
 function handleMemberPanelAction(actionKey: string): void {
   if (actionKey === 'edit') {
+    if (props.teamEnabled) {
+      showGlobalSuccessToast(t('teamTree.stopTeamBeforeEdit', { name: props.teamName }));
+      return;
+    }
     isReadonly.value = false;
     if (!draftOrgTree.value) {
       draftOrgTree.value = createPendingNode();
