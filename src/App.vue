@@ -20,6 +20,7 @@ import {
 import { getSystemStatus, resumeSchedule, setTeamEnabled } from './api';
 import QuickInitModal from './components/layout/QuickInitModal.vue';
 import TopBar from './components/layout/TopBar.vue';
+import { DEFAULT_SETTINGS_SECTION } from './components/settings/sections';
 import ConfirmDialog from './components/ui/ConfirmDialog.vue';
 import { startRealtimeClient, stopRealtimeClient } from './realtime/wsClient';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
@@ -76,11 +77,9 @@ function getRequestErrorCountdownStyle(toast: GlobalRequestErrorToast): Record<s
     return undefined;
   }
 
-  const startAt = toast.dismissAt - toast.autoDismissMs;
-  const elapsedMs = Math.max(0, Math.min(toast.autoDismissMs, Date.now() - startAt));
   return {
     '--countdown-duration': `${toast.autoDismissMs}ms`,
-    '--countdown-delay': `-${elapsedMs}ms`,
+    '--countdown-delay': `${toast.countdownDelayMs}ms`,
   };
 }
 
@@ -129,7 +128,10 @@ function openSettings(): void {
   if (activeTeamId.value === null) {
     return;
   }
-  router.push({ name: 'settings', params: { teamId: activeTeamId.value, section: 'general' } }).catch(console.error);
+  router.push({
+    name: 'settings',
+    params: { teamId: activeTeamId.value, section: DEFAULT_SETTINGS_SECTION },
+  }).catch(console.error);
 }
 
 function selectTeam(teamId: number): void {

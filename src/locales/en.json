@@ -396,12 +396,16 @@
     "nav": {
       "label": "Navigation",
       "ariaLabel": "Settings navigation",
+      "general": "System Status",
+      "generalNote": "Runtime overview and environment status",
       "teams": "Team Management",
       "teamsNote": "Team info and org structure",
       "roles": "Role Management",
       "rolesNote": "Role templates and responsibilities",
       "models": "LLM Service Management",
       "modelsNote": "Model services and call policies",
+      "runtime": "Runtime & Storage",
+      "runtimeNote": "Config paths and runtime data locations",
       "quickInit": "Quick Init",
       "quickInitNote": "Set up model access in one step"
     },

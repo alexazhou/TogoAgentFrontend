@@ -396,12 +396,16 @@
     "nav": {
       "label": "导航菜单",
       "ariaLabel": "设置导航",
+      "general": "系统状态",
+      "generalNote": "运行概览与环境状态",
       "teams": "团队管理",
       "teamsNote": "团队信息与组织结构",
       "roles": "角色管理",
       "rolesNote": "角色模板与职责分配",
       "models": "大模型服务管理",
       "modelsNote": "模型服务与调用策略",
+      "runtime": "运行与存储",
+      "runtimeNote": "配置目录与运行数据位置",
       "quickInit": "快速初始化",
       "quickInitNote": "一键完成基础模型接入"
     },

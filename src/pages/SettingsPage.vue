@@ -11,8 +11,10 @@ import RolesSettingsSection from '../components/settings/RolesSettingsSection.vu
 import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
 import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
 import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
+import { countDeptHierarchyLevels, countDeptNodes } from '../components/settings/teamSummary';
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import { useSettingsNavItems } from '../components/settings/settingsNavItems';
+import { DEFAULT_SETTINGS_SECTION, isSettingsRouteSection } from '../components/settings/sections';
 import { loadTeams, teams, teamsLoadFailed } from '../teamStore';
 import type { AgentInfo, DeptTreeNode, DirectoriesConfig, TeamDetail } from '../types';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
@@ -91,14 +93,11 @@ let uptimeTimer: number | null = null;
 
 const navItems = useSettingsNavItems();
 
-const defaultSectionId = 'teams';
-const validSectionIds = new Set(['teams', 'roles', 'models']);
-
 const routeSection = computed(() =>
   typeof route.params.section === 'string' ? route.params.section : '',
 );
 const currentSectionId = computed(() =>
-  validSectionIds.has(routeSection.value) ? routeSection.value : defaultSectionId,
+  isSettingsRouteSection(routeSection.value) ? routeSection.value : DEFAULT_SETTINGS_SECTION,
 );
 const currentNavItem = computed(() =>
   navItems.value.find((item) => item.id === currentSectionId.value) ?? navItems.value[0],
@@ -191,7 +190,7 @@ function openSection(sectionId: string): void {
 
 function handleBreadcrumbNavigate(key: string): void {
   if (key === 'settings') {
-    openSection(defaultSectionId);
+    openSection(DEFAULT_SETTINGS_SECTION);
     return;
   }
 
@@ -293,27 +292,6 @@ async function loadTeamSummaries(): Promise<void> {
     }),
   );
   teamSummaries.value = Object.fromEntries(entries);
-}
-
-function countDeptNodes(node: DeptTreeNode | null): number {
-  if (!node) {
-    return 0;
-  }
-
-  const current = node.children.length > 0 ? 1 : 0;
-  return current + node.children.reduce((total, child) => total + countDeptNodes(child), 0);
-}
-
-function countDeptHierarchyLevels(node: DeptTreeNode | null): number {
-  if (!node) {
-    return 0;
-  }
-
-  if (!node.children.length) {
-    return 1;
-  }
-
-  return 1 + Math.max(...node.children.map((child) => countDeptHierarchyLevels(child)));
 }
 
 async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
@@ -584,8 +562,11 @@ watch(
 watch(
   () => route.params.section,
   (section) => {
-    if (typeof section !== 'string' || !validSectionIds.has(section)) {
-      router.replace({ name: 'settings', params: { teamId: teamId.value, section: defaultSectionId } }).catch(console.error);
+    if (typeof section !== 'string' || !isSettingsRouteSection(section)) {
+      router.replace({
+        name: 'settings',
+        params: { teamId: teamId.value, section: DEFAULT_SETTINGS_SECTION },
+      }).catch(console.error);
     }
   },
   { immediate: true },
@@ -725,7 +706,7 @@ function handleTeamTreeSaved(): void {
         />
 
         <RuntimeSettingsSection
-          v-else
+          v-else-if="currentSectionId === 'runtime'"
           :breadcrumb-items="breadcrumbItems"
           :directories="runtimeDirectories"
           @navigate-breadcrumb="handleBreadcrumbNavigate"

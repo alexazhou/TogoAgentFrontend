@@ -9,7 +9,6 @@ import {
   getRoomMessages as fetchRoomMessages,
   getRooms as fetchRooms,
 } from '../api';
-import { t } from '../i18n';
 import type {
   AgentActivity,
   AgentInfo,
@@ -21,6 +20,7 @@ import type {
 } from '../types';
 import { displayName, formatPreview } from '../utils';
 import type { FrontendRealtimeEvent } from './eventNormalizer';
+import { resolveRoomPreview } from './roomPreview';
 import { subscribeRealtimeEvents } from './wsClient';
 
 const teamAgentsState = ref<Record<number, AgentInfo[]>>({});
@@ -75,6 +75,36 @@ function updateTeamRooms(teamId: number, updater: (rooms: RoomState[]) => RoomSt
   };
 }
 
+function refreshTeamRoomPreviews(teamId: number): void {
+  updateTeamRooms(teamId, (rooms) =>
+    rooms.map((room) => ({
+      ...room,
+      preview: resolveRoomPreview({
+        messages: roomMessagesState.value[room.room_id],
+        previousRoom: room,
+        resolveSenderDisplayName: (senderId) => resolveMessageSenderDisplayName(teamId, senderId),
+      }),
+    })),
+  );
+}
+
+function syncRoomPreview(teamId: number, roomId: number, messages?: MessageInfo[]): void {
+  updateTeamRooms(teamId, (rooms) =>
+    rooms.map((room) =>
+      room.room_id === roomId
+        ? {
+          ...room,
+          preview: resolveRoomPreview({
+            messages,
+            previousRoom: room,
+            resolveSenderDisplayName: (senderId) => resolveMessageSenderDisplayName(teamId, senderId),
+          }),
+        }
+        : room,
+    ),
+  );
+}
+
 function markRoomAsReadInternal(teamId: number, roomId: number): void {
   updateTeamRooms(teamId, (rooms) =>
     rooms.map((room) =>
@@ -114,6 +144,7 @@ export function seedTeamAgents(teamId: number, agents: AgentInfo[]): void {
     }
   }
   agentStatusState.value = nextStatusState;
+  refreshTeamRoomPreviews(teamId);
 }
 
 export async function loadTeamAgents(teamId: number, options?: { includeSpecial?: boolean }): Promise<AgentInfo[]> {
@@ -141,34 +172,13 @@ export function seedTeamRooms(teamId: number, rooms: RoomState[]): void {
 
 export async function loadTeamRooms(teamId: number): Promise<RoomState[]> {
   const baseRooms = await fetchRooms(teamId);
-  const previews = await Promise.all(
-    baseRooms.map(async (room) => {
-      try {
-        const roomMessages = await fetchRoomMessages(room.room_id);
-        const lastMessage = roomMessages[roomMessages.length - 1];
-        return {
-          room_id: room.room_id,
-          preview: lastMessage
-            ? formatPreview(
-              resolveMessageSenderDisplayName(teamId, lastMessage.agent_id),
-              lastMessage.content,
-            )
-            : t('message.noMessage'),
-        };
-      } catch (error) {
-        console.error(error);
-        return {
-          room_id: room.room_id,
-          preview: t('message.noMessage'),
-        };
-      }
-    }),
-  );
-
-  const previewMap = new Map(previews.map((entry) => [entry.room_id, entry.preview]));
   const rooms: RoomState[] = baseRooms.map((room) => ({
     ...room,
-    preview: previewMap.get(room.room_id) ?? t('message.noMessage'),
+    preview: resolveRoomPreview({
+      messages: roomMessagesState.value[room.room_id],
+      previousRoom: (teamRoomsState.value[teamId] ?? []).find((item) => item.room_id === room.room_id) ?? null,
+      resolveSenderDisplayName: (senderId) => resolveMessageSenderDisplayName(teamId, senderId),
+    }),
     unread: 0,
     current_turn_agent: room.current_turn_agent ?? null,
   }));
@@ -189,6 +199,7 @@ export async function loadRoomMessagesState(teamId: number, roomId: number): Pro
   const rawMessages = await fetchRoomMessages(roomId);
   const messages = rawMessages.map((m) => normalizeMessage(teamId, m));
   seedRoomMessages(roomId, messages);
+  syncRoomPreview(teamId, roomId, messages);
   return messages;
 }
 

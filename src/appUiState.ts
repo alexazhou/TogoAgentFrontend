@@ -14,6 +14,7 @@ export interface GlobalRequestErrorToast {
   detail: string;
   autoDismissMs: number | null;
   dismissAt: number | null;
+  countdownDelayMs: number;
 }
 
 export interface GlobalRequestErrorPayload {
@@ -41,7 +42,7 @@ const globalSuccessToastTimers = new Map<number, number>();
 
 function patchGlobalRequestError(
   toastId: number,
-  patch: Partial<Pick<GlobalRequestErrorToast, 'autoDismissMs' | 'dismissAt'>>,
+  patch: Partial<Pick<GlobalRequestErrorToast, 'autoDismissMs' | 'dismissAt' | 'countdownDelayMs'>>,
 ): void {
   globalRequestErrors.value = globalRequestErrors.value.map((toast) => (
     toast.id === toastId ? { ...toast, ...patch } : toast
@@ -58,6 +59,7 @@ function removeGlobalRequestError(toastId: number): void {
 }
 
 function scheduleGlobalRequestErrorRemoval(toastId: number): void {
+  const currentToast = globalRequestErrors.value.find((toast) => toast.id === toastId) ?? null;
   const currentTimer = globalRequestErrorTimers.get(toastId);
   if (currentTimer !== undefined) {
     window.clearTimeout(currentTimer);
@@ -68,14 +70,29 @@ function scheduleGlobalRequestErrorRemoval(toastId: number): void {
     patchGlobalRequestError(toastId, {
       autoDismissMs: null,
       dismissAt: null,
+      countdownDelayMs: 0,
     });
     return;
   }
 
+  const previousDismissAt = currentToast?.dismissAt ?? null;
+  const previousAutoDismissMs = currentToast?.autoDismissMs ?? null;
+  const previousStartAt = (
+    previousDismissAt !== null && previousAutoDismissMs !== null
+      ? previousDismissAt - previousAutoDismissMs
+      : null
+  );
+  const elapsedMs = previousStartAt !== null
+    ? Math.max(0, Date.now() - previousStartAt)
+    : 0;
+  const countdownDelayMs = elapsedMs > 0
+    ? -Math.min(elapsedMs, globalRequestErrorAutoDismissMs)
+    : 0;
   const dismissAt = Date.now() + globalRequestErrorAutoDismissMs;
   patchGlobalRequestError(toastId, {
     autoDismissMs: globalRequestErrorAutoDismissMs,
     dismissAt,
+    countdownDelayMs,
   });
   const timer = window.setTimeout(() => {
     removeGlobalRequestError(toastId);
@@ -104,6 +121,7 @@ export function showGlobalRequestError(message: GlobalRequestErrorPayload): void
       detail: message.detail?.trim() ?? '',
       autoDismissMs: null,
       dismissAt: null,
+      countdownDelayMs: 0,
     },
   ];
   scheduleGlobalRequestErrorRemoval(toastId);
