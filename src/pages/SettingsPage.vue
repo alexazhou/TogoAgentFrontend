@@ -72,6 +72,8 @@ const teamClearDataConfirm = ref<{
 });
 const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
+const settingsMainRef = ref<HTMLElement | null>(null);
+const settingsScrollbarHovered = ref(false);
 
 const navItems = useSettingsNavItems();
 
