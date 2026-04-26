@@ -108,7 +108,6 @@ const displayAgentName = computed(() => {
   }
   return props.agentName ?? 'Agent';
 });
-const displayTeamName = computed(() => displayAgent.value?.team_name ?? '');
 const displayEmployeeNumber = computed(() => String(displayAgent.value?.employee_number ?? ''));
 const activityRealtimeState = computed(() => connectionState.value);
 const activityRealtimePulse = computed(
@@ -330,7 +329,6 @@ watch(
                 <AgentCardBase
                   :title="displayAgentName"
                   :subtitle="agentTemplateLabel"
-                  :overline="displayTeamName"
                   :employee-number="displayEmployeeNumber"
                   :avatar-name="displayAgentName"
                   variant="profile"

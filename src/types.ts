@@ -13,7 +13,6 @@ export interface AgentInfo {
   role_template_id?: number | null;
   model: string;
   team_id?: number | null;
-  team_name?: string | null;
   status: AgentStatus;
   employ_status?: string | null;
   driver?: string;

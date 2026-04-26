@@ -382,7 +382,6 @@ function normalizeAgent(agent: RawAgentInfo): AgentInfo {
     role_template_id: typeof agent.role_template_id === 'number' ? agent.role_template_id : null,
     model: String(agent.model ?? ''),
     team_id: typeof agent.team_id === 'number' ? agent.team_id : null,
-    team_name: typeof agent.team_name === 'string' ? agent.team_name : null,
     status: normalizeAgentStatus(agent.status),
     employ_status: agent.employ_status ?? null,
     driver: normalizeDriverTypeValue(typeof agent.driver === 'string' ? agent.driver : ''),
