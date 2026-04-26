@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import '../theme/legacy-aliases.css';
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { deleteTeam, clearTeamData, getAgents, getAgentsByTeamId, getDeptTree, getDirectories, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
+import { deleteTeam, clearTeamData, getAgents, getAgentsByTeamId, getDeptTree, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
 import { connectionState, showGlobalSuccessToast, showQuickInit, totalMessageCount } from '../appUiState';
-import GeneralSettingsSection from '../components/settings/GeneralSettingsSection.vue';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
-import RuntimeSettingsSection from '../components/settings/RuntimeSettingsSection.vue';
 import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
 import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vue';
 import { countDeptHierarchyLevels, countDeptNodes } from '../components/settings/teamSummary';
@@ -16,7 +14,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import { useSettingsNavItems } from '../components/settings/settingsNavItems';
 import { DEFAULT_SETTINGS_SECTION, isSettingsRouteSection } from '../components/settings/sections';
 import { loadTeams, teams, teamsLoadFailed } from '../teamStore';
-import type { AgentInfo, DeptTreeNode, DirectoriesConfig, TeamDetail } from '../types';
+import type { AgentInfo, TeamDetail } from '../types';
 import type { SettingsBreadcrumbItem } from '../components/settings/types';
 
 const route = useRoute();
@@ -26,16 +24,7 @@ const { t } = useI18n();
 totalMessageCount.value = 0;
 
 const teamId = computed(() => Number(route.params.teamId));
-const startedAt = Date.now();
-const uptimeLabel = ref('00:00:00');
-const systemVersion = 'Web Console v0.1.0';
-const driverStates = [
-  { key: 'claude', label: 'Claude', available: false, note: t('settings.pendingDetection') },
-  { key: 'tps', label: 'TPS', available: false, note: t('settings.pendingDetection') },
-];
 const agents = ref<AgentInfo[]>([]);
-const settingsMainRef = ref<HTMLElement | null>(null);
-const settingsScrollbarHovered = ref(false);
 const teamSummaries = ref<Record<number, {
   activeMemberCount: number;
   offBoardMemberCount: number;
@@ -44,12 +33,6 @@ const teamSummaries = ref<Record<number, {
   hierarchyLevelCount: number;
   workingDirectory: string;
 }>>({});
-const runtimeDirectories = ref<DirectoriesConfig>({
-  config_dir: '',
-  workspace_dir: '',
-  data_dir: '',
-  log_dir: '',
-});
 const selectedTeamDetail = ref<TeamDetail | null>(null);
 const teamInfoDraft = ref({
   name: '',
@@ -89,7 +72,6 @@ const teamClearDataConfirm = ref<{
 });
 const isSavingTeamInfo = ref(false);
 const teamInfoStatus = ref('');
-let uptimeTimer: number | null = null;
 
 const navItems = useSettingsNavItems();
 
@@ -502,14 +484,6 @@ function resetTeamInfoDraft(): void {
   teamInfoStatus.value = '';
 }
 
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-  const seconds = String(totalSeconds % 60).padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
-}
-
 function formatDateTime(value: string): string {
   if (!value) {
     return t('common.unknown');
@@ -531,20 +505,6 @@ function formatDateTime(value: string): string {
     hour12: false,
   }).format(date);
 }
-
-function updateUptime(): void {
-  uptimeLabel.value = formatDuration(Date.now() - startedAt);
-}
-
-const systemPlatform = computed(() => {
-  const platform = navigator.platform || 'Unknown Platform';
-  const language = navigator.language || 'unknown';
-  return `${platform} / ${language}`;
-});
-
-const teamCount = computed(() => teams.value.length);
-const memberCount = computed(() => agents.value.length);
-const agentCount = computed(() => agents.value.length);
 
 watch(
   () => teams.value.map((team) => team.id),
@@ -585,15 +545,6 @@ watch(
 );
 
 onMounted(() => {
-  updateUptime();
-  uptimeTimer = window.setInterval(updateUptime, 1000);
-  getDirectories()
-    .then((result) => {
-      runtimeDirectories.value = result;
-    })
-    .catch((error) => {
-      console.error(error);
-    });
   getAgents()
     .then((result) => {
       agents.value = result;
@@ -601,13 +552,6 @@ onMounted(() => {
     .catch((error) => {
       console.error(error);
     });
-});
-
-onBeforeUnmount(() => {
-  if (uptimeTimer !== null) {
-    window.clearInterval(uptimeTimer);
-    uptimeTimer = null;
-  }
 });
 
 function handleTeamTreeSaved(): void {
@@ -649,23 +593,8 @@ function handleTeamTreeSaved(): void {
         @pointermove="updateSettingsScrollbarHover"
         @pointerleave="clearSettingsScrollbarHover"
       >
-        <GeneralSettingsSection
-          v-if="currentSectionId === 'general'"
-          :breadcrumb-items="breadcrumbItems"
-          :connection-state="connectionState"
-          :system-version="systemVersion"
-          :system-platform="systemPlatform"
-          :uptime-label="uptimeLabel"
-          :team-count="teamCount"
-          :member-count="memberCount"
-          :agent-count="agentCount"
-          :total-message-count="totalMessageCount"
-          :driver-states="driverStates"
-          @navigate-breadcrumb="handleBreadcrumbNavigate"
-        />
-
         <TeamsSettingsSection
-          v-else-if="currentSectionId === 'teams'"
+          v-if="currentSectionId === 'teams'"
           :breadcrumb-items="breadcrumbItems"
           :selected-team-detail="selectedTeamDetail"
           :team-info-draft="teamInfoDraft"
@@ -702,13 +631,6 @@ function handleTeamTreeSaved(): void {
         <ModelsSettingsSection
           v-else-if="currentSectionId === 'models'"
           :breadcrumb-items="breadcrumbItems"
-          @navigate-breadcrumb="handleBreadcrumbNavigate"
-        />
-
-        <RuntimeSettingsSection
-          v-else-if="currentSectionId === 'runtime'"
-          :breadcrumb-items="breadcrumbItems"
-          :directories="runtimeDirectories"
           @navigate-breadcrumb="handleBreadcrumbNavigate"
         />
       </main>
