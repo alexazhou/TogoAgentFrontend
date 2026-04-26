@@ -2,7 +2,6 @@ import type {
   AgentActivity,
   AgentActivityStatus,
   AgentActivityType,
-  AgentSnapshot,
   AgentStatus,
   AgentDetail,
   AgentInfo,
@@ -43,7 +42,7 @@ type RawRoomInfo = {
   };
   state?: string;
   need_scheduling?: boolean;
-  current_turn_agent?: unknown;
+  current_turn_agent_id?: unknown;
   agents?: unknown;
 };
 
@@ -288,34 +287,11 @@ function normalizeEntityI18n(value: unknown): EntityI18n {
   return normalized;
 }
 
-function normalizeAgentSnapshot(value: unknown): AgentSnapshot | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const raw = value as Record<string, unknown>;
-  const id = Number(raw.id ?? 0);
-  if (!Number.isFinite(id) || id <= 0) {
-    return null;
-  }
-
-  return {
-    id,
-    name: String(raw.name ?? ''),
-    i18n: normalizeEntityI18n(raw.i18n),
-    ...(typeof raw.team_id === 'number' && { team_id: raw.team_id }),
-    ...(typeof raw.model === 'string' && { model: raw.model }),
-    ...(typeof raw.driver === 'string' && { driver: raw.driver }),
-    ...(typeof raw.employ_status === 'string' && { employ_status: raw.employ_status }),
-    ...(typeof raw.employee_number === 'number' && { employee_number: raw.employee_number }),
-    ...(typeof raw.role_template_id === 'number' && { role_template_id: raw.role_template_id }),
-  };
-}
-
 function normalizeRoom(room: RawRoomInfo): RoomInfo {
   const gtRoom = room.gt_room;
   const roomName = String(gtRoom?.name ?? '');
   const roomType = String(gtRoom?.type ?? 'group').toLowerCase();
+  const currentTurnAgentId = Number(room.current_turn_agent_id ?? 0);
 
   return {
     room_id: Number(gtRoom?.id ?? 0),
@@ -333,7 +309,9 @@ function normalizeRoom(room: RawRoomInfo): RoomInfo {
       ? gtRoom.tags.filter((tag): tag is string => typeof tag === 'string')
       : [],
     biz_id: typeof gtRoom?.biz_id === 'string' && gtRoom.biz_id.trim() ? gtRoom.biz_id : null,
-    current_turn_agent: normalizeAgentSnapshot(room.current_turn_agent),
+    current_turn_agent_id: Number.isFinite(currentTurnAgentId) && currentTurnAgentId > 0
+      ? currentTurnAgentId
+      : null,
   };
 }
 

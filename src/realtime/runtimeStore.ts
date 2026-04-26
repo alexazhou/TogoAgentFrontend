@@ -160,7 +160,7 @@ export function seedTeamRooms(teamId: number, rooms: RoomState[]): void {
     return {
       ...room,
       unread: previous?.unread ?? room.unread ?? 0,
-      current_turn_agent: room.current_turn_agent ?? previous?.current_turn_agent ?? null,
+      current_turn_agent_id: room.current_turn_agent_id ?? previous?.current_turn_agent_id ?? null,
     };
   });
 
@@ -180,7 +180,7 @@ export async function loadTeamRooms(teamId: number): Promise<RoomState[]> {
       resolveSenderDisplayName: (senderId) => resolveMessageSenderDisplayName(teamId, senderId),
     }),
     unread: 0,
-    current_turn_agent: room.current_turn_agent ?? null,
+    current_turn_agent_id: room.current_turn_agent_id ?? null,
   }));
 
   seedTeamRooms(teamId, rooms);
@@ -369,7 +369,7 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
             ...room,
             state: event.state,
             need_scheduling: event.needScheduler,
-            current_turn_agent: event.currentTurnAgent,
+            current_turn_agent_id: event.currentTurnAgentId,
           }
           : room,
       ),

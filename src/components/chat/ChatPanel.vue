@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getAgentAvatarUrl } from '../../avatar';
 import { displayName, i18nText } from '../../utils';
-import type { AgentSnapshot, MessageInfo, RoomMemberProfile, RoomState } from '../../types';
+import type { MessageInfo, RoomMemberProfile, RoomState } from '../../types';
 import { useAgentStatus } from '../../realtime/selectors';
 import MessageStream from './MessageStream.vue';
 
@@ -32,21 +32,28 @@ const isDraftComposing = ref(false);
 const currentMembers = computed(() => props.memberProfiles);
 
 const isScheduling = computed(() => props.currentRoom?.state === 'scheduling');
+const currentTurnAgentId = computed(() => props.currentRoom?.current_turn_agent_id ?? null);
+const currentTurnAgent = computed<RoomMemberProfile | null>(() => {
+  const agentId = currentTurnAgentId.value;
+  if (agentId === null) {
+    return null;
+  }
+  return props.memberProfiles.find((member) => member.id === agentId) ?? null;
+});
 const currentSpeaker = computed(() => {
-  const agent = props.currentRoom?.current_turn_agent;
+  const agent = currentTurnAgent.value;
   return agent ? displayName(agent) : null;
 });
 
-const currentTurnAgentId = computed(() => props.currentRoom?.current_turn_agent?.id ?? null);
 const turnAgentStatus = useAgentStatus(currentTurnAgentId);
-const workingAgent = computed<AgentSnapshot | null>(() => {
+const workingAgent = computed<RoomMemberProfile | null>(() => {
   if (
     props.currentRoom?.need_scheduling
     && isScheduling.value
-    && props.currentRoom.current_turn_agent
+    && currentTurnAgent.value
     && turnAgentStatus.value === 'active'
   ) {
-    return props.currentRoom.current_turn_agent;
+    return currentTurnAgent.value;
   }
   return null;
 });

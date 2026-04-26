@@ -2,7 +2,6 @@ import type {
   AgentActivity,
   AgentActivityStatus,
   AgentActivityType,
-  AgentSnapshot,
   AgentStatus,
   MessageInfo,
 } from '../types';
@@ -34,7 +33,7 @@ export type FrontendRealtimeEvent =
     roomId: number;
     state: string;
     needScheduler: boolean;
-    currentTurnAgent: AgentSnapshot | null;
+    currentTurnAgentId: number | null;
   }
   | {
     type: 'schedule_state';
@@ -43,30 +42,6 @@ export type FrontendRealtimeEvent =
   };
 
 type RawRecord = Record<string, unknown>;
-
-function normalizeEntityI18n(value: unknown) {
-  if (!value || typeof value !== 'object') {
-    return {};
-  }
-
-  const normalized: Record<string, Record<string, string>> = {};
-  for (const [field, rawTextMap] of Object.entries(value as RawRecord)) {
-    if (!rawTextMap || typeof rawTextMap !== 'object') {
-      continue;
-    }
-
-    const textMap: Record<string, string> = {};
-    for (const [locale, text] of Object.entries(rawTextMap as RawRecord)) {
-      if (typeof text === 'string') {
-        textMap[locale] = text;
-      }
-    }
-
-    normalized[field] = textMap;
-  }
-
-  return normalized;
-}
 
 function normalizeAgentStatus(value: unknown): AgentStatus {
   const normalized = String(value ?? '').trim().toLowerCase();
@@ -90,24 +65,6 @@ function normalizeActivityStatus(value: unknown): AgentActivityStatus {
     return normalized;
   }
   return 'cancelled';
-}
-
-function normalizeAgentSnapshot(value: unknown): AgentSnapshot | null {
-  if (!value || typeof value !== 'object') return null;
-  const raw = value as RawRecord;
-  const id = Number(raw.id ?? 0);
-  if (!Number.isFinite(id) || id <= 0) return null;
-  return {
-    id,
-    name: String(raw.name ?? ''),
-    i18n: normalizeEntityI18n(raw.i18n),
-    ...(typeof raw.team_id === 'number' && { team_id: raw.team_id }),
-    ...(typeof raw.model === 'string' && { model: raw.model }),
-    ...(typeof raw.driver === 'string' && { driver: raw.driver }),
-    ...(typeof raw.employ_status === 'string' && { employ_status: raw.employ_status }),
-    ...(typeof raw.employee_number === 'number' && { employee_number: raw.employee_number }),
-    ...(typeof raw.role_template_id === 'number' && { role_template_id: raw.role_template_id }),
-  };
 }
 
 function normalizeAgentActivity(value: unknown): AgentActivity | null {
@@ -205,6 +162,7 @@ export function normalizeWsEventPayload(payload: unknown): FrontendRealtimeEvent
     const gtRoom = raw.gt_room as RawRecord | undefined;
     const teamId = Number(gtRoom?.team_id ?? 0);
     const roomId = Number(gtRoom?.id ?? 0);
+    const currentTurnAgentId = Number(raw.current_turn_agent_id ?? 0);
     if (!Number.isFinite(teamId) || !Number.isFinite(roomId) || teamId <= 0 || roomId <= 0) {
       return null;
     }
@@ -215,7 +173,9 @@ export function normalizeWsEventPayload(payload: unknown): FrontendRealtimeEvent
       roomId,
       state: String(raw.state ?? '').trim().toLowerCase(),
       needScheduler: Boolean(raw.need_scheduling),
-      currentTurnAgent: normalizeAgentSnapshot(raw.current_turn_agent),
+      currentTurnAgentId: Number.isFinite(currentTurnAgentId) && currentTurnAgentId > 0
+        ? currentTurnAgentId
+        : null,
     };
   }
 

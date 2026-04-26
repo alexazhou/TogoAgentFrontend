@@ -2,13 +2,13 @@
 import { getAgentAvatarUrl } from '../../avatar';
 import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { AgentSnapshot, MessageInfo, RoomMemberProfile } from '../../types';
+import type { MessageInfo, RoomMemberProfile } from '../../types';
 import { bubbleSide, displayName, formatTime } from '../../utils';
 
 const props = defineProps<{
   messages: MessageInfo[];
   memberProfiles: RoomMemberProfile[];
-  workingAgent?: AgentSnapshot | null;
+  workingAgent?: RoomMemberProfile | null;
 }>();
 
 const emit = defineEmits<{

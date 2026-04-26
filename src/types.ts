@@ -43,18 +43,6 @@ export interface AgentActivity {
   updated_at?: string | null;
 }
 
-export interface AgentSnapshot {
-  id: number;
-  name: string;
-  i18n: EntityI18n;
-  team_id?: number;
-  model?: string;
-  driver?: string;
-  employ_status?: string;
-  employee_number?: number;
-  role_template_id?: number;
-}
-
 export interface RoomInfo {
   room_id: number;
   room_name: string;
@@ -65,7 +53,7 @@ export interface RoomInfo {
   agents: number[];
   tags?: string[];
   biz_id?: string | null;
-  current_turn_agent: AgentSnapshot | null;
+  current_turn_agent_id: number | null;
 }
 
 export interface MessageInfo {
@@ -110,7 +98,7 @@ export interface WsRoomStatusEvent {
     name: string;
   };
   state: 'SCHEDULING' | 'IDLE';
-  current_turn_agent: AgentSnapshot | null;
+  current_turn_agent_id: number | null;
   need_scheduling: boolean;
 }
 
