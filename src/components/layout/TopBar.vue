@@ -349,102 +349,108 @@ function closeLogoutConfirm(): void {
         {{ statusLabel }}
       </div>
       <div v-if="showConnectionStatus" class="metric-pill">{{ t('topbar.messagesCount', { count: totalMessageCount }) }}</div>
-      <button
-        class="theme-switch"
-        type="button"
-        :aria-pressed="isLightMode"
-        :title="isLightMode ? t('topbar.switchToDark') : t('topbar.switchToLight')"
-        @click="emit('toggleTheme')"
-      >
-        <span
-          class="theme-switch-icon theme-switch-icon-sun"
-          :class="{ 'is-active': isLightMode }"
-          aria-hidden="true"
-        >
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2.75v2.5"></path>
-            <path d="M12 18.75v2.5"></path>
-            <path d="M4.93 4.93l1.77 1.77"></path>
-            <path d="M17.3 17.3l1.77 1.77"></path>
-            <path d="M2.75 12h2.5"></path>
-            <path d="M18.75 12h2.5"></path>
-            <path d="M4.93 19.07l1.77-1.77"></path>
-            <path d="M17.3 6.7l1.77-1.77"></path>
-          </svg>
-        </span>
-        <span class="theme-switch-track">
-          <span class="theme-switch-thumb" :class="{ 'is-dark': !isLightMode }"></span>
-        </span>
-        <span
-          class="theme-switch-icon theme-switch-icon-moon"
-          :class="{ 'is-active': !isLightMode }"
-          aria-hidden="true"
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.8 7.8 0 1 0 10.5 10.5Z"></path>
-          </svg>
-        </span>
-      </button>
-      <div class="language-switch">
+      <div class="topbar-utility-group">
         <button
+          class="theme-switch"
           type="button"
-          class="lang-button"
-          :aria-expanded="languageMenuOpen"
-          aria-haspopup="listbox"
-          :aria-label="t('language.switcher')"
-          :title="t('language.switcher')"
-          @click="toggleLanguageMenu"
+          :aria-pressed="isLightMode"
+          :title="isLightMode ? t('topbar.switchToDark') : t('topbar.switchToLight')"
+          @click="emit('toggleTheme')"
         >
-          <svg class="lang-button__globe" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18Z" />
-            <path d="M3.6 9h16.8" />
-            <path d="M3.6 15h16.8" />
-            <path d="M12 3c2.3 2.2 3.6 5.3 3.6 9s-1.3 6.8-3.6 9c-2.3-2.2-3.6-5.3-3.6-9s1.3-6.8 3.6-9Z" />
-          </svg>
-          <svg class="lang-button__chevron" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="m4 6 4 4 4-4" />
+          <span
+            class="theme-switch-icon theme-switch-icon-sun"
+            :class="{ 'is-active': isLightMode }"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2.75v2.5"></path>
+              <path d="M12 18.75v2.5"></path>
+              <path d="M4.93 4.93l1.77 1.77"></path>
+              <path d="M17.3 17.3l1.77 1.77"></path>
+              <path d="M2.75 12h2.5"></path>
+              <path d="M18.75 12h2.5"></path>
+              <path d="M4.93 19.07l1.77-1.77"></path>
+              <path d="M17.3 6.7l1.77-1.77"></path>
+            </svg>
+          </span>
+          <span class="theme-switch-track">
+            <span class="theme-switch-thumb" :class="{ 'is-dark': !isLightMode }"></span>
+          </span>
+          <span
+            class="theme-switch-icon theme-switch-icon-moon"
+            :class="{ 'is-active': !isLightMode }"
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 24 24">
+              <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7.8 7.8 0 1 0 10.5 10.5Z"></path>
+            </svg>
+          </span>
+        </button>
+        <div class="language-switch">
+          <button
+            type="button"
+            class="lang-button"
+            :aria-expanded="languageMenuOpen"
+            aria-haspopup="listbox"
+            :aria-label="t('language.switcher')"
+            :title="t('language.switcher')"
+            @click="toggleLanguageMenu"
+          >
+            <svg class="lang-button__globe" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18Z" />
+              <path d="M3.6 9h16.8" />
+              <path d="M3.6 15h16.8" />
+              <path d="M12 3c2.3 2.2 3.6 5.3 3.6 9s-1.3 6.8-3.6 9c-2.3-2.2-3.6-5.3-3.6-9s1.3-6.8 3.6-9Z" />
+            </svg>
+            <svg class="lang-button__chevron" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m4 6 4 4 4-4" />
+            </svg>
+          </button>
+          <div
+            v-if="languageMenuOpen"
+            class="lang-menu"
+            role="listbox"
+          >
+            <button
+              type="button"
+              class="lang-option"
+              :class="{ 'is-active': currentLocale === 'zh-CN' }"
+              role="option"
+              :aria-selected="currentLocale === 'zh-CN'"
+              @click="handleSetLanguage('zh-CN')"
+            >
+              <span class="lang-option__check" aria-hidden="true">{{ currentLocale === 'zh-CN' ? '✓' : '' }}</span>
+              {{ t('language.zhCN') }}
+            </button>
+            <button
+              type="button"
+              class="lang-option"
+              :class="{ 'is-active': currentLocale === 'en' }"
+              role="option"
+              :aria-selected="currentLocale === 'en'"
+              @click="handleSetLanguage('en')"
+            >
+              <span class="lang-option__check" aria-hidden="true">{{ currentLocale === 'en' ? '✓' : '' }}</span>
+              {{ t('language.en') }}
+            </button>
+          </div>
+        </div>
+        <button
+          v-if="authEnabled"
+          class="nav-icon-button toolbar-icon-button logout-button"
+          type="button"
+          :title="t('topbar.logout')"
+          :aria-label="t('topbar.logout')"
+          @click="handleLogout"
+        >
+          <svg class="logout-button__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 4.5H7.25A2.25 2.25 0 0 0 5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25H10" />
+            <path d="M13 8.5 17 12l-4 3.5" />
+            <path d="M9 12h8" />
           </svg>
         </button>
-        <div
-          v-if="languageMenuOpen"
-          class="lang-menu"
-          role="listbox"
-        >
-          <button
-            type="button"
-            class="lang-option"
-            :class="{ 'is-active': currentLocale === 'zh-CN' }"
-            role="option"
-            :aria-selected="currentLocale === 'zh-CN'"
-            @click="handleSetLanguage('zh-CN')"
-          >
-            <span class="lang-option__check" aria-hidden="true">{{ currentLocale === 'zh-CN' ? '✓' : '' }}</span>
-            {{ t('language.zhCN') }}
-          </button>
-          <button
-            type="button"
-            class="lang-option"
-            :class="{ 'is-active': currentLocale === 'en' }"
-            role="option"
-            :aria-selected="currentLocale === 'en'"
-            @click="handleSetLanguage('en')"
-          >
-            <span class="lang-option__check" aria-hidden="true">{{ currentLocale === 'en' ? '✓' : '' }}</span>
-            {{ t('language.en') }}
-          </button>
-        </div>
       </div>
-      <button
-        v-if="authEnabled"
-        class="nav-icon-button nav-icon-button--bare logout-button"
-        type="button"
-        :title="t('topbar.logout')"
-        :aria-label="t('topbar.logout')"
-        @click="handleLogout"
-      >
-        <i class="fa-solid fa-sign-out-alt" aria-hidden="true"></i>
-      </button>
     </div>
   </header>
 
@@ -688,6 +694,20 @@ function closeLogoutConfirm(): void {
   color: var(--text-primary);
 }
 
+.toolbar-icon-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-pill);
+  color: var(--text-secondary);
+}
+
+.toolbar-icon-button:not(:disabled):hover {
+  border-color: var(--interactive-focus-border);
+  background: color-mix(in srgb, var(--interactive-selected) 28%, var(--surface-pill) 72%);
+  color: var(--text-primary);
+}
+
 .team-switcher-button:focus-visible,
 .nav-action:focus-visible,
 .nav-icon-button:focus-visible,
@@ -701,6 +721,12 @@ function closeLogoutConfirm(): void {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.topbar-utility-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .team-disabled-pill,
@@ -921,6 +947,16 @@ function closeLogoutConfirm(): void {
   line-height: 1;
 }
 
+.logout-button__icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .theme-switch-icon {
   color: var(--text-secondary);
   transition: color 160ms ease;
@@ -1001,9 +1037,9 @@ function closeLogoutConfirm(): void {
 .lang-button {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   height: 28px;
-  padding: 0 6px;
+  padding: 0 5px 0 6px;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   background: var(--surface-pill);
@@ -1032,8 +1068,8 @@ function closeLogoutConfirm(): void {
 }
 
 .lang-button__globe {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .lang-button__chevron {
@@ -1094,7 +1130,7 @@ function closeLogoutConfirm(): void {
 }
 
 .logout-button {
-  margin-left: 2px;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 980px) {

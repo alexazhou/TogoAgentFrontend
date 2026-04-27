@@ -180,5 +180,6 @@ function handleClear() {
   min-width: 88px;
   height: 32px;
   padding: 0 14px;
+  font-size: 0.84rem;
 }
 </style>
