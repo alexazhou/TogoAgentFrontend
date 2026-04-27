@@ -53,7 +53,7 @@ function handleClose() {
 
 <template>
   <Teleport to="body">
-    <div class="token-overlay" @click.self="handleClose">
+    <div class="token-overlay">
       <section class="token-dialog panel">
         <div class="token-head">
           <p class="token-eyebrow">{{ t('auth.dialogEyebrow') }}</p>
