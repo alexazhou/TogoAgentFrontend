@@ -376,7 +376,6 @@ onBeforeUnmount(() => {
 
     <TokenDialog
       v-if="showTokenDialog"
-      @close="showTokenDialog = false"
     />
 
     <ConfirmDialog

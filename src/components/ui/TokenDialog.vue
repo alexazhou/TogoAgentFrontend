@@ -6,10 +6,6 @@ import { showTokenDialog } from '../../appUiState';
 import { loadTeams } from '../../teamStore';
 import { startRealtimeClient, stopRealtimeClient } from '../../realtime/wsClient';
 
-const emit = defineEmits<{
-  close: [];
-}>();
-
 const { t } = useI18n();
 const token = ref('');
 const error = ref('');
@@ -46,8 +42,9 @@ async function handleConfirm() {
   }
 }
 
-function handleClose() {
-  emit('close');
+function handleClear() {
+  token.value = '';
+  error.value = '';
 }
 </script>
 
@@ -76,8 +73,8 @@ function handleClose() {
         <p v-if="error" class="token-error">{{ error }}</p>
 
         <div class="token-actions">
-          <button type="button" class="ghost-button" :disabled="pending" @click="handleClose">
-            {{ t('common.cancel') }}
+          <button type="button" class="ghost-button" :disabled="pending" @click="handleClear">
+            {{ t('common.reset') }}
           </button>
           <button type="button" class="secondary-button" :disabled="pending" @click="handleConfirm">
             {{ pending ? t('auth.verifying') : t('auth.confirm') }}
