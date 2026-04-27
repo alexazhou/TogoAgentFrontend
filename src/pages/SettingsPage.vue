@@ -75,6 +75,9 @@ const teamInfoStatus = ref('');
 const settingsMainRef = ref<HTMLElement | null>(null);
 const settingsScrollbarHovered = ref(false);
 
+const settingsMainRef = ref<HTMLElement | null>(null);
+const settingsScrollbarHovered = ref(false);
+
 const navItems = useSettingsNavItems();
 
 const routeSection = computed(() =>
