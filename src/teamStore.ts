@@ -39,6 +39,13 @@ export async function loadTeams(): Promise<void> {
   }
 }
 
+export function clearTeams(): void {
+  teams.value = [];
+  teamsLoaded.value = false;
+  teamsLoadFailed.value = false;
+  setPreferredTeamId(null);
+}
+
 export function findTeamById(teamId: number | null): TeamSummary | null {
   if (teamId === null) {
     return null;

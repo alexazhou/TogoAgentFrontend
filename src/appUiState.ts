@@ -30,6 +30,8 @@ export const totalMessageCount = ref(0);
 export const globalRequestErrors = ref<GlobalRequestErrorToast[]>([]);
 export const globalSuccessToasts = ref<GlobalToastItem[]>([]);
 export const showQuickInit = ref(false);
+export const showTokenDialog = ref(false);
+export const authEnabled = ref(false);
 export const scheduleState = ref<'stopped' | 'blocked' | 'running' | ''>('');
 export const scheduleNotRunningReason = ref('');
 

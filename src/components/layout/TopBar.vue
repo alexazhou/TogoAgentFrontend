@@ -3,7 +3,12 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import i18n from '../../i18n';
 import { setLanguage } from '../../api';
+import { clearToken } from '../../authStore';
+import { showTokenDialog } from '../../appUiState';
+import { clearTeams } from '../../teamStore';
+import { clearRuntimeStore } from '../../realtime/runtimeStore';
 import LabeledSwitch from '../ui/LabeledSwitch.vue';
+import ConfirmDialog from '../ui/ConfirmDialog.vue';
 import type { TeamSummary } from '../../types';
 import type { ConnectionState } from '../../utils';
 import { displayName } from '../../utils';
@@ -26,6 +31,7 @@ const props = defineProps<{
   scheduleState?: string;
   scheduleNotRunningReason?: string;
   scheduleResumePending?: boolean;
+  authEnabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -39,6 +45,7 @@ const emit = defineEmits<{
 const teamMenuOpen = ref(false);
 const languageMenuOpen = ref(false);
 const currentLocale = computed<AppLocale>(() => i18n.global.locale.value);
+const logoutConfirmOpen = ref(false);
 
 const activeTeamName = computed(() => {
   const team = props.teams.find((team) => team.id === props.activeTeamId);
@@ -178,6 +185,22 @@ function activeOptionId(): string | undefined {
 
 function optionLabel(team: TeamSummary): string {
   return `${displayName(team)} #${team.id}`;
+}
+
+function handleLogout(): void {
+  logoutConfirmOpen.value = true;
+}
+
+function confirmLogout(): void {
+  logoutConfirmOpen.value = false;
+  clearRuntimeStore();
+  clearTeams();
+  clearToken();
+  showTokenDialog.value = true;
+}
+
+function closeLogoutConfirm(): void {
+  logoutConfirmOpen.value = false;
 }
 
 </script>
@@ -412,8 +435,27 @@ function optionLabel(team: TeamSummary): string {
           </button>
         </div>
       </div>
+      <button
+        v-if="authEnabled"
+        class="nav-icon-button nav-icon-button--bare logout-button"
+        type="button"
+        :title="t('topbar.logout')"
+        :aria-label="t('topbar.logout')"
+        @click="handleLogout"
+      >
+        <i class="fa-solid fa-sign-out-alt" aria-hidden="true"></i>
+      </button>
     </div>
   </header>
+
+  <ConfirmDialog
+    :open="logoutConfirmOpen"
+    :title="t('topbar.logoutConfirmTitle')"
+    :message="t('topbar.logoutConfirmMsg')"
+    :confirm-label="t('topbar.logout')"
+    @close="closeLogoutConfirm"
+    @confirm="confirmLogout"
+  />
 </template>
 
 <style scoped>
@@ -1049,6 +1091,10 @@ function optionLabel(team: TeamSummary): string {
   border-color: color-mix(in srgb, var(--interactive-focus-border) 56%, var(--border-subtle) 44%);
   background: color-mix(in srgb, var(--interactive-selected) 72%, var(--surface-panel) 28%);
   font-weight: 600;
+}
+
+.logout-button {
+  margin-left: 2px;
 }
 
 @media (max-width: 980px) {

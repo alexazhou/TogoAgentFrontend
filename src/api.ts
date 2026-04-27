@@ -24,7 +24,8 @@ import type {
   TeamDetail,
   TeamSummary,
 } from './types';
-import { showGlobalRequestError } from './appUiState';
+import { showGlobalRequestError, showTokenDialog } from './appUiState';
+import { getToken } from './authStore';
 import { t } from './i18n';
 import type { AppLocale } from './i18n';
 
@@ -180,12 +181,34 @@ function makeWsUrl(path: string): string {
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const requestUrl = makeUrl(path);
   const displayUrl = makeDisplayUrl(path);
+  const token = getToken();
+
+  // 构建请求头，自动携带 token（豁免路径除外）
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (init?.headers) {
+    // 合并传入的 headers
+    const initHeaders = init.headers;
+    if (initHeaders instanceof Headers) {
+      initHeaders.forEach((value, key) => {
+        (headers as Record<string, string>)[key] = value;
+      });
+    } else if (Array.isArray(initHeaders)) {
+      for (const [key, value] of initHeaders) {
+        (headers as Record<string, string>)[key] = value;
+      }
+    } else {
+      Object.assign(headers, initHeaders);
+    }
+  }
+  if (token && !isAuthExemptPath(path)) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
     const response = await fetch(requestUrl, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init?.headers ?? {}),
-      },
+      headers,
       ...init,
     });
 
@@ -222,6 +245,12 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
         errorDetail = '';
       }
 
+      // 鉴权失败：触发 token 输入
+      if (response.status === 401 && (errorCode === 'auth_required' || errorCode === 'auth_invalid')) {
+        showTokenDialog.value = true;
+        throw new Error('Auth required');
+      }
+
       const isProxyConnectionFailure = errorCode === 'BACKEND_UNAVAILABLE'
         || response.headers.get('x-proxy-error') === 'backend-unavailable';
 
@@ -253,6 +282,9 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     if (error instanceof Error && error.message.startsWith('Request failed:')) {
       throw error;
     }
+    if (error instanceof Error && error.message === 'Auth required') {
+      throw error;
+    }
 
     showGlobalRequestError({
       title: t('error.cannotConnectTitle'),
@@ -261,6 +293,11 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     });
     throw error;
   }
+}
+
+function isAuthExemptPath(path: string): boolean {
+  const exemptPaths = ['/system/status.json'];
+  return exemptPaths.includes(path);
 }
 
 function normalizeEntityI18n(value: unknown): EntityI18n {
@@ -727,6 +764,7 @@ export function createEventsSocket(): WebSocket {
 
 export interface SystemStatus {
   initialized: boolean;
+  auth_enabled?: boolean;
   default_llm_server?: string;
   message?: string;
   schedule_state?: 'STOPPED' | 'BLOCKED' | 'RUNNING' | 'stopped' | 'blocked' | 'running';

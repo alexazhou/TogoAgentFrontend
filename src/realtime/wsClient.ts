@@ -1,5 +1,6 @@
-import { connectionState, reconnectProgress } from '../appUiState';
+import { connectionState, reconnectProgress, authEnabled, showTokenDialog } from '../appUiState';
 import { createEventsSocket } from '../api';
+import { getToken, clearToken } from '../authStore';
 import { normalizeWsEventPayload, type FrontendRealtimeEvent } from './eventNormalizer';
 
 type RealtimeListener = (event: FrontendRealtimeEvent) => void;
@@ -110,8 +111,25 @@ function connectRealtimeSocket(): void {
     }
 
     clearConnectTimeout();
-    connectionState.value = 'connected';
-    reconnectAttempt = 0;
+
+    // 鉴权启用时，发送认证消息
+    if (authEnabled.value) {
+      const token = getToken();
+      if (token) {
+        socket.send(JSON.stringify({ type: 'auth', token }));
+        // 连接状态暂时保持 'connecting'，等待后端确认
+      } else {
+        // 无 token，关闭连接并触发输入
+        socket.close();
+        ws = null;
+        showTokenDialog.value = true;
+        return;
+      }
+    } else {
+      // 鉴权未启用，直接标记为已连接
+      connectionState.value = 'connected';
+      reconnectAttempt = 0;
+    }
 
     if (reconnectTimer !== null) {
       window.clearTimeout(reconnectTimer);
@@ -123,6 +141,12 @@ function connectRealtimeSocket(): void {
   socket.addEventListener('message', (messageEvent) => {
     if (socketToken !== activeSocketToken) {
       return;
+    }
+
+    // 鉴权启用时，第一条消息到达表示认证成功
+    if (authEnabled.value && connectionState.value === 'connecting') {
+      connectionState.value = 'connected';
+      reconnectAttempt = 0;
     }
 
     try {

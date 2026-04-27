@@ -69,7 +69,10 @@
     "teamsCount": "{count} 团队",
     "messagesCount": "{count} 条消息",
     "scheduleBlockedReason": "未配置大模型服务，请到后台配置大模型服务",
-    "scheduleStoppedReason": "调度已停止"
+    "scheduleStoppedReason": "调度已停止",
+    "logout": "退出登录",
+    "logoutConfirmTitle": "确认退出",
+    "logoutConfirmMsg": "退出后将清除访问凭证，需要重新输入 Token 才能继续使用。"
   },
   "agent": {
     "status": {
@@ -493,5 +496,15 @@
     "loadFailed": "加载消息失败，请检查网络或后端状态。",
     "connectFailed": "无法连接到后端服务，请确认服务已启动。",
     "adjustHeight": "调整聊天室和成员卡片高度"
+  },
+  "auth": {
+    "dialogEyebrow": "访问鉴权",
+    "dialogTitle": "请输入访问 Token",
+    "dialogMessage": "当前服务已启用鉴权，请输入配置文件中设置的访问 Token。",
+    "tokenPlaceholder": "Token",
+    "tokenRequired": "请输入 Token",
+    "tokenError": "Token 无效，请重新输入",
+    "confirm": "确定",
+    "verifying": "验证中..."
   }
 }

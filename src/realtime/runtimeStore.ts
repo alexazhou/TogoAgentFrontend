@@ -388,3 +388,16 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
 subscribeRealtimeEvents((event) => {
   applyRealtimeEvent(event);
 });
+
+export function clearRuntimeStore(): void {
+  teamAgentsState.value = {};
+  teamRoomsState.value = {};
+  roomMessagesState.value = {};
+  agentActivitiesState.value = {};
+  agentStatusState.value = {};
+  teamDeptTreeState.value = {};
+  roleTemplatesState.value = [];
+  activeTeamId.value = null;
+  activeRoomId.value = null;
+  totalMessageCount.value = 0;
+}

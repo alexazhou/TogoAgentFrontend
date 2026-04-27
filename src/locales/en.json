@@ -69,7 +69,10 @@
     "teamsCount": "{count} teams",
     "messagesCount": "{count} messages",
     "scheduleBlockedReason": "No LLM service configured",
-    "scheduleStoppedReason": "Scheduling stopped"
+    "scheduleStoppedReason": "Scheduling stopped",
+    "logout": "Logout",
+    "logoutConfirmTitle": "Confirm Logout",
+    "logoutConfirmMsg": "After logout, your access token will be cleared. You will need to re-enter the token to continue."
   },
   "agent": {
     "status": {
@@ -493,5 +496,15 @@
     "loadFailed": "Failed to load messages. Check network or backend status.",
     "connectFailed": "Cannot connect to backend. Please ensure the service is started.",
     "adjustHeight": "Adjust chat room and member card height"
+  },
+  "auth": {
+    "dialogEyebrow": "Authentication",
+    "dialogTitle": "Enter Access Token",
+    "dialogMessage": "Authentication is enabled. Please enter the access token from the configuration file.",
+    "tokenPlaceholder": "Token",
+    "tokenRequired": "Please enter token",
+    "tokenError": "Invalid token, please try again",
+    "confirm": "Confirm",
+    "verifying": "Verifying..."
   }
 }

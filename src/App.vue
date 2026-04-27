@@ -14,11 +14,15 @@ import {
   scheduleState,
   showGlobalSuccessToast,
   showQuickInit,
+  showTokenDialog,
+  authEnabled,
   totalMessageCount,
   updateScheduleState,
 } from './appUiState';
 import { getSystemStatus, resumeSchedule, setTeamEnabled } from './api';
+import { getToken } from './authStore';
 import QuickInitModal from './components/layout/QuickInitModal.vue';
+import TokenDialog from './components/ui/TokenDialog.vue';
 import TopBar from './components/layout/TopBar.vue';
 import { DEFAULT_SETTINGS_SECTION } from './components/settings/sections';
 import ConfirmDialog from './components/ui/ConfirmDialog.vue';
@@ -98,11 +102,18 @@ async function checkSystemStatus(): Promise<void> {
   try {
     const status = await getSystemStatus();
     showQuickInit.value = !status.initialized;
+    authEnabled.value = status.auth_enabled ?? false;
     updateScheduleState(status.schedule_state ?? '', status.not_running_reason ?? '');
     setGlobalRequestErrorAutoDismiss(status.development_mode ? null : 5000);
+
+    // 鉴权启用且无 token 时，触发 token 输入
+    if (authEnabled.value && !getToken()) {
+      showTokenDialog.value = true;
+    }
   } catch {
     // Backend unreachable — don't show init modal
     showQuickInit.value = false;
+    authEnabled.value = false;
     updateScheduleState('', '');
   }
 }
@@ -286,6 +297,7 @@ onBeforeUnmount(() => {
       :schedule-state="scheduleState"
       :schedule-not-running-reason="scheduleNotRunningReason"
       :schedule-resume-pending="scheduleResumePending"
+      :auth-enabled="authEnabled"
       @toggle-theme="toggleTheme"
       @select-team="selectTeam"
       @toggle-active-team-enabled="requestActiveTeamEnabledToggle"
@@ -360,6 +372,11 @@ onBeforeUnmount(() => {
       v-if="showQuickInit"
       @skip="handleInitSkip"
       @done="handleInitDone"
+    />
+
+    <TokenDialog
+      v-if="showTokenDialog"
+      @close="showTokenDialog = false"
     />
 
     <ConfirmDialog
