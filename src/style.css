@@ -16,6 +16,18 @@ body {
   color: inherit;
 }
 
+html.bp-console-mobile,
+html.bp-console-mobile body,
+html.bp-console-mobile #app {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+html.bp-console-mobile body {
+  min-height: 100dvh;
+}
+
 button,
 textarea {
   font: inherit;

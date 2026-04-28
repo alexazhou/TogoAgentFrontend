@@ -27,6 +27,7 @@ import TopBar from './components/layout/TopBar.vue';
 import { DEFAULT_SETTINGS_SECTION } from './components/settings/sections';
 import ConfirmDialog from './components/ui/ConfirmDialog.vue';
 import { startRealtimeClient, stopRealtimeClient } from './realtime/wsClient';
+import { installViewportRootClasses } from './responsive/breakpoints';
 import { findTeamById, firstTeamId, loadTeams, preferredTeamId, setPreferredTeamId, teams, teamsLoaded } from './teamStore';
 import { formatConnectionState } from './utils';
 
@@ -73,6 +74,8 @@ const showTopbarConnectionStatus = computed(() => route.name === 'console');
 const statusLabel = computed(() => formatConnectionState(connectionState.value));
 const isLightMode = computed(() => themeMode.value === 'light');
 const scheduleResumePending = ref(false);
+const isConsoleRoute = computed(() => route.name === 'console');
+let removeViewportRootClasses: (() => void) | null = null;
 
 // ── V13: Quick Init Modal ──
 
@@ -267,18 +270,21 @@ watch(
 );
 
 onMounted(async () => {
+  removeViewportRootClasses = installViewportRootClasses();
   applyTheme(themeMode.value);
   startRealtimeClient();
   await Promise.all([loadTeams(), checkSystemStatus()]);
 });
 
 onBeforeUnmount(() => {
+  removeViewportRootClasses?.();
+  removeViewportRootClasses = null;
   stopRealtimeClient();
 });
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :class="{ 'shell-console': isConsoleRoute }">
     <div class="ambient ambient-left"></div>
     <div class="ambient ambient-right"></div>
 
@@ -364,7 +370,7 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <main class="workspace">
+    <main class="workspace" :class="{ 'workspace-console': isConsoleRoute }">
       <RouterView />
     </main>
 
@@ -392,12 +398,14 @@ onBeforeUnmount(() => {
 <style scoped>
 .shell {
   position: relative;
-  height: 100vh;
+  height: 100%;
+  min-height: 100%;
   padding: 8px 10px;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 8px;
+  box-sizing: border-box;
 }
 
 .ambient {
@@ -422,6 +430,40 @@ onBeforeUnmount(() => {
   overflow: hidden;
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+:global(html.bp-console-mobile) .shell {
+  height: auto;
+  min-height: 100%;
+  padding: 8px 8px calc(12px + env(safe-area-inset-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+:global(html.bp-console-mobile) .workspace {
+  height: auto;
+  overflow: visible;
+}
+
+:global(html.bp-console-mobile) .shell.shell-console {
+  height: 100%;
+  min-height: 0;
+  padding: 12px 0 0;
+  gap: 6px;
+  overflow: hidden;
+}
+
+:global(html.bp-console-mobile) .workspace.workspace-console {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:global(html.bp-console-short) .shell.shell-console {
+  padding: 8px 0 0;
+  gap: 6px;
 }
 
 .global-error-toast-layer {

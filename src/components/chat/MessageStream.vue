@@ -316,11 +316,53 @@ onBeforeUnmount(() => {
   letter-spacing: 0.01em;
 }
 
-@media (max-width: 980px) {
-  .bubble,
-  .system-note {
-    max-width: 100%;
-  }
+:global(html.bp-layout-narrow) .bubble,
+:global(html.bp-layout-narrow) .system-note {
+  max-width: 100%;
+}
+
+:global(html.bp-compact) .message-stream {
+  gap: 12px;
+  padding: 6px 0 10px;
+}
+
+:global(html.bp-compact) .message-meta {
+  gap: 5px;
+  padding: 0 2px;
+  font-size: 0.7rem;
+  flex-wrap: wrap;
+}
+
+:global(html.bp-compact) .message-stream.has-scrollbar .message-row.side-right {
+  padding-right: 0;
+}
+
+:global(html.bp-compact) .sender {
+  font-size: 0.8rem;
+}
+
+:global(html.bp-compact) .sender-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+:global(html.bp-compact) .bubble {
+  max-width: min(92%, 640px);
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+:global(html.bp-compact) .system-note {
+  max-width: 100%;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+:global(html.bp-compact) .working-indicator {
+  padding: 10px 8px;
+  font-size: 0.76rem;
 }
 
 .working-indicator {

@@ -152,6 +152,10 @@
     "waitingSpeaker": "等待 {name} 发言",
     "processing": "{name} 处理中"
   },
+  "console": {
+    "mobileNoRoomHint": "先从聊天室列表选择一个会话，再进入移动端消息流。",
+    "mobileSelectRoom": "选择聊天室"
+  },
   "team": {
     "info": "团队信息",
     "readonly": "只读",

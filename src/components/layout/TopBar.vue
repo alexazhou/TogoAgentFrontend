@@ -206,7 +206,7 @@ function closeLogoutConfirm(): void {
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" :class="{ 'topbar-console': showConnectionStatus }">
     <div class="brand-group">
       <button
         class="nav-icon-button nav-icon-button--bare"
@@ -1133,19 +1133,144 @@ function closeLogoutConfirm(): void {
   flex: 0 0 auto;
 }
 
-@media (max-width: 980px) {
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+:global(html.bp-layout-narrow) .topbar {
+  align-items: flex-start;
+  flex-direction: column;
+}
 
-  .brand-group {
-    width: 100%;
-  }
+:global(html.bp-layout-narrow) .brand-group {
+  width: 100%;
+}
 
-  .status-group {
-    width: 100%;
-    justify-content: flex-start;
-  }
+:global(html.bp-layout-narrow) .status-group {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+:global(html.bp-console-mobile) .topbar {
+  gap: 6px;
+  padding: 6px;
+  border-radius: 14px;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console {
+  gap: 6px;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .brand-group {
+  width: 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .nav-icon-button--bare {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .team-switcher {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .team-switcher-button {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .topbar-team-enabled-switch {
+  flex: 0 0 auto;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .status-group {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .status-group::-webkit-scrollbar {
+  display: none;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .metric-pill {
+  display: none;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .team-disabled-pill,
+:global(html.bp-console-mobile) .topbar.topbar-console .status-pill,
+:global(html.bp-console-mobile) .topbar.topbar-console .schedule-state-pill {
+  min-height: 32px;
+  padding: 0 10px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .topbar-utility-group {
+  margin-left: auto;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .theme-switch,
+:global(html.bp-console-mobile) .topbar.topbar-console .lang-button,
+:global(html.bp-console-mobile) .topbar.topbar-console .toolbar-icon-button {
+  height: 32px;
+}
+
+:global(html.bp-console-mobile) .topbar.topbar-console .toolbar-icon-button {
+  width: 32px;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console {
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console .brand-group {
+  gap: 4px;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console .nav-icon-button--bare,
+:global(html.bp-console-short) .topbar.topbar-console .team-switcher-button,
+:global(html.bp-console-short) .topbar.topbar-console .theme-switch,
+:global(html.bp-console-short) .topbar.topbar-console .lang-button,
+:global(html.bp-console-short) .topbar.topbar-console .toolbar-icon-button {
+  height: 28px;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console .nav-icon-button--bare,
+:global(html.bp-console-short) .topbar.topbar-console .toolbar-icon-button {
+  width: 28px;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console .team-switcher-button {
+  padding: 0 8px;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console .team-disabled-pill,
+:global(html.bp-console-short) .topbar.topbar-console .status-pill,
+:global(html.bp-console-short) .topbar.topbar-console .schedule-state-pill {
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 0.72rem;
+}
+
+:global(html.bp-console-short) .topbar.topbar-console .status-group {
+  gap: 4px;
+  padding-bottom: 0;
 }
 </style>

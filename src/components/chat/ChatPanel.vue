@@ -599,25 +599,167 @@ function handleEnterKey(e: KeyboardEvent): void {
   opacity: 0.4;
 }
 
-@media (max-width: 980px) {
-  .chat-head,
-  .composer-foot {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .chat-members-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+:global(html.bp-layout-narrow) .chat-head,
+:global(html.bp-layout-narrow) .composer-foot {
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-@media (max-width: 640px) {
-  .chat-members-modal {
-    padding: 14px;
-  }
+:global(html.bp-layout-narrow) .chat-members-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 
-  .chat-members-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+:global(html.bp-compact) .chat {
+  padding: 10px 6px 8px;
+  border-radius: 16px;
+}
+
+:global(html.bp-compact) .chat-head {
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+:global(html.bp-compact) .chat-head h2 {
+  font-size: 1.06rem;
+  line-height: 1.2;
+}
+
+:global(html.bp-compact) .chat-side-info {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+:global(html.bp-compact) .chat-head-pill,
+:global(html.bp-compact) .chat-members-button {
+  min-height: 32px;
+  padding: 6px 12px 4px;
+  font-size: 0.78rem;
+}
+
+:global(html.bp-compact) .banner {
+  font-size: 0.76rem;
+}
+
+:global(html.bp-compact) .composer {
+  padding-top: 10px;
+}
+
+:global(html.bp-compact) .composer textarea {
+  min-height: 108px;
+  height: 108px;
+  max-height: 180px;
+  padding: 12px 12px 10px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+:global(html.bp-compact) .composer-foot {
+  min-height: 58px;
+  padding: 10px 76px 11px 12px;
+}
+
+:global(html.bp-compact) .composer-foot span {
+  line-height: 1.35;
+}
+
+:global(html.bp-compact) .composer button {
+  right: 10px;
+  bottom: 10px;
+  min-width: 56px;
+  min-height: 36px;
+  font-size: 0.76rem;
+}
+
+:global(html.bp-compact) .composer-hint {
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  line-height: 1.4;
+}
+
+:global(html.bp-compact) .chat-members-modal {
+  padding: 14px;
+}
+
+:global(html.bp-compact) .chat-members-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+:global(html.bp-console-short) .chat {
+  padding: 6px 5px 5px;
+  border-radius: 12px;
+}
+
+:global(html.bp-console-short) .chat-head {
+  gap: 4px;
+  padding: 0 2px 4px;
+}
+
+:global(html.bp-console-short) .chat-head h2 {
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+
+:global(html.bp-console-short) .chat-side-info {
+  gap: 4px;
+}
+
+:global(html.bp-console-short) .chat-head-pill,
+:global(html.bp-console-short) .chat-members-button {
+  min-height: 24px;
+  padding: 3px 8px 2px;
+  font-size: 0.68rem;
+}
+
+:global(html.bp-console-short) .banner {
+  padding: 4px 6px;
+  font-size: 0.68rem;
+}
+
+:global(html.bp-console-short) .chat.has-banner .banner {
+  margin-top: 4px;
+}
+
+:global(html.bp-console-short) .chat.no-banner .message-viewport {
+  margin-top: 0;
+}
+
+:global(html.bp-console-short) .composer {
+  padding-top: 4px;
+}
+
+:global(html.bp-console-short) .composer-editor {
+  border-radius: 8px;
+}
+
+:global(html.bp-console-short) .composer textarea {
+  min-height: 56px;
+  height: 56px;
+  max-height: 72px;
+  padding: 8px 8px 6px;
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
+:global(html.bp-console-short) .composer-foot {
+  min-height: 34px;
+  padding: 6px 54px 6px 8px;
+  font-size: 0.64rem;
+}
+
+:global(html.bp-console-short) .composer-foot span {
+  line-height: 1.2;
+}
+
+:global(html.bp-console-short) .composer button {
+  right: 6px;
+  bottom: 5px;
+  min-width: 44px;
+  min-height: 24px;
+  font-size: 0.66rem;
+}
+
+:global(html.bp-console-short) .composer-hint {
+  padding: 4px 6px;
+  font-size: 0.66rem;
 }
 </style>

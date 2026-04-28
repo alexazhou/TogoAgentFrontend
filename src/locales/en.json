@@ -152,6 +152,10 @@
     "waitingSpeaker": "Waiting for {name} to speak",
     "processing": "{name} processing"
   },
+  "console": {
+    "mobileNoRoomHint": "Pick a room first, then continue the conversation in the mobile message view.",
+    "mobileSelectRoom": "Select a room"
+  },
   "team": {
     "info": "Team Info",
     "readonly": "Read-only",
