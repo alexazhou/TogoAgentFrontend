@@ -77,12 +77,18 @@ function activityTitle(activity: AgentActivity): string {
       return t('agent.activityType.agentState');
     case 'llm_infer':
       return t('agent.activityType.llmInfer');
+    case 'reasoning':
+      return t('agent.activityType.reasoning');
+    case 'chat_reply':
+      return t('agent.activityType.chatReply');
     case 'tool_call':
       return t('agent.activityType.toolCall');
     case 'compact':
       return t('agent.activityType.compact');
+    case 'unknown':
+      return t('agent.activityType.unknown');
     default:
-      return activity.title;
+      return t('agent.activityType.unknown');
   }
 }
 

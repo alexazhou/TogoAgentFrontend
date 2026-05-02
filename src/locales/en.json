@@ -100,10 +100,13 @@
       "startActivity": "Start Action",
       "stopAction": "Rest",
       "llmInfer": "LLM Inference",
+      "reasoning": "Reasoning",
+      "chatReply": "Self Talk",
       "toolCall": "Tool Call",
       "sendMessage": "Send Message",
       "finishTurn": "End Turn",
-      "compact": "Context Compact"
+      "compact": "Context Compact",
+      "unknown": "Unknown Type"
     },
     "tokenEstimate": "Est. {count}",
     "noTemplate": "No template configured",

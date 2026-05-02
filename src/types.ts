@@ -1,5 +1,12 @@
 export type AgentStatus = 'active' | 'idle' | 'failed';
-export type AgentActivityType = 'llm_infer' | 'tool_call' | 'compact' | 'agent_state';
+export type AgentActivityType =
+  | 'llm_infer'
+  | 'tool_call'
+  | 'compact'
+  | 'agent_state'
+  | 'reasoning'
+  | 'chat_reply'
+  | 'unknown';
 export type AgentActivityStatus = 'started' | 'succeeded' | 'failed' | 'cancelled';
 export type RoomType = 'private' | 'group';
 export type I18nText = Record<string, string>;

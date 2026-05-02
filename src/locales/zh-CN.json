@@ -100,10 +100,13 @@
       "startActivity": "唤醒",
       "stopAction": "休息",
       "llmInfer": "模型推理",
+      "reasoning": "思考",
+      "chatReply": "自言自语",
       "toolCall": "工具调用",
       "sendMessage": "发言",
       "finishTurn": "结束行动",
-      "compact": "上下文压缩"
+      "compact": "上下文压缩",
+      "unknown": "未知类型"
     },
     "tokenEstimate": "估算 {count}",
     "noTemplate": "未配置模板",
