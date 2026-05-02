@@ -313,7 +313,7 @@ watch(
       <section class="agent-detail-dialog panel">
         <div class="agent-detail-head">
           <div>
-            <p class="agent-detail-eyebrow">Agent Card</p>
+            <p class="agent-detail-eyebrow">Agent Status Card</p>
             <h3>{{ displayAgentName }}</h3>
           </div>
           <button type="button" class="agent-detail-close" :aria-label="t('common.close')" @click="emit('close')">×</button>
