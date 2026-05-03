@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getTeamRooms } from '../../realtime/runtimeStore';
 import type { AgentActivity, AgentActivityStatus } from '../../types';
@@ -9,6 +9,10 @@ const { t } = useI18n();
 const props = defineProps<{
   activity: AgentActivity;
 }>();
+
+const toolResultRef = ref<HTMLElement | null>(null);
+const isToolResultOverflowing = ref(false);
+let toolResultObserver: ResizeObserver | null = null;
 
 const toolName = computed(() => {
   const metadataToolName = props.activity.metadata?.tool_name;
@@ -157,6 +161,32 @@ function getSendMessagePrefix(activity: AgentActivity): string {
   return t('agent.sendToRoomPrefix', { room });
 }
 
+function getActivityToolResult(activity: AgentActivity): string {
+  const toolResult = activity.metadata?.tool_result;
+  if (toolResult == null) {
+    return '';
+  }
+  if (typeof toolResult === 'string') {
+    return toolResult.trim();
+  }
+  if (typeof toolResult === 'number' || typeof toolResult === 'boolean') {
+    return String(toolResult);
+  }
+  if (typeof toolResult === 'object') {
+    const candidate = toolResult as { message?: unknown; content?: unknown; text?: unknown };
+    const preferredText = [candidate.message, candidate.content, candidate.text].find((item) => typeof item === 'string');
+    if (typeof preferredText === 'string' && preferredText.trim()) {
+      return preferredText.trim();
+    }
+    try {
+      return JSON.stringify(toolResult, null, 2);
+    } catch {
+      return t('agent.parseFailed');
+    }
+  }
+  return t('agent.parseFailed');
+}
+
 function activitySummary(activity: AgentActivity): string {
   if (activity.activity_type === 'tool_call') {
     if (toolName.value === 'send_chat_msg') {
@@ -247,9 +277,16 @@ function getActivityToolName(activity: AgentActivity): string {
   return typeof toolName === 'string' ? toolName : '';
 }
 
+function isExpandedToolResult(activity: AgentActivity): boolean {
+  return activity.activity_type === 'tool_call'
+    && toolName.value !== 'send_chat_msg'
+    && Boolean(getActivityToolResult(activity));
+}
+
 function isExpandedContent(activity: AgentActivity): boolean {
   return activity.activity_type === 'reasoning'
-    || (activity.activity_type === 'tool_call' && toolName.value === 'send_chat_msg');
+    || (activity.activity_type === 'tool_call' && toolName.value === 'send_chat_msg')
+    || isExpandedToolResult(activity);
 }
 
 function isExpandedMessage(activity: AgentActivity): boolean {
@@ -271,6 +308,48 @@ function summaryTitle(activity: AgentActivity): string {
   }
   return activitySummary(activity);
 }
+
+function updateToolResultOverflow(): void {
+  nextTick(() => {
+    const el = toolResultRef.value;
+    isToolResultOverflowing.value = Boolean(el && el.scrollHeight - el.clientHeight > 1);
+  });
+}
+
+watch(
+  () => [toolName.value, props.activity.metadata?.tool_result, props.activity.detail, props.activity.status],
+  () => {
+    updateToolResultOverflow();
+  },
+  { deep: true },
+);
+
+onMounted(() => {
+  updateToolResultOverflow();
+  if (typeof ResizeObserver !== 'undefined') {
+    toolResultObserver = new ResizeObserver(() => {
+      updateToolResultOverflow();
+    });
+    if (toolResultRef.value) {
+      toolResultObserver.observe(toolResultRef.value);
+    }
+  }
+});
+
+watch(toolResultRef, (el, prevEl) => {
+  if (toolResultObserver && prevEl) {
+    toolResultObserver.unobserve(prevEl);
+  }
+  if (toolResultObserver && el) {
+    toolResultObserver.observe(el);
+  }
+  updateToolResultOverflow();
+});
+
+onBeforeUnmount(() => {
+  toolResultObserver?.disconnect();
+  toolResultObserver = null;
+});
 </script>
 
 <template>
@@ -279,6 +358,7 @@ function summaryTitle(activity: AgentActivity): string {
     :class="{
       'agent-activity-item--expanded': isExpandedContent(activity),
       'agent-activity-item--message': isExpandedMessage(activity),
+      'agent-activity-item--tool-result': isExpandedToolResult(activity),
     }"
     :data-status="activity.status"
     :data-activity-type="activity.activity_type"
@@ -337,6 +417,12 @@ function summaryTitle(activity: AgentActivity): string {
         <span class="agent-activity-item__tokens">{{ activityMetaTokens(activity) }}</span>
       </span>
     </div>
+    <p
+      v-if="isExpandedToolResult(activity)"
+      ref="toolResultRef"
+      class="agent-activity-item__tool-result"
+    >{{ getActivityToolResult(activity) }}</p>
+    <p v-if="isExpandedToolResult(activity) && isToolResultOverflowing" class="agent-activity-item__tool-result-ellipsis">...</p>
     <p v-if="activity.error_message" class="agent-activity-item__error">{{ activity.error_message }}</p>
   </article>
 </template>
@@ -384,7 +470,7 @@ function summaryTitle(activity: AgentActivity): string {
   width: 14px;
   text-align: center;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1;
   color: var(--muted);
 }
@@ -431,7 +517,7 @@ function summaryTitle(activity: AgentActivity): string {
   color: var(--text-strong);
   font-size: 0.78rem;
   line-height: 1.25;
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
 }
 
@@ -476,6 +562,7 @@ function summaryTitle(activity: AgentActivity): string {
   color: var(--text-strong);
   font-size: 0.82rem;
   line-height: 1.2;
+  font-weight: 600;
 }
 
 .agent-activity-item__row span {
@@ -494,7 +581,8 @@ function summaryTitle(activity: AgentActivity): string {
   padding: 0 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface-soft) 74%, transparent);
-  color: var(--text);
+  color: var(--muted);
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -570,10 +658,23 @@ function summaryTitle(activity: AgentActivity): string {
 }
 
 .agent-activity-item__tool-args {
-  flex: 0 1 240px;
-  max-width: 240px;
+  flex: 1 1 auto;
+  max-width: none;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.agent-activity-item[data-activity-type='tool_call'] .agent-activity-item__tail {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.agent-activity-item[data-activity-type='tool_call'] .agent-activity-item__tokens {
+  min-width: 0;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-activity-item[data-status='started'] .agent-activity-item__summary {
@@ -583,6 +684,8 @@ function summaryTitle(activity: AgentActivity): string {
 .agent-activity-item__summary--code {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.69rem;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .agent-activity-item__error {
@@ -636,6 +739,39 @@ function summaryTitle(activity: AgentActivity): string {
 
 .agent-activity-item--message .agent-activity-item__tail {
   order: 11;
+}
+
+.agent-activity-item--tool-result .agent-activity-item__row {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.agent-activity-item--tool-result .agent-activity-item__summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+.agent-activity-item__tool-result {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--text);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow: hidden;
+  max-height: calc(1.45em * 5);
+}
+
+.agent-activity-item__tool-result-ellipsis {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.1;
 }
 
 @keyframes agent-activity-item-dot-pulse {
