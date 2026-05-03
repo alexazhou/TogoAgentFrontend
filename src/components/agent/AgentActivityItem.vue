@@ -231,6 +231,18 @@ function getExecuteBashStderr(activity: AgentActivity): string {
   return typeof stderr === 'string' ? stderr.trim() : '';
 }
 
+function getExecuteBashExitCode(activity: AgentActivity): string {
+  if (!isExecuteBashResult(activity)) {
+    return '';
+  }
+  const toolResult = activity.metadata?.tool_result;
+  if (!toolResult || typeof toolResult !== 'object') {
+    return '';
+  }
+  const exitCode = (toolResult as { exit_code?: unknown }).exit_code;
+  return typeof exitCode === 'number' ? `return_code=${exitCode}` : '';
+}
+
 function isExecuteBashResult(activity: AgentActivity): boolean {
   return activity.activity_type === 'tool_call' && toolName.value === 'execute_bash';
 }
@@ -423,6 +435,9 @@ onBeforeUnmount(() => {
             </span>
             <span class="agent-activity-item__state-meta">{{ formatActivityTime(activity.started_at) }}</span>
           </span>
+          <span v-if="getExecuteBashExitCode(activity)" class="agent-activity-item__state-extra">
+            {{ getExecuteBashExitCode(activity) }}
+          </span>
         </span>
       </span>
       <strong v-if="shouldShowInlineTitle(activity)" class="agent-activity-item__title">{{ activityTitle(activity) }}</strong>
@@ -517,7 +532,7 @@ onBeforeUnmount(() => {
   gap: 6px;
   min-width: 0;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .agent-activity-item__state-anchor {
@@ -560,8 +575,8 @@ onBeforeUnmount(() => {
   z-index: 10;
   display: grid;
   gap: 8px;
-  min-width: 164px;
-  max-width: 220px;
+  min-width: 236px;
+  max-width: 280px;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--panel-border) 84%, transparent);
@@ -570,7 +585,7 @@ onBeforeUnmount(() => {
   opacity: 0;
   visibility: hidden;
   transform: translateY(-4px);
-  pointer-events: none;
+  pointer-events: auto;
   transition:
     opacity 120ms ease,
     transform 120ms ease,
@@ -586,9 +601,9 @@ onBeforeUnmount(() => {
 }
 
 .agent-activity-item__state-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -596,7 +611,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-width: max-content;
+  min-width: 0;
 }
 
 .agent-activity-item__state-anchor:hover .agent-activity-item__state-popover,
@@ -619,6 +634,13 @@ onBeforeUnmount(() => {
 .agent-activity-item__state-meta--strong {
   font-weight: 600;
   opacity: 1;
+}
+
+.agent-activity-item__state-extra {
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .agent-activity-item__title {
