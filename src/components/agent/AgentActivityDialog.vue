@@ -441,17 +441,14 @@ watch(
                     @keydown.ctrl.enter.prevent="sendSupervise"
                     @keydown.meta.enter.prevent="sendSupervise"
                   />
-                  <div class="agent-supervise-section__foot">
-                    <span class="agent-supervise-section__hint">Ctrl+Enter</span>
-                    <button
-                      type="button"
-                      class="agent-supervise-section__send"
-                      :disabled="supervising || !superviseContent.trim()"
-                      @click="sendSupervise"
-                    >
-                      {{ supervising ? t('agent.supervise.sending') : t('agent.supervise.send') }}
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    class="agent-supervise-section__send"
+                    :disabled="supervising || !superviseContent.trim()"
+                    @click="sendSupervise"
+                  >
+                    {{ supervising ? t('agent.supervise.sending') : t('agent.supervise.send') }}
+                  </button>
                 </div>
                 <p v-if="superviseError" class="agent-supervise-section__error">{{ superviseError }}</p>
               </section>
@@ -931,14 +928,6 @@ watch(
 .agent-supervise-section__textarea:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.agent-supervise-section__foot {
-  display: none;
-}
-
-.agent-supervise-section__hint {
-  display: none;
 }
 
 .agent-supervise-section__send {
