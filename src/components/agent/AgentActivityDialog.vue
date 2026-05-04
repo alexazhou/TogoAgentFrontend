@@ -895,6 +895,7 @@ watch(
   border: 1px solid color-mix(in srgb, var(--border-subtle) 78%, var(--border-default) 22%);
   border-radius: 8px;
   overflow: hidden;
+  position: relative;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
@@ -911,13 +912,13 @@ watch(
   resize: none;
   border: none;
   border-radius: 0;
-  padding: 9px 12px 4px;
+  padding: 9px 70px 9px 12px;
   font-size: 0.8rem;
   font-family: inherit;
   background: transparent;
   color: var(--text-primary);
   line-height: 1.4;
-  min-height: 32px;
+  min-height: 36px;
   max-height: 160px;
   overflow-y: auto;
   outline: none;
@@ -933,20 +934,17 @@ watch(
 }
 
 .agent-supervise-section__foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 4px 8px 7px;
+  display: none;
 }
 
 .agent-supervise-section__hint {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  line-height: 1;
+  display: none;
 }
 
 .agent-supervise-section__send {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
   border: 0;
   border-radius: 6px;
   padding: 5px 10px;
