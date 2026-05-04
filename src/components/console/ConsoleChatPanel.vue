@@ -32,7 +32,6 @@ const emit = defineEmits<{
 
 const messageViewport = useTemplateRef('messageViewport');
 const draft = defineModel<string>('draft', { default: '' });
-const insertImmediately = ref(false);
 const escalatingMessageIds = ref<number[]>([]);
 
 const {
@@ -153,9 +152,8 @@ async function handleSubmit(): Promise<void> {
   emit('updateError', '');
 
   try {
-    await postRoomMessage(props.currentRoom.room_id, content, insertImmediately.value);
+    await postRoomMessage(props.currentRoom.room_id, content);
     draft.value = '';
-    insertImmediately.value = false;
   } catch (error) {
     emit('updateError', '消息发送失败。');
     console.error(error);
@@ -220,10 +218,8 @@ onBeforeUnmount(() => {
       :reloading-messages="reloadingMessages"
       :draft="draft"
       :composer-notice="composerNotice"
-      :insert-immediately="insertImmediately"
       :escalating-message-ids="escalatingMessageIds"
       @update-draft="draft = $event"
-      @update-insert-immediately="insertImmediately = $event"
       @submit="handleSubmit"
       @click-working-agent="emit('clickWorkingAgent', $event)"
       @escalate-message="handleEscalateMessage"

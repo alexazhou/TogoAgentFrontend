@@ -157,6 +157,10 @@
     "processing": "{name} 处理中",
     "insertImmediately": "立即注入",
     "insertImmediatelyTip": "消息将在 Agent 下次读取前注入到对话流",
+    "queuedMessageLabel": "排队中",
+    "queuedMessageTip": "将在 Agent 结束当前行动后发送。",
+    "pendingImmediateLabel": "将尽快注入",
+    "pendingImmediateTip": "通常会在 Agent 下一次工具调用结束后注入。",
     "guideNow": "立即引导",
     "guidingNow": "引导中..."
   },

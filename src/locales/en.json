@@ -157,6 +157,10 @@
     "processing": "{name} processing",
     "insertImmediately": "Insert Immediately",
     "insertImmediatelyTip": "Message will be injected before the agent reads next",
+    "queuedMessageLabel": "Queued",
+    "queuedMessageTip": "This will be sent after the agent finishes its current action.",
+    "pendingImmediateLabel": "Injecting Soon",
+    "pendingImmediateTip": "This is usually injected after the agent finishes its next tool call.",
     "guideNow": "Guide Now",
     "guidingNow": "Guiding..."
   },

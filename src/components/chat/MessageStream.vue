@@ -94,6 +94,14 @@ function isEscalatingMessage(message: MessageInfo): boolean {
   return message.db_id !== null && Boolean(props.escalatingMessageIds?.includes(message.db_id));
 }
 
+function pendingImmediateTooltip(): string {
+  return t('chat.pendingImmediateTip');
+}
+
+function queuedTooltip(): string {
+  return t('chat.queuedMessageTip');
+}
+
 function updateScrollbarState(): void {
   const stream = streamRef.value;
   if (!stream) {
@@ -187,8 +195,8 @@ onBeforeUnmount(() => {
           <span
             v-else-if="resolveMessageStatus(message) === 'pending-immediate'"
             class="msg-status msg-status--pending-immediate"
-            title="立即注入，等待发布"
-          >⚡ 等待注入</span>
+            :title="pendingImmediateTooltip()"
+          >⚡ {{ t('chat.pendingImmediateLabel') }}</span>
           <span
             v-else-if="resolveMessageStatus(message) === 'immediate'"
             class="msg-status msg-status--immediate"
@@ -246,13 +254,13 @@ onBeforeUnmount(() => {
         <span
           v-if="resolveMessageStatus(message) === 'queued'"
           class="floating-message-status floating-message-status--queued"
-          title="消息排队中，等待 Agent 回复后注入"
-        >⏳ 排队中</span>
+          :data-tooltip="queuedTooltip()"
+        >⏳ {{ t('chat.queuedMessageLabel') }}</span>
         <span
           v-else-if="resolveMessageStatus(message) === 'pending-immediate'"
           class="floating-message-status floating-message-status--pending-immediate"
-          title="立即注入，等待发布"
-        >⚡ 等待注入</span>
+          :data-tooltip="pendingImmediateTooltip()"
+        >⚡ {{ t('chat.pendingImmediateLabel') }}</span>
         <button
           v-if="resolveMessageStatus(message) === 'queued' && message.db_id !== null"
           type="button"
@@ -494,6 +502,7 @@ onBeforeUnmount(() => {
 }
 
 .floating-message-status {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -514,6 +523,37 @@ onBeforeUnmount(() => {
 .floating-message-status--pending-immediate {
   color: #b66a00;
   background: color-mix(in srgb, #f59e0b 14%, white 86%);
+}
+
+.floating-message-status[data-tooltip]:not([data-tooltip=''])::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: max-content;
+  max-width: min(320px, calc(100vw - 48px));
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0;
+  white-space: normal;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.floating-message-status[data-tooltip]:not([data-tooltip='']):hover::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .floating-message-action {

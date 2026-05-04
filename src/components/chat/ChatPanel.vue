@@ -15,13 +15,11 @@ const props = defineProps<{
   reloadingMessages: boolean;
   draft: string;
   composerNotice: string;
-  insertImmediately?: boolean;
   escalatingMessageIds?: number[];
 }>();
 
 const emit = defineEmits<{
   updateDraft: [value: string];
-  updateInsertImmediately: [value: boolean];
   submit: [];
   clickWorkingAgent: [agentId: number];
   escalateMessage: [messageId: number];
@@ -150,18 +148,6 @@ function handleEnterKey(e: KeyboardEvent): void {
         ></textarea>
         <div class="composer-foot">
           <span>{{ t('chat.sendHint') }}</span>
-          <label
-            class="composer-toggle"
-            :class="{ active: insertImmediately }"
-            :title="t('chat.insertImmediatelyTip')"
-          >
-            <input
-              type="checkbox"
-              :checked="insertImmediately"
-              @change="emit('updateInsertImmediately', ($event.target as HTMLInputElement).checked)"
-            />
-            ⚡ {{ t('chat.insertImmediately') }}
-          </label>
           <button type="submit" :disabled="!draft.trim()">{{ t('chat.send') }}</button>
         </div>
       </div>
