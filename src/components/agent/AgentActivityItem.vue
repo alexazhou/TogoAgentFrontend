@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getTeamRooms } from '../../realtime/runtimeStore';
-import type { AgentActivity, AgentActivityStatus } from '../../types';
+import type { AgentActivity } from '../../types';
 
 const { t } = useI18n();
 
@@ -10,19 +10,25 @@ const props = defineProps<{
   activity: AgentActivity;
 }>();
 
-const toolResultRef = ref<HTMLElement | null>(null);
-const isToolResultOverflowing = ref(false);
-let toolResultObserver: ResizeObserver | null = null;
+function readTrimmedString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
 
-function setToolResultRef(
-  element: Element | { $el?: Element | null } | null,
-): void {
-  if (element instanceof HTMLElement) {
-    toolResultRef.value = element;
-    return;
+function formatActivityTime(value: string | null | undefined): string {
+  if (!value) {
+    return '';
   }
-  const maybeElement = element && typeof element === 'object' && '$el' in element ? element.$el : null;
-  toolResultRef.value = maybeElement instanceof HTMLElement ? maybeElement : null;
+  return value.replace('T', ' ').slice(0, 19);
+}
+
+function formatDuration(durationMs: number | null | undefined): string {
+  if (durationMs == null || Number.isNaN(durationMs) || durationMs < 0) {
+    return '0ms';
+  }
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  }
+  return `${(durationMs / 1000).toFixed(durationMs >= 10_000 ? 0 : 1)}s`;
 }
 
 const toolName = computed(() => {
@@ -47,20 +53,7 @@ const roomName = computed(() => {
   return room?.room_name ?? '';
 });
 
-function activityStatusLabel(status: AgentActivityStatus): string {
-  if (status === 'started') {
-    return t('agent.activityState.running');
-  }
-  if (status === 'succeeded') {
-    return t('agent.activityState.completed');
-  }
-  if (status === 'failed') {
-    return t('agent.activityState.failed');
-  }
-  return t('agent.activityState.cancelled');
-}
-
-function activityStatusSymbol(status: AgentActivityStatus): string {
+function activityStatusSymbol(status: AgentActivity['status']): string {
   if (status === 'started') {
     return '●';
   }
@@ -71,10 +64,10 @@ function activityStatusSymbol(status: AgentActivityStatus): string {
 }
 
 function shouldShowToolName(activity: AgentActivity): boolean {
-  if (activity.activity_type !== 'tool_call') {
-    return false;
-  }
-  return toolName.value !== 'send_chat_msg' && toolName.value !== 'finish_chat_turn' && toolName.value.length > 0;
+  return activity.activity_type === 'tool_call'
+    && toolName.value !== 'send_chat_msg'
+    && toolName.value !== 'finish_chat_turn'
+    && toolName.value.length > 0;
 }
 
 function activityTitle(activity: AgentActivity): string {
@@ -127,67 +120,91 @@ function getActivityToolArguments(activity: AgentActivity): string {
   if (toolArguments == null) {
     return '';
   }
-  const formatToolArguments = (value: unknown): string => {
-    if (typeof value !== 'object' || value === null) {
-      return t('agent.parseFailed');
+
+  if (typeof toolArguments !== 'object' || toolArguments === null) {
+    return t('agent.parseFailed');
+  }
+
+  if (toolName.value === 'execute_bash') {
+    const command = readTrimmedString((toolArguments as { command?: unknown }).command);
+    if (command) {
+      return command;
     }
-    if (toolName.value === 'execute_bash') {
-      const command = (value as { command?: unknown }).command;
-      if (typeof command === 'string' && command.trim()) {
-        return command.trim();
-      }
+  }
+
+  if (toolName.value === 'write_file' || toolName.value === 'read_file') {
+    const filePath = readTrimmedString((toolArguments as { file_path?: unknown }).file_path);
+    if (filePath) {
+      return filePath;
     }
-    if (toolName.value === 'write_file' || toolName.value === 'read_file') {
-      const filePath = (value as { file_path?: unknown }).file_path;
-      if (typeof filePath === 'string' && filePath.trim()) {
-        return filePath.trim();
-      }
-    }
-    return JSON.stringify(value);
-  };
-  return formatToolArguments(toolArguments);
+  }
+
+  return JSON.stringify(toolArguments);
 }
 
 function getSendMessageContent(activity: AgentActivity): string {
   const toolArguments = activity.metadata?.tool_arguments;
-  if (toolArguments == null) {
-    return '';
+  if (toolArguments == null || typeof toolArguments !== 'object') {
+    return toolArguments == null ? '' : t('agent.parseFailed');
   }
-  const extractMessage = (value: unknown): string => {
-    if (typeof value !== 'object' || value === null) {
-      return t('agent.parseFailed');
-    }
-    const candidate = value as { msg?: unknown; content?: unknown; text?: unknown };
-    const message = [candidate.msg, candidate.content, candidate.text].find((item) => typeof item === 'string');
-    return typeof message === 'string' ? message.trim() : t('agent.parseFailed');
-  };
-  return extractMessage(toolArguments);
+
+  const candidate = toolArguments as { msg?: unknown; content?: unknown; text?: unknown };
+  const message = [candidate.msg, candidate.content, candidate.text]
+    .map((item) => readTrimmedString(item))
+    .find(Boolean);
+  return message || t('agent.parseFailed');
 }
 
-function getSendMessagePrefix(activity: AgentActivity): string {
-  const room = roomName.value;
-  if (!room) {
+function getSendMessagePrefix(): string {
+  if (!roomName.value) {
     return '';
   }
-  return t('agent.sendToRoomPrefix', { room });
+  return t('agent.sendToRoomPrefix', { room: roomName.value });
+}
+
+function getExecuteBashStdout(activity: AgentActivity): string {
+  const toolResult = activity.metadata?.tool_result;
+  if (!toolResult || typeof toolResult !== 'object') {
+    return '';
+  }
+  return readTrimmedString((toolResult as { stdout?: unknown }).stdout);
+}
+
+function getExecuteBashStderr(activity: AgentActivity): string {
+  const toolResult = activity.metadata?.tool_result;
+  if (!toolResult || typeof toolResult !== 'object') {
+    return '';
+  }
+  return readTrimmedString((toolResult as { stderr?: unknown }).stderr);
+}
+
+function getExecuteBashExitCode(activity: AgentActivity): string {
+  const toolResult = activity.metadata?.tool_result;
+  if (!toolResult || typeof toolResult !== 'object') {
+    return '';
+  }
+  const exitCode = (toolResult as { exit_code?: unknown }).exit_code;
+  return typeof exitCode === 'number' ? `return_code=${exitCode}` : '';
 }
 
 function getActivityToolResult(activity: AgentActivity): string {
   if (toolName.value === 'execute_bash') {
-    const stdout = getExecuteBashStdout(activity);
-    const stderr = getExecuteBashStderr(activity);
-    return [stdout, stderr].filter(Boolean).join('\n');
+    return [getExecuteBashStdout(activity), getExecuteBashStderr(activity)].filter(Boolean).join('\n');
   }
+
   if (toolName.value === 'write_file') {
     const toolArguments = activity.metadata?.tool_arguments;
     if (toolArguments && typeof toolArguments === 'object') {
       const candidate = toolArguments as { content?: unknown; text?: unknown };
-      const writeContent = [candidate.content, candidate.text].find((item) => typeof item === 'string');
-      if (typeof writeContent === 'string' && writeContent.trim()) {
-        return writeContent.trim();
+      const writeContent = [candidate.content, candidate.text]
+        .map((item) => readTrimmedString(item))
+        .find(Boolean);
+      if (writeContent) {
+        return writeContent;
       }
     }
   }
+
   const toolResult = activity.metadata?.tool_result;
   if (toolResult == null) {
     return '';
@@ -200,9 +217,11 @@ function getActivityToolResult(activity: AgentActivity): string {
   }
   if (typeof toolResult === 'object') {
     const candidate = toolResult as { message?: unknown; content?: unknown; text?: unknown };
-    const preferredText = [candidate.message, candidate.content, candidate.text].find((item) => typeof item === 'string');
-    if (typeof preferredText === 'string' && preferredText.trim()) {
-      return preferredText.trim();
+    const preferredText = [candidate.message, candidate.content, candidate.text]
+      .map((item) => readTrimmedString(item))
+      .find(Boolean);
+    if (preferredText) {
+      return preferredText;
     }
     try {
       return JSON.stringify(toolResult, null, 2);
@@ -211,101 +230,6 @@ function getActivityToolResult(activity: AgentActivity): string {
     }
   }
   return t('agent.parseFailed');
-}
-
-function getExecuteBashStdout(activity: AgentActivity): string {
-  const toolResult = activity.metadata?.tool_result;
-  if (!toolResult || typeof toolResult !== 'object') {
-    return '';
-  }
-  const stdout = (toolResult as { stdout?: unknown }).stdout;
-  return typeof stdout === 'string' ? stdout.trim() : '';
-}
-
-function getExecuteBashStderr(activity: AgentActivity): string {
-  const toolResult = activity.metadata?.tool_result;
-  if (!toolResult || typeof toolResult !== 'object') {
-    return '';
-  }
-  const stderr = (toolResult as { stderr?: unknown }).stderr;
-  return typeof stderr === 'string' ? stderr.trim() : '';
-}
-
-function getExecuteBashExitCode(activity: AgentActivity): string {
-  if (!isExecuteBashResult(activity)) {
-    return '';
-  }
-  const toolResult = activity.metadata?.tool_result;
-  if (!toolResult || typeof toolResult !== 'object') {
-    return '';
-  }
-  const exitCode = (toolResult as { exit_code?: unknown }).exit_code;
-  return typeof exitCode === 'number' ? `return_code=${exitCode}` : '';
-}
-
-function isExecuteBashResult(activity: AgentActivity): boolean {
-  return activity.activity_type === 'tool_call' && toolName.value === 'execute_bash';
-}
-
-function activitySummary(activity: AgentActivity): string {
-  if (activity.activity_type === 'tool_call') {
-    if (toolName.value === 'send_chat_msg') {
-      return getSendMessageContent(activity);
-    }
-    if (toolName.value === 'finish_chat_turn') {
-      return '';
-    }
-    if (shouldShowToolName(activity) && getActivityToolArguments(activity)) {
-      return '';
-    }
-  }
-
-  const command = getActivityToolCommand(activity);
-  if (command) {
-    return command;
-  }
-
-  const detail = activity.detail.trim();
-  if (activity.activity_type === 'agent_state' && (detail.toUpperCase() === 'ACTIVE' || detail.toUpperCase() === 'IDLE')) {
-    return '';
-  }
-
-  if (detail && detail !== toolName.value) {
-    return detail;
-  }
-
-  if (activity.error_message?.trim()) {
-    return activity.error_message.trim();
-  }
-  return '';
-}
-
-function formatActivityTime(value: string | null | undefined): string {
-  if (!value) {
-    return '';
-  }
-  return value.replace('T', ' ').slice(0, 19);
-}
-
-function formatActivityTimeCompact(value: string | null | undefined): string {
-  if (!value) {
-    return '';
-  }
-  const normalized = formatActivityTime(value);
-  return normalized.slice(-8);
-}
-
-function formatDuration(durationMs: number | null | undefined): string {
-  if (durationMs == null || Number.isNaN(durationMs)) {
-    return '0ms';
-  }
-  if (durationMs < 0) {
-    return '0ms';
-  }
-  if (durationMs < 1000) {
-    return `${durationMs}ms`;
-  }
-  return `${(durationMs / 1000).toFixed(durationMs >= 10_000 ? 0 : 1)}s`;
 }
 
 function activityMetaTokens(activity: AgentActivity): string {
@@ -321,8 +245,7 @@ function activityMetaTokens(activity: AgentActivity): string {
     return `tokens ${currentTotal}`;
   }
   if (estimated !== null) {
-    const runningTotal = estimated + (currentCompletion ?? 0);
-    return t('agent.tokenEstimate', { count: runningTotal });
+    return t('agent.tokenEstimate', { count: estimated + (currentCompletion ?? 0) });
   }
   return '';
 }
@@ -333,82 +256,105 @@ function getActivityModel(activity: AgentActivity): string {
 }
 
 function getActivityToolName(activity: AgentActivity): string {
-  const toolName = activity.metadata?.tool_name;
-  return typeof toolName === 'string' ? toolName : '';
+  const metadataToolName = activity.metadata?.tool_name;
+  return typeof metadataToolName === 'string' ? metadataToolName : '';
 }
 
-function isExpandedToolResult(activity: AgentActivity): boolean {
-  return activity.activity_type === 'tool_call'
-    && toolName.value !== 'send_chat_msg'
-    && Boolean(getActivityToolResult(activity));
-}
-
-function isExpandedContent(activity: AgentActivity): boolean {
-  return activity.activity_type === 'reasoning'
-    || (activity.activity_type === 'tool_call' && toolName.value === 'send_chat_msg')
-    || isExpandedToolResult(activity);
-}
-
-function isExpandedMessage(activity: AgentActivity): boolean {
-  return activity.activity_type === 'tool_call' && toolName.value === 'send_chat_msg';
-}
-
-function shouldShowInlineTitle(activity: AgentActivity): boolean {
-  return !(
-    Boolean(activitySummary(activity))
-    || shouldShowToolName(activity)
-    || (activity.activity_type === 'llm_infer' && Boolean(getActivityModel(activity)))
-    || (activity.activity_type !== 'tool_call' && Boolean(getActivityToolName(activity)))
-  );
-}
-
-function summaryTitle(activity: AgentActivity): string {
-  if (isExpandedContent(activity)) {
-    return '';
-  }
-  return activitySummary(activity);
-}
-
-function updateToolResultOverflow(): void {
-  nextTick(() => {
-    const el = toolResultRef.value;
-    isToolResultOverflowing.value = Boolean(el && el.scrollHeight - el.clientHeight > 1);
-  });
-}
-
-watch(
-  () => [toolName.value, props.activity.metadata?.tool_result, props.activity.detail, props.activity.status],
-  () => {
-    updateToolResultOverflow();
-  },
-  { deep: true },
-);
-
-onMounted(() => {
-  updateToolResultOverflow();
-  if (typeof ResizeObserver !== 'undefined') {
-    toolResultObserver = new ResizeObserver(() => {
-      updateToolResultOverflow();
-    });
-    if (toolResultRef.value) {
-      toolResultObserver.observe(toolResultRef.value);
+function activitySummary(
+  activity: AgentActivity,
+  summaryToolName: string,
+  showToolName: boolean,
+  toolArguments: string,
+  toolCommand: string,
+): string {
+  if (activity.activity_type === 'tool_call') {
+    if (summaryToolName === 'send_chat_msg') {
+      return getSendMessageContent(activity);
+    }
+    if (summaryToolName === 'finish_chat_turn') {
+      return '';
+    }
+    if (showToolName && toolArguments) {
+      return '';
     }
   }
-});
 
-watch(toolResultRef, (el, prevEl) => {
-  if (toolResultObserver && prevEl) {
-    toolResultObserver.unobserve(prevEl);
+  if (toolCommand) {
+    return toolCommand;
   }
-  if (toolResultObserver && el) {
-    toolResultObserver.observe(el);
-  }
-  updateToolResultOverflow();
-});
 
-onBeforeUnmount(() => {
-  toolResultObserver?.disconnect();
-  toolResultObserver = null;
+  const detail = activity.detail.trim();
+  if (activity.activity_type === 'agent_state' && (detail.toUpperCase() === 'ACTIVE' || detail.toUpperCase() === 'IDLE')) {
+    return '';
+  }
+  if (detail && detail !== summaryToolName) {
+    return detail;
+  }
+
+  return activity.error_message?.trim() ?? '';
+}
+
+const activityView = computed(() => {
+  const activity = props.activity;
+  const currentToolName = toolName.value;
+  const currentTitle = activityTitle(activity);
+  const currentToolCommand = getActivityToolCommand(activity);
+  const currentToolArguments = getActivityToolArguments(activity);
+  const currentModel = getActivityModel(activity);
+  const currentMetadataToolName = getActivityToolName(activity);
+  const showToolName = shouldShowToolName(activity);
+  const currentSendMessagePrefix = currentToolName === 'send_chat_msg' ? getSendMessagePrefix() : '';
+  const executeBashResult = activity.activity_type === 'tool_call' && currentToolName === 'execute_bash';
+  const currentStdout = executeBashResult ? getExecuteBashStdout(activity) : '';
+  const currentStderr = executeBashResult ? getExecuteBashStderr(activity) : '';
+  const currentExitCode = executeBashResult ? getExecuteBashExitCode(activity) : '';
+  const currentToolResult = getActivityToolResult(activity);
+  const expandedToolResult = activity.activity_type === 'tool_call'
+    && currentToolName !== 'send_chat_msg'
+    && Boolean(currentToolResult);
+  const expandedMessage = activity.activity_type === 'tool_call' && currentToolName === 'send_chat_msg';
+  const expandedContent = activity.activity_type === 'reasoning' || expandedMessage || expandedToolResult;
+  const currentSummary = activitySummary(
+    activity,
+    currentToolName,
+    showToolName,
+    currentToolArguments,
+    currentToolCommand,
+  );
+  const inlineTitle = !(
+    Boolean(currentSummary)
+    || showToolName
+    || (activity.activity_type === 'llm_infer' && Boolean(currentModel))
+    || (activity.activity_type !== 'tool_call' && Boolean(currentMetadataToolName))
+  );
+
+  return {
+    durationText: formatDuration(activity.duration_ms),
+    executeBashResult,
+    expandedContent,
+    expandedMessage,
+    expandedToolResult,
+    exitCode: currentExitCode,
+    inlineTitle,
+    metadataToolName: currentMetadataToolName,
+    model: currentModel,
+    sendMessagePrefix: currentSendMessagePrefix,
+    showSummary: Boolean(currentSummary),
+    showToolArguments: showToolName && Boolean(currentToolArguments),
+    showToolName,
+    startedAtText: formatActivityTime(activity.started_at),
+    stateSymbol: activityStatusSymbol(activity.status),
+    stderr: currentStderr,
+    stdout: currentStdout,
+    summary: currentSummary,
+    summaryIsCode: Boolean(currentToolCommand),
+    summaryTitle: expandedContent ? '' : currentSummary,
+    title: currentTitle,
+    tokenText: activityMetaTokens(activity),
+    toolArguments: currentToolArguments,
+    toolName: currentToolName,
+    toolResult: currentToolResult,
+  };
 });
 </script>
 
@@ -416,91 +362,86 @@ onBeforeUnmount(() => {
   <article
     class="agent-activity-item"
     :class="{
-      'agent-activity-item--expanded': isExpandedContent(activity),
-      'agent-activity-item--message': isExpandedMessage(activity),
-      'agent-activity-item--tool-result': isExpandedToolResult(activity),
-      'agent-activity-item--bash-result': isExecuteBashResult(activity),
+      'agent-activity-item--expanded': activityView.expandedContent,
+      'agent-activity-item--message': activityView.expandedMessage,
+      'agent-activity-item--tool-result': activityView.expandedToolResult,
+      'agent-activity-item--bash-result': activityView.executeBashResult,
     }"
     :data-status="activity.status"
     :data-activity-type="activity.activity_type"
   >
     <div class="agent-activity-item__row">
       <span class="agent-activity-item__state-anchor" tabindex="0">
-        <span class="agent-activity-item__state" :data-status="activity.status">{{ activityStatusSymbol(activity.status) }}</span>
+        <span class="agent-activity-item__state" :data-status="activity.status">{{ activityView.stateSymbol }}</span>
         <span class="agent-activity-item__state-popover">
           <span class="agent-activity-item__state-row">
             <span class="agent-activity-item__state-row-left">
-              <span class="agent-activity-item__state-title">{{ activityTitle(activity) }}</span>
-              <span class="agent-activity-item__state-meta agent-activity-item__state-meta--strong">{{ formatDuration(activity.duration_ms) }}</span>
+              <span class="agent-activity-item__state-title">{{ activityView.title }}</span>
+              <span class="agent-activity-item__state-meta agent-activity-item__state-meta--strong">{{ activityView.durationText }}</span>
             </span>
-            <span class="agent-activity-item__state-meta">{{ formatActivityTime(activity.started_at) }}</span>
+            <span class="agent-activity-item__state-meta">{{ activityView.startedAtText }}</span>
           </span>
-          <span v-if="getExecuteBashExitCode(activity)" class="agent-activity-item__state-extra">
-            {{ getExecuteBashExitCode(activity) }}
+          <span v-if="activityView.exitCode" class="agent-activity-item__state-extra">
+            {{ activityView.exitCode }}
           </span>
         </span>
       </span>
-      <strong v-if="shouldShowInlineTitle(activity)" class="agent-activity-item__title">{{ activityTitle(activity) }}</strong>
+      <strong v-if="activityView.inlineTitle" class="agent-activity-item__title">{{ activityView.title }}</strong>
       <span
-        v-if="shouldShowToolName(activity)"
+        v-if="activityView.showToolName"
         class="agent-activity-item__chip agent-activity-item__chip--mono agent-activity-item__tool-name"
-        :title="toolName"
-      >{{ toolName }}</span>
+        :title="activityView.toolName"
+      >{{ activityView.toolName }}</span>
       <span
-        v-if="shouldShowToolName(activity) && getActivityToolArguments(activity)"
+        v-if="activityView.showToolArguments"
         class="agent-activity-item__summary agent-activity-item__summary--code agent-activity-item__tool-args"
-        :title="getActivityToolArguments(activity)"
-      >{{ getActivityToolArguments(activity) }}</span>
+        :title="activityView.toolArguments"
+      >{{ activityView.toolArguments }}</span>
       <span
-        v-if="activity.activity_type === 'llm_infer' && getActivityModel(activity)"
+        v-if="activity.activity_type === 'llm_infer' && activityView.model"
         class="agent-activity-item__chip agent-activity-item__chip--mono"
-        :title="getActivityModel(activity)"
-      >{{ getActivityModel(activity) }}</span>
+        :title="activityView.model"
+      >{{ activityView.model }}</span>
       <span
-        v-if="toolName === 'send_chat_msg' && getSendMessagePrefix(activity)"
+        v-if="activityView.sendMessagePrefix"
         class="agent-activity-item__chip"
-        :title="getSendMessagePrefix(activity)"
-      >{{ getSendMessagePrefix(activity) }}</span>
+        :title="activityView.sendMessagePrefix"
+      >{{ activityView.sendMessagePrefix }}</span>
       <span
-        v-if="activitySummary(activity)"
+        v-if="activityView.showSummary"
         class="agent-activity-item__summary"
-        :class="{ 'agent-activity-item__summary--code': !!getActivityToolCommand(activity) }"
-        :title="summaryTitle(activity)"
-      >{{ activitySummary(activity) }}</span>
+        :class="{ 'agent-activity-item__summary--code': activityView.summaryIsCode }"
+        :title="activityView.summaryTitle"
+      >{{ activityView.summary }}</span>
       <span
-        v-if="activity.activity_type !== 'llm_infer' && getActivityModel(activity)"
+        v-if="activity.activity_type !== 'llm_infer' && activityView.model"
         class="agent-activity-item__chip agent-activity-item__chip--mono"
-        :title="getActivityModel(activity)"
-      >{{ getActivityModel(activity) }}</span>
+        :title="activityView.model"
+      >{{ activityView.model }}</span>
       <span
-        v-if="activity.activity_type !== 'tool_call' && getActivityToolName(activity)"
+        v-if="activity.activity_type !== 'tool_call' && activityView.metadataToolName"
         class="agent-activity-item__chip agent-activity-item__chip--mono"
-        :title="getActivityToolName(activity)"
-      >{{ getActivityToolName(activity) }}</span>
-      <span v-if="activityMetaTokens(activity)" class="agent-activity-item__tail">
-        <span class="agent-activity-item__tokens">{{ activityMetaTokens(activity) }}</span>
+        :title="activityView.metadataToolName"
+      >{{ activityView.metadataToolName }}</span>
+      <span v-if="activityView.tokenText" class="agent-activity-item__tail">
+        <span class="agent-activity-item__tokens">{{ activityView.tokenText }}</span>
       </span>
     </div>
-    <template v-if="isExecuteBashResult(activity)">
+    <template v-if="activityView.executeBashResult">
       <p
-        v-if="getExecuteBashStdout(activity)"
-        :ref="setToolResultRef"
+        v-if="activityView.stdout"
         class="agent-activity-item__tool-result agent-activity-item__tool-result--stdout"
-      >{{ getExecuteBashStdout(activity) }}</p>
+      >{{ activityView.stdout }}</p>
       <p
-        v-if="getExecuteBashStderr(activity)"
-        :ref="!getExecuteBashStdout(activity) ? setToolResultRef : undefined"
+        v-if="activityView.stderr"
         class="agent-activity-item__tool-result agent-activity-item__tool-result--stderr"
-      >{{ getExecuteBashStderr(activity) }}</p>
-      <p v-if="isToolResultOverflowing" class="agent-activity-item__tool-result-ellipsis">...</p>
+      >{{ activityView.stderr }}</p>
     </template>
     <template v-else>
       <p
-        v-if="isExpandedToolResult(activity)"
-        :ref="setToolResultRef"
+        v-if="activityView.expandedToolResult"
         class="agent-activity-item__tool-result"
-      >{{ getActivityToolResult(activity) }}</p>
-      <p v-if="isExpandedToolResult(activity) && isToolResultOverflowing" class="agent-activity-item__tool-result-ellipsis">...</p>
+      >{{ activityView.toolResult }}</p>
     </template>
     <p v-if="activity.error_message" class="agent-activity-item__error">{{ activity.error_message }}</p>
   </article>
@@ -556,7 +497,6 @@ onBeforeUnmount(() => {
 
 .agent-activity-item__state[data-status='started'] {
   color: var(--good);
-  animation: agent-activity-item-dot-pulse 2s ease-in-out infinite;
 }
 
 .agent-activity-item__state[data-status='succeeded'] {
@@ -847,9 +787,11 @@ onBeforeUnmount(() => {
   color: var(--text);
   font-size: 0.76rem;
   line-height: 1.45;
-  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
   overflow: hidden;
-  max-height: calc(1.45em * 5);
+  white-space: pre-wrap;
 }
 
 .agent-activity-item__tool-result--stdout {
@@ -860,24 +802,4 @@ onBeforeUnmount(() => {
   color: var(--danger, #f85149);
 }
 
-.agent-activity-item__tool-result-ellipsis {
-  margin: 0;
-  padding-left: 22px;
-  color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.1;
-}
-
-@keyframes agent-activity-item-dot-pulse {
-  0%,
-  100% {
-    transform: scale(0.85);
-    opacity: 0.55;
-  }
-
-  50% {
-    transform: scale(1.35);
-    opacity: 1;
-  }
-}
 </style>

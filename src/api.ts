@@ -867,3 +867,19 @@ export async function setLanguage(language: AppLocale): Promise<{ language: AppL
     body: JSON.stringify({ language }),
   });
 }
+
+export type SuperviseResponse = {
+  room_id: number;
+  created: boolean;
+};
+
+export async function superviseAgent(
+  agentId: number,
+  content: string,
+  insertImmediately = true,
+): Promise<SuperviseResponse> {
+  return requestJson(`/agents/${agentId}/supervise.json`, {
+    method: 'POST',
+    body: JSON.stringify({ content, insert_immediately: insertImmediately }),
+  });
+}

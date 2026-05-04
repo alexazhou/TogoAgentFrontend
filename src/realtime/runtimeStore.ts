@@ -30,6 +30,7 @@ const agentActivitiesState = ref<Record<number, AgentActivity[]>>({});
 const agentStatusState = ref<Record<number, AgentStatus>>({});
 const teamDeptTreeState = ref<Record<number, DeptTreeNode | null>>({});
 const roleTemplatesState = ref<RoleTemplateSummary[]>([]);
+const MAX_AGENT_ACTIVITY_ITEMS = 100;
 
 const activeTeamId = ref<number | null>(null);
 const activeRoomId = ref<number | null>(null);
@@ -141,20 +142,39 @@ function markRoomAsReadInternal(teamId: number, roomId: number): void {
   );
 }
 
-function upsertAgentActivity(activity: AgentActivity): void {
-  const currentItems = agentActivitiesState.value[activity.agent_id] ?? [];
-  const nextItems = [...currentItems];
-  const index = nextItems.findIndex((item) => item.id === activity.id);
-  if (index >= 0) {
-    nextItems[index] = activity;
-  } else {
-    nextItems.push(activity);
+function trimAgentActivities(items: AgentActivity[]): void {
+  if (items.length > MAX_AGENT_ACTIVITY_ITEMS) {
+    items.splice(0, items.length - MAX_AGENT_ACTIVITY_ITEMS);
   }
-  nextItems.sort((a, b) => a.id - b.id);
-  agentActivitiesState.value = {
-    ...agentActivitiesState.value,
-    [activity.agent_id]: nextItems,
-  };
+}
+
+function upsertAgentActivity(activity: AgentActivity): void {
+  const currentItems = agentActivitiesState.value[activity.agent_id];
+  if (!currentItems) {
+    agentActivitiesState.value[activity.agent_id] = [activity];
+    return;
+  }
+
+  const index = currentItems.findIndex((item) => item.id === activity.id);
+  if (index >= 0) {
+    currentItems[index] = activity;
+    return;
+  }
+
+  const lastItem = currentItems[currentItems.length - 1];
+  if (!lastItem || lastItem.id < activity.id) {
+    currentItems.push(activity);
+    trimAgentActivities(currentItems);
+    return;
+  }
+
+  const insertIndex = currentItems.findIndex((item) => item.id > activity.id);
+  if (insertIndex < 0) {
+    currentItems.push(activity);
+  } else {
+    currentItems.splice(insertIndex, 0, activity);
+  }
+  trimAgentActivities(currentItems);
 }
 
 export function seedTeamAgents(teamId: number, agents: AgentInfo[]): void {
@@ -230,10 +250,9 @@ export async function loadRoomMessagesState(teamId: number, roomId: number): Pro
 }
 
 export function seedAgentActivities(agentId: number, activities: AgentActivity[]): void {
-  agentActivitiesState.value = {
-    ...agentActivitiesState.value,
-    [agentId]: [...activities].sort((a, b) => a.id - b.id),
-  };
+  agentActivitiesState.value[agentId] = [...activities]
+    .sort((a, b) => a.id - b.id)
+    .slice(-MAX_AGENT_ACTIVITY_ITEMS);
 }
 
 export async function loadAgentActivities(agentId: number): Promise<AgentActivity[]> {
@@ -429,6 +448,16 @@ export function applyRealtimeEvent(event: FrontendRealtimeEvent): void {
 
   if (event.type === 'schedule_state') {
     updateScheduleState(event.scheduleState, event.notRunningReason);
+    return;
+  }
+
+  if (event.type === 'room_added') {
+    updateTeamRooms(event.teamId, (rooms) => {
+      if (rooms.some((r) => r.room_id === event.room.room_id)) {
+        return rooms;
+      }
+      return [...rooms, event.room];
+    });
     return;
   }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getAgentDetail, resumeAgent, stopAgent } from '../../api';
+import { getAgentDetail, resumeAgent, stopAgent, superviseAgent } from '../../api';
 import { connectionState, showGlobalSuccessToast } from '../../appUiState';
 import { displayName, formatConnectionState } from '../../utils';
 import { loadAgentActivities } from '../../realtime/runtimeStore';
@@ -34,6 +34,9 @@ const activitiesLoading = ref(false);
 const resuming = ref(false);
 const stopping = ref(false);
 const errorMessage = ref('');
+const superviseContent = ref('');
+const supervising = ref(false);
+const superviseError = ref('');
 const activitiesErrorMessage = ref('');
 const shouldFollowActivities = ref(true);
 const hasAutoScrolledForCurrentAgent = ref(false);
@@ -110,9 +113,6 @@ const displayAgentName = computed(() => {
 });
 const displayEmployeeNumber = computed(() => String(displayAgent.value?.employee_number ?? ''));
 const activityRealtimeState = computed(() => connectionState.value);
-const activityRealtimePulse = computed(
-  () => activityRealtimeState.value !== 'disconnected',
-);
 const activityBadgeLabel = computed(() =>
   activityRealtimeState.value === 'connected' ? t('agent.realtimeConnected') : formatConnectionState(activityRealtimeState.value),
 );
@@ -230,6 +230,22 @@ async function copyFailureMessage(): Promise<void> {
   }
 }
 
+async function sendSupervise(): Promise<void> {
+  if (!props.agentId || !superviseContent.value.trim() || supervising.value) {
+    return;
+  }
+  supervising.value = true;
+  superviseError.value = '';
+  try {
+    await superviseAgent(props.agentId, superviseContent.value.trim());
+    superviseContent.value = '';
+  } catch (error) {
+    superviseError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    supervising.value = false;
+  }
+}
+
 watch(
   () => [props.open, props.agentId, props.agentName],
   () => {
@@ -335,7 +351,7 @@ watch(
                   readonly
                 />
                 <div class="agent-status-panel" :data-status="currentStatus ?? undefined">
-                  <span class="status-dot" :class="{ 'status-dot-pulse': currentStatus === 'active' }"></span>
+                  <span class="status-dot"></span>
                   <span class="agent-status-panel__value">{{ statusLabel }}</span>
                   <button
                     v-if="currentStatus === 'failed'"
@@ -374,7 +390,6 @@ watch(
                   <span class="agent-activity-panel__badge" :data-state="activityRealtimeState">
                     <span
                       class="agent-activity-panel__badge-dot"
-                      :class="{ 'agent-activity-panel__badge-dot--pulse': activityRealtimePulse }"
                     ></span>
                     {{ activityBadgeLabel }}
                   </span>
@@ -397,6 +412,30 @@ watch(
                     :activity="activity"
                   />
                 </div>
+              </section>
+
+              <section class="agent-supervise-section">
+                <h4 class="agent-supervise-section__title">{{ t('agent.supervise.title') }}</h4>
+                <div class="agent-supervise-section__input-row">
+                  <textarea
+                    v-model="superviseContent"
+                    class="agent-supervise-section__textarea"
+                    :placeholder="t('agent.supervise.placeholder')"
+                    rows="3"
+                    :disabled="supervising"
+                    @keydown.ctrl.enter.prevent="sendSupervise"
+                    @keydown.meta.enter.prevent="sendSupervise"
+                  />
+                  <button
+                    type="button"
+                    class="agent-supervise-section__send"
+                    :disabled="supervising || !superviseContent.trim()"
+                    @click="sendSupervise"
+                  >
+                    {{ supervising ? t('agent.supervise.sending') : t('agent.supervise.send') }}
+                  </button>
+                </div>
+                <p v-if="superviseError" class="agent-supervise-section__error">{{ superviseError }}</p>
               </section>
             </div>
           </section>
@@ -618,42 +657,27 @@ watch(
   background: var(--status-dot-idle);
 }
 
-.status-dot-pulse {
-  width: 6px;
-  height: 6px;
-  background: var(--good);
-  animation: agent-dot-pulse 2s ease-in-out infinite;
-}
-
 .agent-status-panel[data-status='failed'] .status-dot {
   background: var(--danger, #f85149);
   box-shadow: none;
 }
 
-@keyframes agent-dot-pulse {
-  0%,
-  100% {
-    transform: scale(0.85);
-    opacity: 0.55;
-  }
-
-  50% {
-    transform: scale(1.35);
-    opacity: 1;
-  }
-}
-
 .agent-detail-stage__right {
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  height: 100%;
 }
 
 .agent-activity-panel {
   min-height: 0;
-  height: 100%;
-  border-radius: 18px;
+  flex: 1;
+  border-radius: 18px 18px 0 0;
   padding: 0;
   background: color-mix(in srgb, var(--panel-bg) 97%, var(--surface-soft) 3%);
   border: 1px solid color-mix(in srgb, var(--panel-border) 82%, white 18%);
+  border-bottom: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -717,42 +741,33 @@ watch(
 }
 
 .agent-activity-panel__badge-dot {
-  width: 7px;
-  height: 7px;
+  position: relative;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  color: var(--status-dot-idle);
+}
+
+.agent-activity-panel__badge-dot::before {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
   border-radius: 999px;
-  background: var(--status-dot-idle);
-  flex: 0 0 auto;
+  background: currentColor;
 }
 
 .agent-activity-panel__badge[data-state='connected'] .agent-activity-panel__badge-dot {
-  background: var(--good);
+  color: var(--good);
 }
 
 .agent-activity-panel__badge[data-state='waiting_reconnect'] .agent-activity-panel__badge-dot,
 .agent-activity-panel__badge[data-state='reconnecting'] .agent-activity-panel__badge-dot,
 .agent-activity-panel__badge[data-state='connecting'] .agent-activity-panel__badge-dot {
-  background: var(--warn);
+  color: var(--warn);
 }
 
 .agent-activity-panel__badge[data-state='disconnected'] .agent-activity-panel__badge-dot {
-  background: var(--danger);
-}
-
-.agent-activity-panel__badge-dot--pulse {
-  animation: agent-activity-badge-pulse 2s ease-in-out infinite;
-}
-
-@keyframes agent-activity-badge-pulse {
-  0%,
-  100% {
-    transform: scale(0.9);
-    opacity: 0.58;
-  }
-
-  50% {
-    transform: scale(1.18);
-    opacity: 1;
-  }
+  color: var(--danger);
 }
 
 .agent-activity-list {
@@ -846,4 +861,77 @@ watch(
     padding: 0;
   }
 }
-</style>
+
+.agent-supervise-section {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--panel-bg) 97%, var(--surface-soft) 3%);
+  border: 1px solid color-mix(in srgb, var(--panel-border) 82%, white 18%);
+  border-top: none;
+  border-radius: 0 0 18px 18px;
+}
+
+.agent-supervise-section__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary, #6b7280);
+  margin: 0 0 8px;
+}
+
+.agent-supervise-section__input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.agent-supervise-section__textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: var(--color-bg-input, #fff);
+  color: var(--color-text, #111827);
+  line-height: 1.4;
+  min-height: 60px;
+  transition: border-color 0.15s;
+}
+
+.agent-supervise-section__textarea:focus {
+  outline: none;
+  border-color: var(--color-accent, #4f46e5);
+}
+
+.agent-supervise-section__textarea:disabled {
+  opacity: 0.6;
+}
+
+.agent-supervise-section__send {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-accent, #4f46e5);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  align-self: flex-end;
+}
+
+.agent-supervise-section__send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.agent-supervise-section__error {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--color-error, #ef4444);
+}</style>

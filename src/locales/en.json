@@ -123,7 +123,13 @@
     "cardSubtitle": "Agent",
     "searchPlaceholder": "Search Agents",
     "agentLoadFailed": "Failed to load agents",
-    "teamMembersLabel": "Team Members"
+    "teamMembersLabel": "Team Members",
+    "supervise": {
+      "title": "Supervise",
+      "placeholder": "Enter instruction… (Ctrl+Enter to send)",
+      "send": "Send",
+      "sending": "Sending…"
+    }
   },
   "room": {
     "chatRooms": "Chat Rooms",

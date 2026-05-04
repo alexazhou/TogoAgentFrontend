@@ -123,7 +123,13 @@
     "cardSubtitle": "智能体",
     "searchPlaceholder": "搜索Agent",
     "agentLoadFailed": "Agent 加载失败",
-    "teamMembersLabel": "团队成员"
+    "teamMembersLabel": "团队成员",
+    "supervise": {
+      "title": "追加指令",
+      "placeholder": "输入指令内容…（Ctrl+Enter 发送）",
+      "send": "发送",
+      "sending": "发送中…"
+    }
   },
   "room": {
     "chatRooms": "聊天室",

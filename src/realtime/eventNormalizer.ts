@@ -4,6 +4,7 @@ import type {
   AgentActivityType,
   AgentStatus,
   MessageInfo,
+  RoomState,
 } from '../types';
 
 export type FrontendRealtimeEvent =
@@ -45,6 +46,11 @@ export type FrontendRealtimeEvent =
     type: 'schedule_state';
     scheduleState: 'stopped' | 'blocked' | 'running';
     notRunningReason: string;
+  }
+  | {
+    type: 'room_added';
+    teamId: number;
+    room: RoomState;
   };
 
 type RawRecord = Record<string, unknown>;
@@ -212,6 +218,40 @@ export function normalizeWsEventPayload(payload: unknown): FrontendRealtimeEvent
       scheduleState,
       notRunningReason: String(raw.not_running_reason ?? ''),
     };
+  }
+
+  if (eventType === 'room_added') {
+    const gtRoom = raw.gt_room as RawRecord | undefined;
+    const teamId = Number(raw.team_id ?? gtRoom?.team_id ?? 0);
+    const roomId = Number(gtRoom?.id ?? 0);
+    if (!Number.isFinite(teamId) || !Number.isFinite(roomId) || teamId <= 0 || roomId <= 0) {
+      return null;
+    }
+    const roomType = String(gtRoom?.type ?? 'group').toLowerCase();
+    const agentIds = Array.isArray(gtRoom?.agent_ids)
+      ? (gtRoom.agent_ids as unknown[])
+        .map((id) => Number(id))
+        .filter((id) => !Number.isNaN(id) && id > 0 && id !== -2)
+      : [];
+    const room: RoomState = {
+      room_id: roomId,
+      room_name: String(gtRoom?.name ?? ''),
+      i18n: {},
+      room_type: roomType === 'private' ? 'private' : 'group',
+      state: 'idle',
+      need_scheduling: false,
+      agents: agentIds,
+      tags: Array.isArray(gtRoom?.tags)
+        ? (gtRoom.tags as unknown[]).filter((t): t is string => typeof t === 'string')
+        : [],
+      biz_id: typeof gtRoom?.biz_id === 'string' && (gtRoom.biz_id as string).trim()
+        ? (gtRoom.biz_id as string)
+        : null,
+      current_turn_agent_id: null,
+      preview: '',
+      unread: 0,
+    };
+    return { type: 'room_added', teamId, room };
   }
 
   return null;
