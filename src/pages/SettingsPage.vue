@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import '../theme/legacy-aliases.css';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { deleteTeam, clearTeamData, getAgents, getTeamDetail, setTeamEnabled, updateTeam } from '../api';
-import { showGlobalSuccessToast, showQuickInit, totalMessageCount } from '../appUiState';
+import { getAgents } from '../api';
+import { showQuickInit, totalMessageCount } from '../appUiState';
 import ModelsSettingsSection from '../components/settings/ModelsSettingsSection.vue';
 import RolesSettingsSection from '../components/settings/RolesSettingsSection.vue';
 import SettingsNavSidebar from '../components/settings/SettingsNavSidebar.vue';
@@ -12,6 +12,8 @@ import TeamsSettingsSection from '../components/settings/TeamsSettingsSection.vu
 import ConfirmDialog from '../components/ui/ConfirmDialog.vue';
 import { useSettingsNavItems } from '../components/settings/settingsNavItems';
 import { useSettingsRouting } from '../composables/useSettingsRouting';
+import { useSettingsTeamDetailState } from '../composables/useSettingsTeamDetailState';
+import { useSettingsTeamMutations } from '../composables/useSettingsTeamMutations';
 import { useTeamSummaries } from '../composables/useTeamSummaries';
 import { loadTeams, teams, teamsLoadFailed } from '../teamStore';
 import type { AgentInfo, TeamDetail } from '../types';
@@ -25,44 +27,6 @@ totalMessageCount.value = 0;
 const teamId = computed(() => Number(route.params.teamId));
 const agents = ref<AgentInfo[]>([]);
 const selectedTeamDetail = ref<TeamDetail | null>(null);
-const teamInfoDraft = ref({
-  name: '',
-  workingDirectory: '',
-  slogan: '',
-  rules: '',
-});
-const teamEnabledPending = ref<Record<number, boolean>>({});
-const teamToggleConfirm = ref<{
-  open: boolean;
-  teamId: number | null;
-  teamName: string;
-  enabled: boolean;
-}>({
-  open: false,
-  teamId: null,
-  teamName: '',
-  enabled: false,
-});
-const teamDeleteConfirm = ref<{
-  open: boolean;
-  teamId: number | null;
-  teamName: string;
-}>({
-  open: false,
-  teamId: null,
-  teamName: '',
-});
-const teamClearDataConfirm = ref<{
-  open: boolean;
-  teamId: number | null;
-  teamName: string;
-}>({
-  open: false,
-  teamId: null,
-  teamName: '',
-});
-const isSavingTeamInfo = ref(false);
-const teamInfoStatus = ref('');
 const settingsMainRef = ref<HTMLElement | null>(null);
 const settingsScrollbarHovered = ref(false);
 
@@ -90,47 +54,49 @@ const {
   },
   t,
 });
-
-watch(
+const {
+  clearSelectedTeamDetail,
+  handleTeamTreeSaved,
+  hasTeamInfoChanges,
+  isSavingTeamInfo,
+  loadSelectedTeamDetail,
+  resetTeamInfoDraft,
+  saveTeamInfo,
+  teamInfoDraft,
+  teamInfoStatus,
+} = useSettingsTeamDetailState({
+  currentSectionId,
+  detailTeamId,
+  selectedTeamDetail,
   teams,
-  (latestTeams) => {
-    if (!selectedTeamDetail.value) {
-      return;
-    }
-
-    const latestSummary = latestTeams.find((team) => team.id === selectedTeamDetail.value?.id);
-    if (!latestSummary || selectedTeamDetail.value.enabled === latestSummary.enabled) {
-      return;
-    }
-
-    selectedTeamDetail.value = {
-      ...selectedTeamDetail.value,
-      enabled: latestSummary.enabled,
-    };
-  },
-  { deep: true },
-);
-
-function buildTeamInfoDraft(detail: TeamDetail) {
-  return {
-    name: detail.name,
-    workingDirectory: detail.working_directory || '',
-    slogan: String(detail.config?.slogan || ''),
-    rules: String(detail.config?.rules || ''),
-  };
-}
-
-const hasTeamInfoChanges = computed(() => {
-  if (!selectedTeamDetail.value) {
-    return false;
-  }
-
-  return (
-    teamInfoDraft.value.name !== selectedTeamDetail.value.name ||
-    teamInfoDraft.value.workingDirectory !== (selectedTeamDetail.value.working_directory || '') ||
-    teamInfoDraft.value.slogan !== String(selectedTeamDetail.value.config?.slogan || '') ||
-    teamInfoDraft.value.rules !== String(selectedTeamDetail.value.config?.rules || '')
-  );
+  loadTeams,
+  loadTeamSummaries,
+  t,
+});
+const {
+  closeTeamClearDataConfirm,
+  closeTeamDeleteConfirm,
+  closeTeamToggleConfirm,
+  confirmClearTeamData,
+  confirmDeleteTeam,
+  confirmTeamToggle,
+  requestClearTeamData,
+  requestDeleteSelectedTeam,
+  requestTeamEnabledToggle,
+  teamClearDataConfirm,
+  teamDeleteConfirm,
+  teamEnabledPending,
+  teamToggleConfirm,
+} = useSettingsTeamMutations({
+  teamId,
+  teams,
+  selectedTeamDetail,
+  loadTeams,
+  loadTeamSummaries,
+  loadSelectedTeamDetail,
+  clearSelectedTeamDetail,
+  router,
+  t,
 });
 function updateSettingsScrollbarHover(event: PointerEvent): void {
   const element = settingsMainRef.value;
@@ -155,214 +121,6 @@ function clearSettingsScrollbarHover(): void {
   settingsScrollbarHovered.value = false;
 }
 
-async function loadSelectedTeamDetail(targetTeamId: number | null): Promise<void> {
-  if (targetTeamId === null) {
-    selectedTeamDetail.value = null;
-    teamInfoStatus.value = '';
-    return;
-  }
-
-  try {
-    selectedTeamDetail.value = await getTeamDetail(targetTeamId);
-    teamInfoDraft.value = buildTeamInfoDraft(selectedTeamDetail.value);
-    teamInfoStatus.value = '';
-  } catch (error) {
-    console.error(error);
-    selectedTeamDetail.value = null;
-  }
-}
-
-async function saveTeamInfo(): Promise<void> {
-  if (!selectedTeamDetail.value || isSavingTeamInfo.value || !hasTeamInfoChanges.value) {
-    return;
-  }
-
-  isSavingTeamInfo.value = true;
-  teamInfoStatus.value = '';
-
-  try {
-    await updateTeam(selectedTeamDetail.value.id, {
-      name: teamInfoDraft.value.name.trim(),
-      working_directory: teamInfoDraft.value.workingDirectory,
-      config: {
-        ...(selectedTeamDetail.value.config || {}),
-        slogan: teamInfoDraft.value.slogan,
-        rules: teamInfoDraft.value.rules,
-      },
-    });
-    await Promise.all([
-      loadSelectedTeamDetail(selectedTeamDetail.value.id),
-      loadTeamSummaries(),
-      loadTeams(),
-    ]);
-    teamInfoStatus.value = t('settings.page.teamSavedStatus');
-    showGlobalSuccessToast(t('settings.page.teamSaved'));
-  } catch (error) {
-    console.error(error);
-    teamInfoStatus.value = t('settings.page.teamSaveFailed');
-  } finally {
-    isSavingTeamInfo.value = false;
-  }
-}
-
-async function updateTeamEnabledState(teamIdToUpdate: number, enabled: boolean): Promise<void> {
-  if (teamEnabledPending.value[teamIdToUpdate]) {
-    return;
-  }
-
-  teamEnabledPending.value = {
-    ...teamEnabledPending.value,
-    [teamIdToUpdate]: true,
-  };
-
-  try {
-    await setTeamEnabled(teamIdToUpdate, enabled);
-    await Promise.all([
-      loadTeams(),
-      loadTeamSummaries(),
-      selectedTeamDetail.value?.id === teamIdToUpdate
-        ? loadSelectedTeamDetail(teamIdToUpdate)
-        : Promise.resolve(),
-    ]);
-    showGlobalSuccessToast(enabled ? t('settings.page.teamEnabled') : t('settings.page.teamDisabled'));
-  } catch (error) {
-    console.error(error);
-  } finally {
-    const nextPending = { ...teamEnabledPending.value };
-    delete nextPending[teamIdToUpdate];
-    teamEnabledPending.value = nextPending;
-  }
-}
-
-function requestTeamEnabledToggle(teamIdToUpdate: number, enabled: boolean): void {
-  const team = teams.value.find((item) => item.id === teamIdToUpdate);
-  if (!team) {
-    return;
-  }
-
-  teamToggleConfirm.value = {
-    open: true,
-    teamId: teamIdToUpdate,
-    teamName: team.name,
-    enabled,
-  };
-}
-
-function closeTeamToggleConfirm(): void {
-  teamToggleConfirm.value = {
-    open: false,
-    teamId: null,
-    teamName: '',
-    enabled: false,
-  };
-}
-
-function confirmTeamToggle(): void {
-  const { teamId: targetTeamId, enabled } = teamToggleConfirm.value;
-  closeTeamToggleConfirm();
-  if (targetTeamId === null) {
-    return;
-  }
-  void updateTeamEnabledState(targetTeamId, enabled);
-}
-
-function requestDeleteSelectedTeam(): void {
-  if (!selectedTeamDetail.value) {
-    return;
-  }
-
-  teamDeleteConfirm.value = {
-    open: true,
-    teamId: selectedTeamDetail.value.id,
-    teamName: selectedTeamDetail.value.name,
-  };
-}
-
-function closeTeamDeleteConfirm(): void {
-  teamDeleteConfirm.value = {
-    open: false,
-    teamId: null,
-    teamName: '',
-  };
-}
-
-async function confirmDeleteTeam(): Promise<void> {
-  const { teamId: targetTeamId } = teamDeleteConfirm.value;
-  closeTeamDeleteConfirm();
-  if (targetTeamId === null) {
-    return;
-  }
-
-  try {
-    await deleteTeam(targetTeamId);
-    await Promise.all([
-      loadTeams(),
-      loadTeamSummaries(),
-    ]);
-    selectedTeamDetail.value = null;
-    teamInfoStatus.value = '';
-    const nextTeamId = teams.value[0]?.id ?? teamId.value;
-    router.push({
-      name: 'settings',
-      params: { teamId: nextTeamId, section: 'teams' },
-    }).catch(console.error);
-    showGlobalSuccessToast(t('settings.page.teamDeleted'));
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-function requestClearTeamData(): void {
-  if (!selectedTeamDetail.value) {
-    return;
-  }
-
-  teamClearDataConfirm.value = {
-    open: true,
-    teamId: selectedTeamDetail.value.id,
-    teamName: selectedTeamDetail.value.name,
-  };
-}
-
-function closeTeamClearDataConfirm(): void {
-  teamClearDataConfirm.value = {
-    open: false,
-    teamId: null,
-    teamName: '',
-  };
-}
-
-async function confirmClearTeamData(): Promise<void> {
-  const { teamId: targetTeamId, teamName } = teamClearDataConfirm.value;
-  closeTeamClearDataConfirm();
-  if (targetTeamId === null) {
-    return;
-  }
-
-  try {
-    const result = await clearTeamData(targetTeamId);
-    showGlobalSuccessToast(
-      t('settings.page.clearDataSuccess', {
-        name: teamName,
-        tasks: result.deleted.tasks,
-        histories: result.deleted.histories,
-        messages: result.deleted.messages,
-      })
-    );
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-function resetTeamInfoDraft(): void {
-  if (!selectedTeamDetail.value) {
-    return;
-  }
-
-  teamInfoDraft.value = buildTeamInfoDraft(selectedTeamDetail.value);
-  teamInfoStatus.value = '';
-}
-
 function formatDateTime(value: string): string {
   if (!value) {
     return t('common.unknown');
@@ -385,18 +143,6 @@ function formatDateTime(value: string): string {
   }).format(date);
 }
 
-watch(
-  [currentSectionId, detailTeamId],
-  ([sectionId, targetTeamId]) => {
-    if (sectionId === 'teams') {
-      loadSelectedTeamDetail(targetTeamId).catch(console.error);
-      return;
-    }
-    selectedTeamDetail.value = null;
-  },
-  { immediate: true },
-);
-
 onMounted(() => {
   getAgents()
     .then((result) => {
@@ -406,18 +152,6 @@ onMounted(() => {
       console.error(error);
     });
 });
-
-function handleTeamTreeSaved(): void {
-  if (!selectedTeamDetail.value) {
-    return;
-  }
-
-  Promise.all([
-    loadSelectedTeamDetail(selectedTeamDetail.value.id),
-    loadTeamSummaries(),
-    loadTeams(),
-  ]).catch(console.error);
-}
 </script>
 
 <template>
