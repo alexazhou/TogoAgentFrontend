@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { scheduleNotRunningReason, scheduleState, totalMessageCount } from '../../appUiState';
-import type { AgentInfo, MessageInfo, RoomState } from '../../types';
+import type { AgentActivity, AgentInfo, MessageInfo, RoomState } from '../../types';
 import {
   applyRealtimeEvent,
   clearRuntimeStore,
+  getAgentActivities,
   getAgentStatus,
   getRoomMessages,
   getTeamRooms,
@@ -49,6 +50,26 @@ function createMessage(overrides: Partial<MessageInfo>): MessageInfo {
     time: '2026-05-04 22:24:00',
     seq: null,
     insert_immediately: false,
+    ...overrides,
+  };
+}
+
+function createActivity(overrides: Partial<AgentActivity> = {}): AgentActivity {
+  return {
+    id: 10,
+    agent_id: 1,
+    team_id: 1,
+    activity_type: 'llm_infer',
+    status: 'started',
+    title: '推理',
+    detail: '',
+    error_message: null,
+    started_at: '2026-05-06T10:00:00',
+    finished_at: null,
+    duration_ms: null,
+    metadata: { model: 'test-model' },
+    created_at: null,
+    updated_at: null,
     ...overrides,
   };
 }
@@ -153,6 +174,45 @@ describe('runtimeStore realtime events', () => {
     expect(room?.state).toBe('scheduling');
     expect(room?.need_scheduling).toBe(true);
     expect(room?.current_turn_agent_id).toBe(8);
+  });
+
+  it('keeps the activity array stable when a realtime activity changes status', () => {
+    applyRealtimeEvent({
+      type: 'agent_activity',
+      agentId: 1,
+      activity: createActivity(),
+    });
+
+    const beforeUpdate = getAgentActivities(1);
+    const beforeActivity = beforeUpdate[0];
+
+    applyRealtimeEvent({
+      type: 'agent_activity',
+      agentId: 1,
+      activity: createActivity({
+        status: 'succeeded',
+        finished_at: '2026-05-06T10:00:03',
+        duration_ms: 3000,
+        metadata: {
+          model: 'test-model',
+          final_total_tokens: 128,
+        },
+      }),
+    });
+
+    const afterUpdate = getAgentActivities(1);
+
+    expect(afterUpdate).toBe(beforeUpdate);
+    expect(afterUpdate).toHaveLength(1);
+    expect(afterUpdate[0]).toBe(beforeActivity);
+    expect(afterUpdate[0]).toMatchObject({
+      id: 10,
+      status: 'succeeded',
+      duration_ms: 3000,
+      metadata: {
+        final_total_tokens: 128,
+      },
+    });
   });
 
   it('adds rooms only once and syncs schedule state events', () => {

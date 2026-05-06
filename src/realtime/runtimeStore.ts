@@ -151,13 +151,17 @@ function trimAgentActivities(items: AgentActivity[]): void {
 function upsertAgentActivity(activity: AgentActivity): void {
   const currentItems = agentActivitiesState.value[activity.agent_id];
   if (!currentItems) {
-    agentActivitiesState.value[activity.agent_id] = [activity];
+    agentActivitiesState.value = {
+      ...agentActivitiesState.value,
+      [activity.agent_id]: [activity],
+    };
     return;
   }
 
   const index = currentItems.findIndex((item) => item.id === activity.id);
+
   if (index >= 0) {
-    currentItems[index] = activity;
+    Object.assign(currentItems[index], activity);
     return;
   }
 
@@ -169,11 +173,7 @@ function upsertAgentActivity(activity: AgentActivity): void {
   }
 
   const insertIndex = currentItems.findIndex((item) => item.id > activity.id);
-  if (insertIndex < 0) {
-    currentItems.push(activity);
-  } else {
-    currentItems.splice(insertIndex, 0, activity);
-  }
+  currentItems.splice(insertIndex < 0 ? currentItems.length : insertIndex, 0, activity);
   trimAgentActivities(currentItems);
 }
 
