@@ -119,7 +119,11 @@ const activityBadgeLabel = computed(() =>
   activityRealtimeState.value === 'connected' ? t('agent.realtimeConnected') : formatConnectionState(activityRealtimeState.value),
 );
 
-const visibleActivities = computed(() => activities.value.slice(-30));
+const visibleActivities = computed(() =>
+  activities.value
+    .filter((a) => a.activity_type !== 'agent_state')
+    .slice(-30),
+);
 
 async function scrollActivitiesToBottom(): Promise<void> {
   await nextTick();
