@@ -4,6 +4,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, wa
 import { useI18n } from 'vue-i18n';
 import type { MessageInfo, RoomMemberProfile } from '../../types';
 import { bubbleSide, displayName, formatTime } from '../../utils';
+import { renderMarkdownPreviewText } from '../../utils/markdown';
+import MarkdownContent from '../ui/MarkdownContent.vue';
 
 const props = defineProps<{
   messages: MessageInfo[];
@@ -102,6 +104,10 @@ function queuedTooltip(): string {
   return t('chat.queuedMessageTip');
 }
 
+function messagePreviewContent(message: MessageInfo): string {
+  return renderMarkdownPreviewText(message.content);
+}
+
 function updateScrollbarState(): void {
   const stream = streamRef.value;
   if (!stream) {
@@ -172,7 +178,9 @@ onBeforeUnmount(() => {
       :class="`side-${bubbleSide(message.sender_id)}`"
     >
       <template v-if="bubbleSide(message.sender_id) === 'center'">
-        <div class="system-note">{{ message.content }}</div>
+        <div class="system-note">
+          <MarkdownContent :content="message.content" />
+        </div>
       </template>
       <template v-else>
         <div class="message-meta">
@@ -213,7 +221,9 @@ onBeforeUnmount(() => {
             />
           </template>
         </div>
-        <div class="bubble">{{ message.content }}</div>
+        <div class="bubble">
+          <MarkdownContent :content="message.content" />
+        </div>
       </template>
     </div>
 
@@ -250,7 +260,7 @@ onBeforeUnmount(() => {
           :src="getAgentAvatarUrl(resolveSenderStableName(message.sender_id))"
           :alt="`${resolveSenderDisplayName(message.sender_id)} avatar`"
         />
-        <div class="floating-message-content">{{ message.content }}</div>
+        <div class="floating-message-content">{{ messagePreviewContent(message) }}</div>
         <span
           v-if="resolveMessageStatus(message) === 'queued'"
           class="floating-message-status floating-message-status--queued"
@@ -387,7 +397,6 @@ onBeforeUnmount(() => {
   line-height: 1.55;
   word-break: break-word;
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
   font-size: 0.82rem;
 }
 
@@ -397,6 +406,10 @@ onBeforeUnmount(() => {
   border: 1px solid color-mix(in srgb, var(--border-default) 18%, transparent);
   box-shadow: var(--bubble-shadow, none);
   transition: opacity 0.25s ease;
+}
+
+.bubble :deep(.markdown-content) {
+  color: inherit;
 }
 
 .side-right .bubble {
@@ -415,6 +428,7 @@ onBeforeUnmount(() => {
   line-height: 1.5;
   font-size: 0.76rem;
   letter-spacing: 0.01em;
+  white-space: pre-wrap;
 }
 
 :global(html.bp-layout-narrow) .bubble,

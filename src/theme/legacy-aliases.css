@@ -15,7 +15,7 @@
   --danger: var(--state-danger);
   --warn: var(--state-warning);
   --warn-track: var(--state-warning-track);
-  --bubble-left: #435062;
+  --bubble-left: #364657;
   --bubble-left-text: color-mix(in srgb, var(--text-primary) 92%, white 8%);
   --bubble-right: var(--interactive-selected);
   --bubble-right-text: var(--text-on-accent);

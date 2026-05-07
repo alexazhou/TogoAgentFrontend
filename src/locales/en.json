@@ -21,7 +21,9 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "closeAlert": "Close alert",
-    "use": "Use"
+    "use": "Use",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "language": {
     "switcher": "Switch language",
