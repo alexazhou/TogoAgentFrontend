@@ -212,7 +212,7 @@ function selectAgent(agent: AgentInfo): void {
   0%,
   100% {
     transform: scale(0.85);
-    opacity: 0.55;
+    opacity: 0.85;
   }
 
   50% {
