@@ -41,16 +41,15 @@ const toolName = computed(() => {
 });
 
 const roomName = computed(() => {
-  const metadataRoomName = props.activity.metadata?.room_name;
-  if (typeof metadataRoomName === 'string' && metadataRoomName.trim()) {
-    return metadataRoomName.trim();
+  // send_chat_msg 的目标房间存放在 tool_arguments.room_name
+  const toolArguments = props.activity.metadata?.tool_arguments;
+  if (toolArguments && typeof toolArguments === 'object') {
+    const argRoomName = (toolArguments as { room_name?: unknown }).room_name;
+    if (typeof argRoomName === 'string' && argRoomName.trim()) {
+      return argRoomName.trim();
+    }
   }
-  const roomId = props.activity.metadata?.room_id;
-  if (typeof roomId !== 'number') {
-    return '';
-  }
-  const room = getTeamRooms(props.activity.team_id).find((item) => item.room_id === roomId);
-  return room?.room_name ?? '';
+  return '';
 });
 
 function activityStatusSymbol(status: AgentActivity['status']): string {
