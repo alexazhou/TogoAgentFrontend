@@ -19,6 +19,12 @@ function codeBlockLanguage(pre: HTMLElement): string {
   return pre.dataset.language?.trim() || 'text';
 }
 
+function syncWrapButtonState(button: HTMLButtonElement, wrapped: boolean): void {
+  button.setAttribute('aria-pressed', wrapped ? 'true' : 'false');
+  button.setAttribute('aria-label', wrapped ? t('common.disableCodeWrap') : t('common.enableCodeWrap'));
+  button.title = wrapped ? t('common.disableCodeWrap') : t('common.enableCodeWrap');
+}
+
 function enhanceCodeBlocks(): void {
   const root = rootRef.value;
   if (!root) {
@@ -41,14 +47,27 @@ function enhanceCodeBlocks(): void {
     language.className = 'markdown-code-language';
     language.textContent = codeBlockLanguage(pre);
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'markdown-code-copy';
-    button.setAttribute('aria-label', t('common.copy'));
-    button.innerHTML = '<i class="fa-solid fa-copy" aria-hidden="true"></i>';
+    const actions = document.createElement('div');
+    actions.className = 'markdown-code-actions';
+
+    const wrapButton = document.createElement('button');
+    wrapButton.type = 'button';
+    wrapButton.className = 'markdown-code-action markdown-code-wrap';
+    syncWrapButtonState(wrapButton, false);
+    wrapButton.innerHTML = '<i class="fa-solid fa-align-left" aria-hidden="true"></i>';
+
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'markdown-code-action markdown-code-copy';
+    copyButton.setAttribute('aria-label', t('common.copy'));
+    copyButton.title = t('common.copy');
+    copyButton.innerHTML = '<i class="fa-solid fa-copy" aria-hidden="true"></i>';
+
+    actions.appendChild(wrapButton);
+    actions.appendChild(copyButton);
 
     toolbar.appendChild(language);
-    toolbar.appendChild(button);
+    toolbar.appendChild(actions);
 
     pre.parentNode?.insertBefore(wrapper, pre);
     wrapper.appendChild(toolbar);
@@ -64,6 +83,17 @@ async function syncCodeBlocks(): Promise<void> {
 async function handleRootClick(event: MouseEvent): Promise<void> {
   const target = event.target;
   if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const wrapButton = target.closest('.markdown-code-wrap');
+  if (wrapButton instanceof HTMLButtonElement) {
+    const wrapper = wrapButton.closest('.markdown-code-block');
+    if (!(wrapper instanceof HTMLElement)) {
+      return;
+    }
+    const wrapped = wrapper.classList.toggle('markdown-code-block--wrapped');
+    syncWrapButtonState(wrapButton, wrapped);
     return;
   }
 
@@ -192,7 +222,7 @@ onMounted(() => {
 
 .markdown-content :deep(pre) {
   overflow-x: auto;
-  padding: 0 0.6rem 0.5rem;
+  padding: 0.12rem 0.6rem 0.5rem;
   border-radius: 0 0 8px 8px;
   background: transparent;
   border: none;
@@ -241,6 +271,15 @@ onMounted(() => {
   color: var(--markdown-code-text);
   line-height: 1.45;
   white-space: pre;
+}
+
+.markdown-content :deep(.markdown-code-block--wrapped pre) {
+  overflow-x: hidden;
+}
+
+.markdown-content :deep(.markdown-code-block--wrapped pre code) {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .markdown-content :deep(a) {
@@ -308,7 +347,7 @@ onMounted(() => {
   justify-content: space-between;
   min-height: 24px;
   padding: 0.22rem 0.55rem 0;
-  color: var(--text-secondary);
+  color: var(--markdown-code-toolbar-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   font-size: 0.72rem;
   line-height: 1.35;
@@ -321,7 +360,14 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.markdown-content :deep(.markdown-code-copy) {
+.markdown-content :deep(.markdown-code-actions) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.markdown-content :deep(.markdown-code-action) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -331,7 +377,7 @@ onMounted(() => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--markdown-code-toolbar-text);
   font-size: 0.65rem;
   line-height: 1;
   cursor: pointer;
@@ -340,11 +386,12 @@ onMounted(() => {
     color 140ms ease;
 }
 
-.markdown-content :deep(.markdown-code-copy:hover) {
+.markdown-content :deep(.markdown-code-action:hover),
+.markdown-content :deep(.markdown-code-wrap[aria-pressed='true']) {
   color: var(--text-primary);
 }
 
-.markdown-content :deep(.markdown-code-copy i) {
+.markdown-content :deep(.markdown-code-action i) {
   pointer-events: none;
 }
 

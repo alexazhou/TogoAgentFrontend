@@ -51,6 +51,8 @@ describe('MarkdownContent', () => {
     expect(wrapper.find('pre.hljs code').text()).toBe('const answer = 42;');
     expect(wrapper.find('input[type="checkbox"]').element).toHaveProperty('checked', true);
     expect(wrapper.find('.markdown-code-language').text()).toBe('ts');
+    expect(wrapper.find('.markdown-code-wrap').attributes('aria-label')).toBe('开启自动换行');
+    expect(wrapper.find('.markdown-code-wrap').attributes('aria-pressed')).toBe('false');
     expect(wrapper.find('.markdown-code-copy').attributes('aria-label')).toBe('复制');
     expect(wrapper.find('.markdown-code-copy .fa-copy').exists()).toBe(true);
   });
@@ -91,5 +93,35 @@ describe('MarkdownContent', () => {
 
     expect(writeText).toHaveBeenCalledWith('const answer = 42;');
     expect(showGlobalSuccessToastMock).toHaveBeenCalledWith('已复制');
+  });
+
+  it('toggles wrapping for an individual code block', async () => {
+    const wrapper = mount(MarkdownContent, {
+      props: {
+        content: '```bash\nreally-long-command --with-many-arguments --and-a-long-path\n```',
+      },
+      global: {
+        plugins: [i18n],
+      },
+    });
+    await flushPromises();
+
+    const codeBlock = wrapper.find('.markdown-code-block');
+    const wrapButton = wrapper.find('.markdown-code-wrap');
+
+    expect(codeBlock.classes()).not.toContain('markdown-code-block--wrapped');
+    expect(wrapButton.attributes('aria-pressed')).toBe('false');
+
+    await wrapButton.trigger('click');
+
+    expect(codeBlock.classes()).toContain('markdown-code-block--wrapped');
+    expect(wrapButton.attributes('aria-pressed')).toBe('true');
+    expect(wrapButton.attributes('aria-label')).toBe('关闭自动换行');
+
+    await wrapButton.trigger('click');
+
+    expect(codeBlock.classes()).not.toContain('markdown-code-block--wrapped');
+    expect(wrapButton.attributes('aria-pressed')).toBe('false');
+    expect(wrapButton.attributes('aria-label')).toBe('开启自动换行');
   });
 });

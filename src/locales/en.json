@@ -23,7 +23,9 @@
     "closeAlert": "Close alert",
     "use": "Use",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "enableCodeWrap": "Enable code wrapping",
+    "disableCodeWrap": "Disable code wrapping"
   },
   "language": {
     "switcher": "Switch language",
