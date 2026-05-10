@@ -260,10 +260,11 @@ onMounted(() => {
 }
 
 .markdown-content :deep(:not(pre) > code) {
-  padding: 0.12em 0.38em;
-  border-radius: 6px;
-  background: var(--markdown-inline-code-bg);
-  color: color-mix(in srgb, var(--text-primary) 92%, white 8%);
+  padding: 0.16em 0.35em;
+  border-radius: 4px;
+  background: var(--gray-800);
+  border: 1px solid var(--gray-700);
+  color: var(--text-primary);
 }
 
 .markdown-content :deep(pre code) {
