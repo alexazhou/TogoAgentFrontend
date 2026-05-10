@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getTeamRooms } from '../../realtime/runtimeStore';
 import type { AgentActivity } from '../../types';
+import { displayName } from '../../utils';
 
 const { t } = useI18n();
 
@@ -174,6 +175,21 @@ function getSendMessagePrefix(): string {
   return t('agent.sendToRoomPrefix', { room: roomName.value });
 }
 
+function getFinishTurnRoomLabel(activity: AgentActivity): string {
+  if (activity.activity_type !== 'tool_call' || toolName.value !== 'finish_chat_turn') {
+    return '';
+  }
+  const taskRoomId = activity.metadata?.task_room_id;
+  if (typeof taskRoomId !== 'number') {
+    return '';
+  }
+  const room = getTeamRooms(activity.team_id).find((item) => item.room_id === taskRoomId);
+  if (!room) {
+    return '';
+  }
+  return t('agent.finishTurnRoomLabel', { room: displayName({ name: room.room_name, i18n: room.i18n }) });
+}
+
 function getExecuteBashStdout(activity: AgentActivity): string {
   const toolResult = activity.metadata?.tool_result;
   if (!toolResult || typeof toolResult !== 'object') {
@@ -309,6 +325,7 @@ function activitySummary(
 const activityView = computed(() => {
   const activity = props.activity;
   const currentToolName = toolName.value;
+  const isFinishTurnActivity = activity.activity_type === 'tool_call' && currentToolName === 'finish_chat_turn';
   const currentTitle = activityTitle(activity);
   const currentToolCommand = getActivityToolCommand(activity);
   const currentToolArguments = getActivityToolArguments(activity);
@@ -316,13 +333,16 @@ const activityView = computed(() => {
   const currentMetadataToolName = getActivityToolName(activity);
   const showToolName = shouldShowToolName(activity);
   const currentSendMessagePrefix = currentToolName === 'send_chat_msg' ? getSendMessagePrefix() : '';
+  const currentFinishTurnRoomLabel = getFinishTurnRoomLabel(activity);
   const executeBashResult = activity.activity_type === 'tool_call' && currentToolName === 'execute_bash';
   const currentStdout = executeBashResult ? getExecuteBashStdout(activity) : '';
   const currentStderr = executeBashResult ? getExecuteBashStderr(activity) : '';
   const currentExitCode = executeBashResult ? getExecuteBashExitCode(activity) : '';
   const currentToolResult = getActivityToolResult(activity);
+  const currentErrorMessage = readTrimmedString(activity.error_message);
   const expandedToolResult = activity.activity_type === 'tool_call'
     && currentToolName !== 'send_chat_msg'
+    && (!isFinishTurnActivity || activity.status === 'failed')
     && Boolean(currentToolResult);
   const expandedMessage = activity.activity_type === 'tool_call' && currentToolName === 'send_chat_msg';
   const receivedMessages = getReceivedMessages(activity);
@@ -348,12 +368,14 @@ const activityView = computed(() => {
     expandedContent,
     expandedMessage,
     expandedToolResult,
+    finishTurnRoomLabel: currentFinishTurnRoomLabel,
     receivedMessages,
     exitCode: currentExitCode,
     inlineTitle,
     metadataToolName: currentMetadataToolName,
     model: currentModel,
     sendMessagePrefix: currentSendMessagePrefix,
+    showErrorMessage: Boolean(currentErrorMessage) && currentErrorMessage !== currentToolResult,
     showSummary: Boolean(currentSummary),
     showToolArguments: showToolName && Boolean(currentToolArguments),
     showToolName,
@@ -441,6 +463,12 @@ const activityView = computed(() => {
       <span v-if="activityView.tokenText" class="agent-activity-item__tail">
         <span class="agent-activity-item__tokens">{{ activityView.tokenText }}</span>
       </span>
+      <span v-if="activityView.finishTurnRoomLabel" class="agent-activity-item__tail">
+        <span
+          class="agent-activity-item__finish-turn-room"
+          :title="activityView.finishTurnRoomLabel"
+        >{{ activityView.finishTurnRoomLabel }}</span>
+      </span>
     </div>
     <template v-if="activityView.executeBashResult">
       <p
@@ -465,7 +493,7 @@ const activityView = computed(() => {
         class="agent-activity-item__received-message"
       ><span class="agent-activity-item__received-sender">{{ msg.sender }}:</span> {{ msg.content }}</p>
     </template>
-    <p v-if="activity.error_message" class="agent-activity-item__error">{{ activity.error_message }}</p>
+    <p v-if="activityView.showErrorMessage" class="agent-activity-item__error">{{ activity.error_message }}</p>
   </article>
 </template>
 
@@ -485,8 +513,14 @@ const activityView = computed(() => {
 }
 
 .agent-activity-item[data-status='failed'] {
-  border-color: color-mix(in srgb, var(--danger, #f85149) 26%, var(--panel-border) 74%);
-  background: color-mix(in srgb, var(--danger, #f85149) 7%, var(--panel-bg) 93%);
+  border-color: color-mix(in srgb, var(--danger, #f85149) 52%, var(--panel-border) 48%);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--danger, #f85149) 14%, var(--panel-bg) 86%) 0%,
+      color-mix(in srgb, var(--danger, #f85149) 10%, var(--panel-bg) 90%) 100%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--danger, #f85149) 10%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--danger, #f85149) 6%, transparent);
 }
 
 .agent-activity-item__row {
@@ -676,6 +710,15 @@ const activityView = computed(() => {
   font-variant-numeric: tabular-nums;
 }
 
+.agent-activity-item__finish-turn-room {
+  min-width: 0;
+  max-width: 220px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .agent-activity-item[data-status='started'] .agent-activity-item__status {
   background: color-mix(in srgb, var(--good) 16%, transparent);
   color: color-mix(in srgb, var(--good) 84%, var(--text) 16%);
@@ -745,6 +788,32 @@ const activityView = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__title {
+  color: color-mix(in srgb, var(--danger, #f85149) 56%, var(--text-strong) 44%);
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__row span {
+  color: color-mix(in srgb, var(--danger, #f85149) 52%, var(--text) 48%);
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__summary {
+  color: color-mix(in srgb, var(--danger, #f85149) 68%, var(--text) 32%);
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__chip {
+  background: color-mix(in srgb, var(--danger, #f85149) 16%, transparent);
+  color: color-mix(in srgb, var(--danger, #f85149) 72%, var(--text) 28%);
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__tool-result,
+.agent-activity-item[data-status='failed'] .agent-activity-item__received-message {
+  color: color-mix(in srgb, var(--danger, #f85149) 76%, var(--text) 24%);
+}
+
+.agent-activity-item[data-status='failed'] .agent-activity-item__received-sender {
+  color: color-mix(in srgb, var(--danger, #f85149) 88%, var(--text-strong) 12%);
 }
 
 .agent-activity-item--expanded .agent-activity-item__row {

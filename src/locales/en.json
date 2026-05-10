@@ -124,6 +124,7 @@
     "copiedError": "Error copied",
     "parseFailed": "Parse Failed",
     "sendToRoomPrefix": "To Room [{room}]: ",
+    "finishTurnRoomLabel": "Room [{room}]",
     "backupLabel": "Backup Agents",
     "cardSubtitle": "Agent",
     "searchPlaceholder": "Search Agents",

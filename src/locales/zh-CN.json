@@ -124,6 +124,7 @@
     "copiedError": "已复制完整报错",
     "parseFailed": "解析失败",
     "sendToRoomPrefix": "To 房间【{room}】: ",
+    "finishTurnRoomLabel": "房间【{room}】",
     "backupLabel": "备选Agent",
     "cardSubtitle": "智能体",
     "searchPlaceholder": "搜索Agent",
