@@ -28,6 +28,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   updateError: [value: string];
   clickWorkingAgent: [agentId: number];
+  clickAgent: [agentId: number];
 }>();
 
 const messageViewport = useTemplateRef('messageViewport');
@@ -226,6 +227,7 @@ onBeforeUnmount(() => {
       :escalating-message-ids="escalatingMessageIds"
       @update-draft="draft = $event"
       @submit="handleSubmit"
+      @click-agent="emit('clickAgent', $event)"
       @click-working-agent="emit('clickWorkingAgent', $event)"
       @escalate-message="handleEscalateMessage"
     />

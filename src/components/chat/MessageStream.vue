@@ -16,6 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   clickWorkingAgent: [agentId: number];
+  clickAgent: [agentId: number];
   escalateMessage: [messageId: number];
 }>();
 
@@ -74,6 +75,21 @@ function resolveSenderDisplayName(senderId: number): string {
   }
   const profile = resolveSenderProfile(senderId);
   return profile ? displayName(profile) : String(senderId);
+}
+
+function resolveSenderAgentId(senderId: number): number | null {
+  if (senderId <= 0) {
+    return null;
+  }
+  return resolveSenderProfile(senderId) ? senderId : null;
+}
+
+function handleSenderAvatarClick(senderId: number): void {
+  const agentId = resolveSenderAgentId(senderId);
+  if (agentId === null) {
+    return;
+  }
+  emit('clickAgent', agentId);
 }
 
 type MessageStatus = 'published' | 'immediate' | 'pending-immediate' | 'queued';
@@ -187,8 +203,10 @@ onBeforeUnmount(() => {
           <template v-if="bubbleSide(message.sender_id) === 'left'">
             <img
               class="sender-avatar"
+              :class="{ 'sender-avatar--clickable': resolveSenderAgentId(message.sender_id) !== null }"
               :src="getAgentAvatarUrl(resolveSenderStableName(message.sender_id))"
               :alt="`${resolveSenderDisplayName(message.sender_id)} avatar`"
+              @click="handleSenderAvatarClick(message.sender_id)"
             />
             <span class="sender" :style="{ color: senderColor(resolveSenderStableName(message.sender_id)) }">
               {{ resolveSenderDisplayName(message.sender_id) }}
@@ -216,8 +234,10 @@ onBeforeUnmount(() => {
             </span>
             <img
               class="sender-avatar"
+              :class="{ 'sender-avatar--clickable': resolveSenderAgentId(message.sender_id) !== null }"
               :src="getAgentAvatarUrl(resolveSenderStableName(message.sender_id))"
               :alt="`${resolveSenderDisplayName(message.sender_id)} avatar`"
+              @click="handleSenderAvatarClick(message.sender_id)"
             />
           </template>
         </div>
@@ -257,8 +277,10 @@ onBeforeUnmount(() => {
         <img
           v-if="bubbleSide(message.sender_id) !== 'center'"
           class="floating-message-avatar"
+          :class="{ 'floating-message-avatar--clickable': resolveSenderAgentId(message.sender_id) !== null }"
           :src="getAgentAvatarUrl(resolveSenderStableName(message.sender_id))"
           :alt="`${resolveSenderDisplayName(message.sender_id)} avatar`"
+          @click="handleSenderAvatarClick(message.sender_id)"
         />
         <div class="floating-message-content">{{ messagePreviewContent(message) }}</div>
         <span
@@ -363,6 +385,10 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   border: 1px solid color-mix(in srgb, var(--border-strong) 30%, transparent);
   background: color-mix(in srgb, var(--surface-elevated) 84%, var(--border-default) 16%);
+}
+
+.sender-avatar--clickable {
+  cursor: pointer;
 }
 
 .time {
@@ -513,6 +539,10 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   border: 1px solid color-mix(in srgb, var(--border-strong) 28%, transparent);
   background: color-mix(in srgb, var(--surface-elevated) 84%, var(--border-default) 16%);
+}
+
+.floating-message-avatar--clickable {
+  cursor: pointer;
 }
 
 .floating-message-status {

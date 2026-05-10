@@ -339,6 +339,7 @@ onBeforeUnmount(() => {
           :reloading-messages="reloadingMessages"
           :team-enabled="currentTeam?.enabled ?? true"
           @update-error="errorMessage = $event"
+          @click-agent="openAgent"
           @click-working-agent="openAgent"
         />
       </div>

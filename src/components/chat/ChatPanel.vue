@@ -22,6 +22,7 @@ const emit = defineEmits<{
   updateDraft: [value: string];
   submit: [];
   clickWorkingAgent: [agentId: number];
+  clickAgent: [agentId: number];
   escalateMessage: [messageId: number];
 }>();
 
@@ -129,6 +130,7 @@ function handleEnterKey(e: KeyboardEvent): void {
         :member-profiles="memberProfiles"
         :working-agent="workingAgent"
         :escalating-message-ids="escalatingMessageIds"
+        @click-agent="emit('clickAgent', $event)"
         @click-working-agent="emit('clickWorkingAgent', $event)"
         @escalate-message="emit('escalateMessage', $event)"
       />

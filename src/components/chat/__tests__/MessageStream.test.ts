@@ -70,4 +70,20 @@ describe('MessageStream', () => {
     expect(preview).not.toContain('**');
     expect(preview).not.toContain('`');
   });
+
+  it('emits clickAgent when a sender avatar is clicked', async () => {
+    const wrapper = mount(MessageStream, {
+      props: {
+        messages: [createMessage()],
+        memberProfiles,
+      },
+      global: {
+        plugins: [i18n],
+      },
+    });
+
+    await wrapper.find('.sender-avatar').trigger('click');
+
+    expect(wrapper.emitted('clickAgent')).toEqual([[7]]);
+  });
 });
