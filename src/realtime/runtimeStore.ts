@@ -47,8 +47,8 @@ function syncTotalMessageCount(): void {
 function normalizeMessage(teamId: number, raw: RawMessageInfo): MessageInfo {
   return {
     db_id: raw.id,
-    sender_id: raw.agent_id,
-    sender_display_name: resolveMessageSenderDisplayName(teamId, raw.agent_id),
+    sender_id: raw.sender_id,
+    sender_display_name: resolveMessageSenderDisplayName(teamId, raw.sender_id),
     content: raw.content,
     time: raw.send_time,
     seq: raw.seq,

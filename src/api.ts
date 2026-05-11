@@ -737,7 +737,7 @@ export async function stopAgent(agentId: number): Promise<{ status: string; agen
 
 export type RawMessageInfo = {
   id: number;
-  agent_id: number;
+  sender_id: number;
   content: string;
   send_time: string;
   seq: number | null;
